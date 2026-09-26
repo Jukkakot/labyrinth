@@ -4,7 +4,7 @@
 
 - [x] 1.1 Restrict CORS to an `ALLOWED_ORIGINS` allow-list via Colyseus's CORS hook (localhost/LAN dev origins allowed outside production) and `ALLOWED_ORIGINS=https://jukkakot.github.io` in `render.yaml`; verify by server test that a request with an allowed Origin gets `Access-Control-Allow-Origin` and a disallowed one does not
 - [x] 1.2 Add `client/src/config.ts` reading `VITE_SERVER_URL` (dev fallback `http://localhost:2567`, clear error when used in a production build without it — resolved on use so the first Pages deploy works before Render exists) with a typed `vite-env.d.ts`, and pass `VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}` in `deploy-client.yml`; verify by unit tests: dev fallback, trailing-slash trim, production error when missing
-- [ ] 1.3 Add `.vscode/launch.json` (Server via tsx with `--conditions=source`, Client via Chrome, compound Full stack) and `.vscode/extensions.json`, and allow `launch.json` in `.gitignore`; verify the Server configuration starts and stops at a breakpoint in `packages/rules`
+- [x] 1.3 Add `.vscode/launch.json` (Server via tsx with `--conditions=source`, Client via Chrome, compound Full stack) and `.vscode/extensions.json`, and allow `launch.json` in `.gitignore`; verify the Server configuration starts and stops at a breakpoint in `packages/rules`
 - [x] 1.4 Add `playwright-mobile` (`--device "Galaxy S24"`) and `playwright-ios` (`--device "iPhone 15"`) instances to `.mcp.json`; verify the Playwright MCP instances can open the local client after a Claude Code restart (install chromium and pin `--browser chromium` if needed)
 - [x] 1.5 Run lint, typecheck, test and build and commit; ask the user to push
 
