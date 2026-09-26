@@ -8,6 +8,24 @@ Apply to every change. Designs and task lists must show how they are met.
   loses in-memory games.
 - Scale target: tens of concurrent games on a single instance. No Redis, no
   horizontal scaling.
+- No keep-alive pinging; sleeping is accepted.
+- Graceful shutdown: on SIGTERM (deploy/restart) the server tells connected
+  players "Server is updating, the game ends" before closing.
+- A finished game stays open while any human is in it (results, "Play
+  again"), and closes when the last human leaves or after 10 minutes.
+
+## Performance (mid-range phone a few years old)
+- Usable within 3 s on 4G; JS bundle budget 200 kB gzip, checked in CI.
+- Tile slide and pawn move at 60 fps; animate only transform and opacity.
+- Every tap gives immediate feedback (pending state); target server response
+  under 300 ms.
+
+## Error UX
+- Rejected command: short localized message ("You can't push back from the
+  same spot").
+- Connection lost: banner "Reconnecting…". Crash: "Something went wrong –
+  reload" screen.
+- Technical details go to the logs only, never to the UI.
 
 ## Logging and audit
 - All logs, server and client, end up in Render's log stream. No other log
@@ -45,6 +63,17 @@ Apply to every change. Designs and task lists must show how they are met.
 ## Versioning
 - The server reports its version on connect. On an incompatible client the UI
   shows "New version available, reload" instead of playing on a broken client.
+
+## Legal and privacy
+- Never use Ravensburger names, logos or artwork in the UI or assets; own name
+  ("Labyrintti"/"Labyrinth") and own icons only.
+- No license: all rights reserved.
+- No analytics, no cookies, no consent banner.
+
+## Development workflow
+- Commit directly to main; CI guards it and Render deploys only after green CI.
+- No code formatter; oxlint only.
+- Dependencies are updated manually (no Renovate/Dependabot).
 
 ## Browser support
 - Current iOS Safari, Chrome/Android, Firefox and Edge, back about two years. No

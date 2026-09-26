@@ -22,7 +22,7 @@ context: |
   - openspec/context/architecture.md: board coordinates, phases, commands,
     bots, hidden information → any design touching game state or commands
   - openspec/context/nfr.md: logging/audit, testing, abuse protection,
-    versioning, hosting limits → every design and task list
+    versioning, performance, error UX, legal, workflow → every design and task list
   - openspec/context/roadmap.md: planned change order → when choosing or
     scoping the next change
 
