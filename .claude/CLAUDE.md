@@ -56,8 +56,9 @@ everything works and is final.
 
 ## Working agreements
 
-- Work locally: commit, but do not push, wait for CI or deploy. The user pushes and deploys
-  manually; list any production checks for them in the summary instead.
+- Commit and **push to `main`** yourself (this overrides the global "never push" rule): at the
+  latest before giving a summary, not necessarily after every commit. Do not wait for CI or the
+  deploy; list any production checks for the user in the summary instead.
 - End every summary that changed something visible or runnable with a short "How to check"
   (a few steps: which command, which URL, what to tap, what you should see). Keep it cheap: no
   extra work just to produce it; skip it when nothing user-visible changed.

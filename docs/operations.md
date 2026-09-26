@@ -16,7 +16,7 @@
 
 ## Release flow — Implemented
 
-commit (Claude, locally) → **the user pushes** to `main` → CI (lint, typecheck, tests, build, bundle
+commit → push to `main` (Claude pushes before each summary) → CI (lint, typecheck, tests, build, bundle
 size, E2E smoke) → Pages deploy (client) and Render deploy (server, only after green CI). No staging
 environment.
 
