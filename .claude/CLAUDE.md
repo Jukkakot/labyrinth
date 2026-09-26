@@ -26,6 +26,9 @@ initiative whenever they fit; do not wait to be asked. When unsure whether one f
 
 - Work locally: commit, but do not push, wait for CI or deploy. The user pushes and deploys
   manually; list any production checks for them in the summary instead.
+- End every summary that changed something visible or runnable with a short "How to check"
+  (a few steps: which command, which URL, what to tap, what you should see). Keep it cheap: no
+  extra work just to produce it; skip it when nothing user-visible changed.
 - Bug reports ("around 14:30 in game brave-otters-sing, X happened"): follow
   [docs/operations.md → Investigating a reported bug](../docs/operations.md#investigating-a-reported-bug).
 - UI checks: Playwright MCP `playwright-mobile` (Galaxy S24) by default.
