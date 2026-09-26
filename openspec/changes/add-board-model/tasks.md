@@ -14,3 +14,7 @@
 ## 3. Public API
 
 - [ ] 3.1 Export the board model from `packages/rules/src/index.ts` and add a test-fixture helper for building layouts from compact strings; verify `npm run typecheck` and `npm test` pass in all workspaces and `npm run build -w @labyrinth/rules` emits the new declarations
+
+## 4. Wiki
+
+- [ ] 4.1 Update `docs/architecture.md` Board geometry to Implemented (module locations, plain-data model, tile ids) and the rules row in `docs/development.md` testing table; mark `add-board-model` done in `openspec/context/roadmap.md`; verify the documented conventions match the code and tests

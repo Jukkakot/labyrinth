@@ -1,5 +1,12 @@
 # Labyrinth – working instructions
 
+## Knowledge base
+
+The project wiki is [docs/README.md](../docs/README.md): architecture, operations (environments,
+deploy, logs, bug runbook), development (run, test, debug, conventions). Start any planning or
+investigation there, then verify against the code. Keep it current: every change updates the wiki
+pages it affects (enforced by `openspec/config.yaml` rules and archive guidance).
+
 ## OpenSpec workflow (use it proactively)
 
 This project is spec-driven with OpenSpec. Use the OpenSpec skills/commands on your own
@@ -11,41 +18,14 @@ initiative whenever they fit; do not wait to be asked. When unsure whether one f
 - Plan changes mid-way → `openspec-update-change`.
 - User approves a proposal → `openspec-apply-change`.
 - Change implemented, verified and committed → suggest `openspec-archive-change`.
-- Pure tooling or refactoring with no behaviour change needs no change; just do it.
+- Pure tooling or refactoring with no behaviour change needs no change; just do it (and still
+  update the wiki if it affects it).
 - After finishing a step, name the natural next OpenSpec step.
 
-Project context and decisions: `openspec/config.yaml` points to `openspec/context/*.md`
-(product, architecture, nfr, roadmap). Read the relevant one before planning. An existing
-spec under `openspec/specs/` wins over those files.
+## Working agreements
 
-## Investigating a reported bug ("around 14:30 in game brave-otters-sing, X happened")
-
-1. Convert the reported local time (Europe/Helsinki) to UTC.
-2. Fetch production logs with Render MCP (`list_logs`) for the server service. Filter by
-   text `"room":"<game id>"` and a window of about ±15 min; widen the window if needed. Locally,
-   read `logs/dev.log` instead.
-3. Follow the room's timeline: `player.*`, `cmd.accepted`/`cmd.rejected`/`cmd.failed`,
-   `client.error` (`src:"client"`), `framework.log`. Check `ver` on both sides.
-4. Reproduce the bug as a failing test (rules unit test, or room test with @colyseus/testing).
-   For UI bugs, reproduce it with Playwright MCP using two tabs.
-5. Fix it; the failing test stays as a regression test. Report the root cause and which log
-   lines showed it.
-
-## Environments
-
-- Client: https://jukkakot.github.io/labyrinth/ (GitHub Pages, "Deploy client" workflow on
-  pushes touching client/rules)
-- Server: https://labyrinth-server-3z1m.onrender.com (`/health`). Render service
-  `srv-darps5navr4c73fmplh0`, workspace `tea-d7vbs7l7vvec73dbddt0`, free plan (sleeps when idle,
-  first request can take ~1 min). Deploys from `render.yaml` after CI passes, only on
-  server/rules changes.
-- Flow: commit → push to main (Claude may push in this repo) → CI → Pages / Render deploy.
-- Config: GitHub variable `VITE_SERVER_URL`; Render env `ALLOWED_ORIGINS`.
-- Debugging: Render MCP `list_logs` (resource = service id, `text` filter, time range);
-  Playwright MCP `playwright-mobile` (Galaxy S24, the default for UI checks), `playwright-ios`
-  (iPhone 15) and `playwright` (desktop), all headless.
-
-## Commands
-
-- `npm run dev`: server (:2567, /monitor, /playground) + client (Vite)
-- `npm run lint && npm run typecheck && npm test && npm run build`: run all before committing
+- Push to `main` yourself after green checks when a deploy is needed.
+- Bug reports ("around 14:30 in game brave-otters-sing, X happened"): follow
+  [docs/operations.md → Investigating a reported bug](../docs/operations.md#investigating-a-reported-bug).
+- UI checks: Playwright MCP `playwright-mobile` (Galaxy S24) by default.
+- Before committing: `npm run lint && npm run typecheck && npm test && npm run build`.

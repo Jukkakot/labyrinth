@@ -2,7 +2,7 @@
 
 ## Context
 
-`packages/rules` currently exports only `RULES_VERSION`. It compiles with `module: nodenext`, so internal imports use `.js` extensions. Tests run with Vitest. Server and client consume the TypeScript source directly through the `source` export condition, so no build step is needed during development. Requirements are in `specs/board/spec.md`, and geometry conventions come from `openspec/context/architecture.md`.
+`packages/rules` currently exports only `RULES_VERSION`. It compiles with `module: nodenext`, so internal imports use `.js` extensions. Tests run with Vitest. Server and client consume the TypeScript source directly through the `source` export condition, so no build step is needed during development. Requirements are in `specs/board/spec.md`, and geometry conventions come from `docs/architecture.md` (Board geometry).
 
 ## Goals / Non-Goals
 
