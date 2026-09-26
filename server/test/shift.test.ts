@@ -127,7 +127,7 @@ describe("turns and tile-shift in a room", () => {
     });
 
     it("Current player leaves while moving", async () => {
-      const { room, clients } = await game(2);
+      const { room, clients } = await game(3);
       await shift(clients[0]!, { insertion: "N1", rotation: 0 });
       await clients[0]!.leave();
       await vi.waitFor(() => expect(room.state.turnSeat).toBe(2));

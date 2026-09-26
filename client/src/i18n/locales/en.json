@@ -70,7 +70,8 @@
     "retry": "Try again",
     "waking": "Waking up the server…",
     "wakingSlow": "The server was asleep. Waking up can take about a minute.",
-    "wakeFailed": "The server hasn't answered yet – you can still try."
+    "wakeFailed": "The server hasn't answered yet – you can still try.",
+    "kicked": "You were removed from the game because your turn time ran out."
   },
   "game": {
     "idLabel": "Game {{id}}. Tap to copy.",
@@ -82,7 +83,10 @@
     "mine": "Your turn – push a tile",
     "other": "Player {{seat}} is pushing",
     "mineMove": "Your turn – move your pawn",
-    "otherMove": "Player {{seat}} is moving"
+    "otherMove": "Player {{seat}} is moving",
+    "timeUp": "Time's up",
+    "disconnected": "Player {{seat}} – connection lost",
+    "timeLeft": "Time left {{time}}"
   },
   "shift": {
     "hint": "Pick an arrow on the board edge",
@@ -103,7 +107,9 @@
     "WRONG_PHASE": "You can't do that right now",
     "REVERSE_PUSH_FORBIDDEN": "You can't push the tile straight back from the same spot",
     "generic": "That didn't work. Try again.",
-    "UNREACHABLE": "Your pawn can't reach that square"
+    "UNREACHABLE": "Your pawn can't reach that square",
+    "NOT_KICKABLE": "That player can't be removed now",
+    "TURN_NOT_EXPIRED": "Their time isn't up yet"
   },
   "move": {
     "hint": "Tap a highlighted square",
@@ -116,11 +122,20 @@
     "count": "{{found}}/{{cards}} treasures found",
     "target": "target: {{name}}",
     "home": "home square",
-    "collected": "You found: {{name}}"
+    "collected": "You found: {{name}}",
+    "disconnected": "connection lost",
+    "left": "Player {{seat}} left the game"
   },
   "result": {
     "mine": "You won!",
     "other": "Player {{seat}} won",
     "newGame": "New game"
+  },
+  "kick": {
+    "timeUp": "Player {{seat}}'s time is up",
+    "button": "Remove player {{seat}}",
+    "confirm": "Remove player {{seat}} from the game?",
+    "yes": "Remove",
+    "cancel": "Cancel"
   }
 }

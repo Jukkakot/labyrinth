@@ -70,7 +70,8 @@
     "retry": "Yritä uudelleen",
     "waking": "Herätetään palvelinta…",
     "wakingSlow": "Palvelin on ollut levossa. Herääminen voi kestää noin minuutin.",
-    "wakeFailed": "Palvelin ei vastannut vielä – voit silti yrittää."
+    "wakeFailed": "Palvelin ei vastannut vielä – voit silti yrittää.",
+    "kicked": "Sinut poistettiin pelistä, koska vuorosi aika loppui."
   },
   "game": {
     "idLabel": "Peli {{id}}. Napauta kopioidaksesi.",
@@ -82,7 +83,10 @@
     "mine": "Sinun vuorosi – työnnä laatta",
     "other": "Pelaaja {{seat}} työntää",
     "mineMove": "Sinun vuorosi – siirrä nappulaa",
-    "otherMove": "Pelaaja {{seat}} siirtää"
+    "otherMove": "Pelaaja {{seat}} siirtää",
+    "timeUp": "Aika loppui",
+    "disconnected": "Pelaaja {{seat}} – yhteys katkennut",
+    "timeLeft": "Aikaa jäljellä {{time}}"
   },
   "shift": {
     "hint": "Valitse nuoli laudan reunalta",
@@ -103,7 +107,9 @@
     "WRONG_PHASE": "Sitä ei voi tehdä juuri nyt",
     "REVERSE_PUSH_FORBIDDEN": "Et voi työntää laattaa takaisin samasta kohdasta",
     "generic": "Siirto ei onnistunut. Yritä uudelleen.",
-    "UNREACHABLE": "Nappulasi ei pääse sinne"
+    "UNREACHABLE": "Nappulasi ei pääse sinne",
+    "NOT_KICKABLE": "Tätä pelaajaa ei voi poistaa nyt",
+    "TURN_NOT_EXPIRED": "Pelaajan aika ei ole vielä loppunut"
   },
   "move": {
     "hint": "Napauta korostettua ruutua",
@@ -116,11 +122,20 @@
     "count": "{{found}}/{{cards}} aarretta löydetty",
     "target": "kohde: {{name}}",
     "home": "kotiruutu",
-    "collected": "Löysit: {{name}}"
+    "collected": "Löysit: {{name}}",
+    "disconnected": "yhteys katkennut",
+    "left": "Pelaaja {{seat}} poistui pelistä"
   },
   "result": {
     "mine": "Voitit!",
     "other": "Pelaaja {{seat}} voitti",
     "newGame": "Uusi peli"
+  },
+  "kick": {
+    "timeUp": "Pelaajan {{seat}} aika loppui",
+    "button": "Poista pelaaja {{seat}}",
+    "confirm": "Poistetaanko pelaaja {{seat}} pelistä?",
+    "yes": "Poista",
+    "cancel": "Peru"
   }
 }

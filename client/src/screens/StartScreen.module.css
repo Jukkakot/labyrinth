@@ -9,3 +9,8 @@
 .wake p {
   margin: 0;
 }
+
+/* Why the last game ended (kicked): calm, but readable. */
+.ended {
+  color: var(--text);
+}

@@ -1,5 +1,13 @@
 import { Client } from "@colyseus/sdk";
-import { GAME_ERROR_CODES, type CommandResult, type GameErrorCode, type MovePayload, type ShiftPayload } from "@labyrinth/protocol";
+import {
+  CLOSE_CODES,
+  GAME_ERROR_CODES,
+  type CommandResult,
+  type GameErrorCode,
+  type KickPayload,
+  type MovePayload,
+  type ShiftPayload,
+} from "@labyrinth/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { serverUrl } from "../config.ts";
 import { log, setLogContext } from "../logging/logger.ts";
@@ -46,6 +54,9 @@ export function createConnector(): Connector {
 
 export type SessionStatus = "idle" | "connecting" | "playing" | "error";
 
+/** Why the last game ended for this tab, when the start screen should say so. */
+export type EndReason = "kicked";
+
 /** After this long in "connecting" the UI explains that the server may be waking up. */
 export const SLOW_CONNECT_MS = 5_000;
 
@@ -69,8 +80,12 @@ export interface GameSession {
   shift(insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]): Promise<CommandResult | undefined>;
   /** Sends a move (the own square = stay). Resolves undefined without sending while another command is pending. */
   move(target: MovePayload): Promise<CommandResult | undefined>;
+  /** Kicks the current player once their time is up. Resolves undefined without sending while another command is pending. */
+  kick(seat: number): Promise<CommandResult | undefined>;
   /** Leaves the game (e.g. "Uusi peli" after it has finished) and returns to the start screen. */
   leave(): void;
+  /** Set when the server removed this tab from its game (kicked); cleared by play(). */
+  endReason?: EndReason;
   /** True while a command waits for the server. */
   pending: boolean;
   /** i18n key of the message for the last rejected command, shown for NOTICE_MS. */
@@ -91,6 +106,7 @@ export function useGameSession(connector?: Connector): GameSession {
   const pendingRef = useRef(false);
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState<NoticeKey>();
+  const [endReason, setEndReason] = useState<EndReason>();
 
   const getConnector = () => (connectorRef.current ??= createConnector());
 
@@ -114,6 +130,7 @@ export function useGameSession(connector?: Connector): GameSession {
       setLogContext({});
       setView(undefined);
       setStatus("idle");
+      if (code === CLOSE_CODES.KICKED) setEndReason("kicked");
       log.info("client.conn.lost", { room: room.roomId, code, final: true });
     });
     update(room.state);
@@ -144,6 +161,7 @@ export function useGameSession(connector?: Connector): GameSession {
 
   const play = useCallback(() => {
     setSlow(false);
+    setEndReason(undefined);
     setStatus("connecting");
     getConnector()
       .joinOrCreate()
@@ -163,7 +181,7 @@ export function useGameSession(connector?: Connector): GameSession {
   }, [notice]);
 
   /** Sends one command at a time; a rejection becomes a notice. */
-  const send = useCallback(async (cmd: "shift" | "move", payload: ShiftPayload | MovePayload) => {
+  const send = useCallback(async (cmd: "shift" | "move" | "kick", payload: ShiftPayload | MovePayload | KickPayload) => {
     const room = roomRef.current;
     if (!room || pendingRef.current) return undefined;
     pendingRef.current = true;
@@ -192,6 +210,7 @@ export function useGameSession(connector?: Connector): GameSession {
     [send],
   );
   const move = useCallback(({ row, col }: MovePayload) => send("move", { row, col }), [send]);
+  const kick = useCallback((seat: number) => send("kick", { seat }), [send]);
 
   const leave = useCallback(() => {
     const room = roomRef.current;
@@ -207,5 +226,5 @@ export function useGameSession(connector?: Connector): GameSession {
     });
   }, []);
 
-  return { status, view, slow: status === "connecting" && slow, play, shift, move, leave, pending, notice };
+  return { status, view, slow: status === "connecting" && slow, play, shift, move, kick, leave, endReason, pending, notice };
 }

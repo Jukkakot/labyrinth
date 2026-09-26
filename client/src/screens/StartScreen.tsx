@@ -10,7 +10,7 @@ import { BuildInfo } from "./BuildInfo.tsx";
 import styles from "./StartScreen.module.css";
 
 export interface StartScreenProps {
-  session: Pick<GameSession, "status" | "slow" | "play">;
+  session: Pick<GameSession, "status" | "slow" | "play" | "endReason">;
   /** The early server wake-up: Play stays disabled until it is over. */
   wake: ServerWake;
 }
@@ -18,7 +18,7 @@ export interface StartScreenProps {
 /** Start, connecting and join-error states before a game is shown. */
 export function StartScreen({ session, wake }: StartScreenProps) {
   const { t } = useTranslation();
-  const { status, slow, play } = session;
+  const { status, slow, play, endReason } = session;
 
   let content;
   if (status === "connecting") {
@@ -49,6 +49,7 @@ export function StartScreen({ session, wake }: StartScreenProps) {
         </Message>
         {/* Always mounted so screen readers announce the change. */}
         <div role="status" className={styles.wake}>
+          {endReason === "kicked" && <p className={styles.ended}>{t("start.kicked")}</p>}
           {waking && <p>{t("start.waking")}</p>}
           {waking && wake.slow && <p>{t("start.wakingSlow")}</p>}
           {wake.state === "failed" && <p>{t("start.wakeFailed")}</p>}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { movePayloadSchema, shiftPayloadSchema } from "./game-schema.js";
+import { kickPayloadSchema, movePayloadSchema, shiftPayloadSchema } from "./game-schema.js";
 
 describe("shiftPayloadSchema", () => {
   it("accepts every insertion point and rotation", () => {
@@ -29,5 +29,19 @@ describe("movePayloadSchema", () => {
     expect(movePayloadSchema.safeParse({ row: "1", col: 0 }).success).toBe(false);
     expect(movePayloadSchema.safeParse({ row: 1, col: 1, extra: 1 }).success).toBe(false);
     expect(movePayloadSchema.safeParse(null).success).toBe(false);
+  });
+});
+
+describe("kickPayloadSchema", () => {
+  it("accepts seats 1–4", () => {
+    expect(kickPayloadSchema.safeParse({ seat: 1 }).success).toBe(true);
+    expect(kickPayloadSchema.safeParse({ seat: 4 }).success).toBe(true);
+  });
+
+  it("rejects other seats, non-integers and extra fields", () => {
+    expect(kickPayloadSchema.safeParse({ seat: 0 }).success).toBe(false);
+    expect(kickPayloadSchema.safeParse({ seat: 5 }).success).toBe(false);
+    expect(kickPayloadSchema.safeParse({ seat: "1" }).success).toBe(false);
+    expect(kickPayloadSchema.safeParse({ seat: 1, extra: 1 }).success).toBe(false);
   });
 });

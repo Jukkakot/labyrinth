@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
 import { GameOverControls } from "../game/GameOverControls.tsx";
+import { KickControl } from "../game/KickControl.tsx";
 import { MoveControls } from "../game/MoveControls.tsx";
 import { PlayerStrip } from "../game/PlayerStrip.tsx";
 import { ShiftControls } from "../game/ShiftControls.tsx";
@@ -17,7 +18,7 @@ import { Screen } from "../ui/Screen.tsx";
 
 export interface GameScreenProps {
   view: GameView;
-  session: Pick<GameSession, "shift" | "move" | "leave" | "pending" | "notice">;
+  session: Pick<GameSession, "shift" | "move" | "kick" | "leave" | "pending" | "notice">;
 }
 
 /**
@@ -26,11 +27,12 @@ export interface GameScreenProps {
  * server uses); tapping it again or "Työnnä" sends it. Move step: tapping a
  * highlighted square moves there at once; "Jää paikalleen" stays. The viewer's
  * target is marked wherever its tile is; a finished game shows the result and
- * "Uusi peli".
+ * "Uusi peli". Once the current player's time is up, the others get the kick
+ * control instead of the (disabled) step controls, and anyone leaving is announced.
  */
 export function GameScreen({ view, session }: GameScreenProps) {
   const { t } = useTranslation();
-  const { shift, move, leave, pending, notice } = session;
+  const { shift, move, kick, leave, pending, notice } = session;
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
 
@@ -86,7 +88,32 @@ export function GameScreen({ view, session }: GameScreenProps) {
     const timer = setTimeout(() => setCollected(undefined), NOTICE_MS);
     return () => clearTimeout(timer);
   }, [collected]);
-  const message = notice ? t(notice) : collected ? t("progress.collected", { name: t(`treasures.${collected}`) }) : undefined;
+  // Announce a player leaving the running game (left, kicked or timed out; the reason is not synced).
+  const seatList = view.seats.map((s) => s.seat).join(",");
+  const [seenSeats, setSeenSeats] = useState({ list: seatList, finished: view.finished });
+  const [departed, setDeparted] = useState<number>();
+  if (seenSeats.list !== seatList || seenSeats.finished !== view.finished) {
+    const gone = seenSeats.list
+      .split(",")
+      .filter(Boolean)
+      .map(Number)
+      .find((seat) => !view.seats.some((s) => s.seat === seat));
+    if (gone !== undefined && !seenSeats.finished) setDeparted(gone);
+    setSeenSeats({ list: seatList, finished: view.finished });
+  }
+  useEffect(() => {
+    if (departed === undefined) return;
+    const timer = setTimeout(() => setDeparted(undefined), NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [departed]);
+
+  const message = notice
+    ? t(notice)
+    : collected
+      ? t("progress.collected", { name: t(`treasures.${collected}`) })
+      : departed !== undefined
+        ? t("progress.left", { seat: departed })
+        : undefined;
 
   return (
     <Screen start={<GameIdBadge roomId={view.roomId} />} end={<LanguageSwitcher />}>
@@ -102,6 +129,8 @@ export function GameScreen({ view, session }: GameScreenProps) {
       />
       {view.finished ? (
         <GameOverControls onNewGame={leave} />
+      ) : view.canKick ? (
+        <KickControl key={boardKey} seat={view.turnSeat} pending={pending} onKick={() => void kick(view.turnSeat)} />
       ) : view.step === "move" ? (
         <MoveControls
           spare={view.board.spare}

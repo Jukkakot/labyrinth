@@ -20,6 +20,10 @@ interface Turn {
   me?: object;
   other?: object;
   winnerSeat?: number;
+  turnDeadline?: number;
+  turnExpired?: boolean;
+  /** Player 2 has left: only my seat remains. */
+  otherGone?: boolean;
 }
 
 function view(turn: Turn = {}) {
@@ -28,12 +32,14 @@ function view(turn: Turn = {}) {
     spare: { id: board.spare.id, rotation: board.spare.rotation },
     players: new Map([
       ["me", { seat: 1, connected: true, ...(turn.mine ?? { row: 0, col: 0 }), ...turn.me }],
-      ["other", { seat: 2, connected: true, ...turn.other }],
+      ...(turn.otherGone ? [] : [["other", { seat: 2, connected: true, ...turn.other }] as const]),
     ]),
     turnSeat: turn.turnSeat ?? 1,
     lastInsertion: turn.lastInsertion ?? "",
     phase: turn.phase ?? "shift",
     winnerSeat: turn.winnerSeat ?? 0,
+    turnDeadline: turn.turnDeadline ?? 0,
+    turnExpired: turn.turnExpired ?? false,
   };
   return toGameView(state, "brave-otters-sing", "me")!;
 }
@@ -42,8 +48,9 @@ function setup(turn?: Turn, session: Partial<GameSession> = {}) {
   const shift = vi.fn<GameSession["shift"]>(async () => ({ ok: true }));
   const move = vi.fn<GameSession["move"]>(async () => ({ ok: true }));
   const leave = vi.fn<GameSession["leave"]>();
-  const utils = render(<GameScreen view={view(turn)} session={{ shift, move, leave, pending: false, ...session }} />);
-  return { shift, move, leave, ...utils };
+  const kick = vi.fn<GameSession["kick"]>(async () => ({ ok: true }));
+  const utils = render(<GameScreen view={view(turn)} session={{ shift, move, kick, leave, pending: false, ...session }} />);
+  return { shift, move, kick, leave, ...utils };
 }
 
 /** Where the board draws a tile: its translate in board units. */
@@ -152,7 +159,7 @@ describe("board-view › Tiles slide", () => {
       "brave-otters-sing",
       "me",
     )!;
-    rerender(<GameScreen view={synced} session={{ shift, move: vi.fn(), leave: vi.fn(), pending: false }} />);
+    rerender(<GameScreen view={synced} session={{ shift, move: vi.fn(), kick: vi.fn(), leave: vi.fn(), pending: false }} />);
 
     // The N1 preview is gone; the board is the synced one.
     expect(tilePosition(container, moving.id)).toBe(at(0, 1));
@@ -335,14 +342,14 @@ describe("board-view › Collected treasure announced", () => {
     const before = { cards: 6, found: [] as TreasureId[], target: "dragon" };
     const { rerender, leave, shift, move } = setup({ me: before });
     const next = view({ me: { cards: 6, found: ["dragon"], target: boardTreasure } });
-    rerender(<GameScreen view={next} session={{ shift, move, leave, pending: false }} />);
+    rerender(<GameScreen view={next} session={{ shift, move, kick: vi.fn(), leave, pending: false }} />);
     expect(screen.getByText("Löysit: lohikäärme")).toBeTruthy();
     expect(tileOnBoard(TILE_SET.find((t) => t.treasure === boardTreasure)!.id)!.getAttribute("data-target")).toBe("treasure");
   });
 
   it("another player's collection only updates their count", () => {
     const { rerender, leave, shift, move } = setup({ me: { cards: 6, found: [] }, other: { cards: 6, found: [] } });
-    rerender(<GameScreen view={view({ me: { cards: 6, found: [] }, other: { cards: 6, found: ["cat"] } })} session={{ shift, move, leave, pending: false }} />);
+    rerender(<GameScreen view={view({ me: { cards: 6, found: [] }, other: { cards: 6, found: ["cat"] } })} session={{ shift, move, kick: vi.fn(), leave, pending: false }} />);
     expect(screen.queryByText(/Löysit/)).toBeNull();
     expect(screen.getByRole("list", { name: "Pelaajat ja löydetyt aarteet" }).textContent).toContain("1/6");
   });
@@ -368,5 +375,62 @@ describe("board-view › Game result shown", () => {
     expect(document.querySelector("[data-winner-seat='2']")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Uusi peli" }));
     expect(leave).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("board-view › Kick control", () => {
+  it("Offer after the time is up: player 2 sees 'Poista pelaaja 1' instead of the step controls", () => {
+    // The viewer is seat 1 in these helpers, so make seat 2 the slow one.
+    setup({ turnSeat: 2, turnDeadline: Date.now() - 1, turnExpired: true });
+    expect(screen.getByText("Pelaajan 2 aika loppui")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Poista pelaaja 2" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Käännä laattaa" })).toBeNull();
+  });
+
+  it("Confirm before kicking: nothing is sent until Poista; Peru goes back", () => {
+    const { kick } = setup({ turnSeat: 2, turnExpired: true });
+    fireEvent.click(screen.getByRole("button", { name: "Poista pelaaja 2" }));
+    expect(screen.getByText("Poistetaanko pelaaja 2 pelistä?")).toBeTruthy();
+    expect(kick).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Peru" }));
+    expect(screen.getByRole("button", { name: "Poista pelaaja 2" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Poista pelaaja 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Poista" }));
+    expect(kick).toHaveBeenCalledExactlyOnceWith(2);
+  });
+
+  it("Not for the slow player: their own step controls stay", () => {
+    setup({ turnSeat: 1, turnExpired: true });
+    expect(screen.queryByRole("button", { name: /Poista pelaaja/ })).toBeNull();
+    expect(screen.getByText("Aika loppui")).toBeTruthy();
+  });
+
+  it("not before the time is up", () => {
+    setup({ turnSeat: 2, turnDeadline: Date.now() + 30_000 });
+    expect(screen.queryByRole("button", { name: /Poista pelaaja/ })).toBeNull();
+  });
+
+  it("Turn ends meanwhile: the confirmation disappears and nothing is sent", () => {
+    const { rerender, kick, shift, move, leave } = setup({ turnSeat: 2, turnExpired: true });
+    fireEvent.click(screen.getByRole("button", { name: "Poista pelaaja 2" }));
+    rerender(<GameScreen view={view({ turnSeat: 1, turnDeadline: Date.now() + 60_000 })} session={{ shift, move, kick, leave, pending: false }} />);
+    expect(screen.queryByText("Poistetaanko pelaaja 2 pelistä?")).toBeNull();
+    expect(kick).not.toHaveBeenCalled();
+  });
+});
+
+describe("board-view › Departures announced", () => {
+  it("Someone leaves: 'Pelaaja 2 poistui pelistä' and their chip is gone", () => {
+    const { rerender, kick, shift, move, leave } = setup();
+    rerender(<GameScreen view={view({ otherGone: true })} session={{ shift, move, kick, leave, pending: false }} />);
+    expect(screen.getByText("Pelaaja 2 poistui pelistä")).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Pelaajat ja löydetyt aarteet" }).querySelector("[data-seat='2']")).toBeNull();
+  });
+
+  it("leaving a finished game is not announced", () => {
+    const { rerender, kick, shift, move, leave } = setup({ phase: "finished", winnerSeat: 1 });
+    rerender(<GameScreen view={view({ phase: "finished", winnerSeat: 1, otherGone: true })} session={{ shift, move, kick, leave, pending: false }} />);
+    expect(screen.queryByText("Pelaaja 2 poistui pelistä")).toBeNull();
   });
 });

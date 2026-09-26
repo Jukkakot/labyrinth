@@ -24,6 +24,9 @@ export interface SyncedState {
   phase?: string;
   lastInsertion?: string;
   winnerSeat?: number;
+  /** Server epoch ms when the current turn's time runs out; 0 = no clock. */
+  turnDeadline?: number;
+  turnExpired?: boolean;
 }
 
 export interface SyncedPlayer {
@@ -77,6 +80,14 @@ export interface GameView {
   /** Seat of the winner; 0 while the game runs. */
   winnerSeat: number;
   finished: boolean;
+  /** Server epoch ms when the current turn's time runs out; 0 while no clock runs. */
+  turnDeadline: number;
+  /** The current turn's time is up (the server decides). */
+  turnExpired: boolean;
+  /** The current player's connection has dropped. */
+  turnDisconnected: boolean;
+  /** The viewer may kick the current player: seated, not on turn, time up, game running. */
+  canKick: boolean;
 }
 
 const isTreasure = (value: unknown): value is TreasureId => (TREASURES as readonly unknown[]).includes(value);
@@ -117,6 +128,8 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
   const isMyTurn = !finished && mySeat !== undefined && mySeat === turnSeat;
   const step: TurnStep = state.phase === "move" ? "move" : "shift";
   const me = seats.find((s) => s.isMe);
+  const current = seats.find((s) => s.seat === turnSeat);
+  const turnExpired = !finished && (state.turnExpired ?? false);
   return {
     roomId,
     board,
@@ -134,6 +147,10 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
         : undefined,
     winnerSeat,
     finished,
+    turnDeadline: finished ? 0 : (state.turnDeadline ?? 0),
+    turnExpired,
+    turnDisconnected: !finished && current !== undefined && !current.connected,
+    canKick: turnExpired && mySeat !== undefined && current !== undefined && mySeat !== turnSeat,
   };
 }
 

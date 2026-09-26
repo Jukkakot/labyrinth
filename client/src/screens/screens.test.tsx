@@ -142,3 +142,18 @@ describe("observability › Build times on the start screen", () => {
     expect(screen.getByText("Server dev")).toBeTruthy();
   });
 });
+
+describe("game-session › Kicked player informed", () => {
+  it("Kicked: the start screen explains why, and Play is available", () => {
+    const play = vi.fn();
+    render(<StartScreen session={{ status: "idle", slow: false, play, endReason: "kicked" }} wake={ready} />);
+    expect(screen.getByRole("status").textContent).toContain("Sinut poistettiin pelistä, koska vuorosi aika loppui.");
+    fireEvent.click(screen.getByRole("button", { name: "Pelaa" }));
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("no message without a reason", () => {
+    render(<StartScreen session={{ status: "idle", slow: false, play: vi.fn() }} wake={ready} />);
+    expect(screen.queryByText(/Sinut poistettiin/)).toBeNull();
+  });
+});

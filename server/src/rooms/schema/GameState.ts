@@ -38,5 +38,9 @@ export const GameState = schema({
   winnerSeat: t.uint8().default(0),
   /** Insertion id of the previous shift, or "" before the first one. */
   lastInsertion: t.string().default(""),
+  /** When the current turn's time runs out (server epoch ms); 0 while no clock runs. For the countdown only. */
+  turnDeadline: t.float64().default(0),
+  /** True once the current turn's time is up: from then on the other players may kick. */
+  turnExpired: t.boolean().default(false),
 });
 export type GameState = SchemaType<typeof GameState>;

@@ -288,3 +288,72 @@ describe("game-session › leave", () => {
     expect(loadToken()).toBeUndefined();
   });
 });
+
+describe("game-session › turn rules in the view model", () => {
+  const withPlayers = (players: [string, number, boolean][], turn: Partial<SyncedState>) => {
+    const state = syncedState({}, turn);
+    state.players = new Map(players.map(([id, seat, connected]) => [id, { seat, connected }]));
+    return state;
+  };
+
+  it("passes the deadline and expiry through; only other seated players may kick", () => {
+    const state = withPlayers([["me", 1, true], ["b", 2, true]], { turnSeat: 2, turnDeadline: 1234, turnExpired: true });
+    expect(toGameView(state, "r", "me")).toMatchObject({ turnDeadline: 1234, turnExpired: true, canKick: true });
+    expect(toGameView(state, "r", "b")!.canKick).toBe(false);
+    expect(toGameView(state, "r", "spectator")!.canKick).toBe(false);
+    const running = withPlayers([["me", 1, true], ["b", 2, true]], { turnSeat: 2, turnDeadline: 1234, turnExpired: false });
+    expect(toGameView(running, "r", "me")!.canKick).toBe(false);
+  });
+
+  it("no clock and no kick in a finished game", () => {
+    const state = withPlayers([["me", 1, true], ["b", 2, true]], { turnSeat: 2, phase: "finished", turnDeadline: 99, turnExpired: true });
+    expect(toGameView(state, "r", "me")).toMatchObject({ turnDeadline: 0, turnExpired: false, canKick: false });
+  });
+
+  it("knows when the current player's connection has dropped", () => {
+    const state = withPlayers([["me", 1, true], ["b", 2, false]], { turnSeat: 2 });
+    expect(toGameView(state, "r", "me")!.turnDisconnected).toBe(true);
+    expect(toGameView({ ...state, turnSeat: 1 }, "r", "me")!.turnDisconnected).toBe(false);
+  });
+});
+
+describe("game-session › kick", () => {
+  it("sends the seat; a rejection gives its notice", async () => {
+    const room = fakeRoom({ request: vi.fn(async () => ({ ok: false, code: "TURN_NOT_EXPIRED" })) });
+    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play());
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+
+    await act(async () => {
+      await result.current.kick(2);
+    });
+    expect(room.request).toHaveBeenCalledWith("kick", { seat: 2 });
+    expect(result.current.notice).toBe("errors.TURN_NOT_EXPIRED");
+  });
+
+  it("Kicked: close code 4100 returns to the start screen with the reason, cleared by Play", async () => {
+    let onLeave: (code: number) => void = () => {};
+    const room = fakeRoom({ onLeave: vi.fn((cb: (code: number) => void) => (onLeave = cb)) });
+    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play());
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+
+    act(() => onLeave(4100));
+    expect(result.current).toMatchObject({ status: "idle", endReason: "kicked" });
+    act(() => result.current.play());
+    expect(result.current.endReason).toBeUndefined();
+  });
+
+  it("an ordinary leave has no end reason", async () => {
+    let onLeave: (code: number) => void = () => {};
+    const room = fakeRoom({ onLeave: vi.fn((cb: (code: number) => void) => (onLeave = cb)) });
+    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play());
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    act(() => onLeave(4000));
+    expect(result.current.endReason).toBeUndefined();
+  });
+});

@@ -1,19 +1,24 @@
 import { randomInt } from "node:crypto";
 import { StateView } from "@colyseus/schema";
-import type { Client, CloseCode } from "colyseus";
-import { movePayloadSchema, shiftPayloadSchema, type TurnPhase } from "@labyrinth/protocol";
+import type { Client, CloseCode, Deferred } from "colyseus";
+import { CLOSE_CODES, kickPayloadSchema, movePayloadSchema, shiftPayloadSchema, type TurnPhase } from "@labyrinth/protocol";
 import {
   createBoard,
   dealTreasures,
+  DISCONNECT_LIMIT_SECONDS,
   isInsertionId,
   isReachable,
+  kickRejection,
   MAX_SEED,
+  nextSeat,
   reverseOf,
   settleMove,
   setupBoard,
   shiftBoard,
+  soleSurvivor,
   START_CORNERS,
   tileSpec,
+  TURN_TIME_LIMIT_SECONDS,
   type Board,
   type Rotation,
   type Square,
@@ -25,9 +30,10 @@ import { CommandRejection } from "./command.js";
 import { LoggedRoom } from "./LoggedRoom.js";
 import { GameState, Player, TileState } from "./schema/GameState.js";
 
-/** Seconds a dropped player's seat is held before they are removed. */
-const RECONNECT_WINDOW_SECONDS = 60;
 export const MAX_SEATS = 4;
+
+/** Why a player was taken out of the game (`player.removed`). */
+type RemovalReason = "left" | "kicked" | "timeout";
 
 const toTileState = (tile: Tile) => new TileState({ id: tile.id, rotation: tile.rotation });
 const toTile = (t: TileState): Tile => ({ id: t.id, kind: tileSpec(t.id).kind, rotation: t.rotation as Rotation });
@@ -42,11 +48,21 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
   maxClients = MAX_SEATS;
   state = new GameState();
 
+  /** Turn time limit; room tests shorten it. */
+  turnLimitMs = TURN_TIME_LIMIT_SECONDS * 1000;
+  /** How long a dropped player keeps their seat; room tests shorten it. */
+  disconnectLimitSeconds = DISCONNECT_LIMIT_SECONDS;
+
   /** Server-only: never part of the synced state. */
   private seed = 0;
   private dealSeed = 0;
   /** Treasure stack of each seat (index = seat − 1), dealt when the game is created. */
   private stacks: TreasureId[][] = [];
+  /** True once a shift was made with at least two players seated: from then on the last player left wins. */
+  private contested = false;
+  private turnTimer?: { clear(): void };
+  /** Seat holds of dropped players, by sessionId; rejecting one removes that player at once. */
+  private holds = new Map<string, Deferred<Client>>();
 
   messages = {
     shift: this.command("shift", shiftPayloadSchema, (client, { insertion, rotation }) => {
@@ -63,6 +79,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
       this.state.spare = toTileState(board.spare);
       players.forEach((player, i) => placePawn(player, pawns[i]!));
       this.state.lastInsertion = insertion;
+      if (players.length >= 2) this.contested = true;
       this.setPhase("move");
     }),
 
@@ -79,8 +96,32 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
         target: (player.target || undefined) as TreasureId | undefined,
       });
       if (outcome.collected) this.collect(player, outcome.collected);
-      if (outcome.won) this.finish(player.seat);
+      if (outcome.won) this.finish(player.seat, "home");
       else this.passTurn();
+    }),
+
+    kick: this.command("kick", kickPayloadSchema, (client, { seat }) => {
+      const kicker = this.state.players.get(client.sessionId);
+      if (!kicker) throw new CommandRejection("NOT_SEATED");
+      const code = kickRejection({
+        kicker: kicker.seat,
+        target: seat,
+        turnSeat: this.state.turnSeat,
+        expired: this.state.turnExpired,
+        finished: this.state.phase === "finished",
+      });
+      if (code) throw new CommandRejection(code, { target: seat });
+
+      const targetId = [...this.state.players.entries()].find(([, p]) => p.seat === seat)![0];
+      this.removePlayer(targetId, "kicked", kicker.seat);
+      // Then disconnect them: a dropped player's hold ends, a connected one is told why.
+      const hold = this.holds.get(targetId);
+      if (hold) {
+        this.holds.delete(targetId);
+        hold.reject(false);
+      } else {
+        this.clients.find((c) => c.sessionId === targetId)?.leave(CLOSE_CODES.KICKED);
+      }
     }),
   };
 
@@ -89,6 +130,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
     return {
       phase: this.state.phase,
       turnSeat: this.state.turnSeat,
+      turnExpired: this.state.turnExpired,
       lastInsertion: this.state.lastInsertion,
       pawn: current ? [current.row, current.col] : undefined,
     };
@@ -101,12 +143,30 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
     log.info("treasure.collected", this.logCtx(undefined, { seat: player.seat, treasure, found: player.found.length, cards: player.cards }));
   }
 
-  /** The winning move ends the game: no further turn, and quick play no longer joins this room. */
-  private finish(winner: number): void {
+  /** A win ends the game: no further turn, no clock, and quick play no longer joins this room. */
+  private finish(winner: number, reason: "home" | "lastPlayer"): void {
     this.state.winnerSeat = winner;
     this.setPhase("finished");
+    this.restartClock();
     void this.lock();
-    log.info("game.finished", this.logCtx(undefined, { winner }));
+    log.info("game.finished", this.logCtx(undefined, { winner, reason }));
+  }
+
+  /**
+   * The one way out of a running game (left, kicked, disconnected too long): pawn, stack and seat
+   * go; then the last player standing wins, or the turn passes if it was theirs.
+   */
+  private removePlayer(sessionId: string, reason: RemovalReason, by?: number): void {
+    const player = this.state.players.get(sessionId);
+    if (!player) return;
+    const { seat } = player;
+    this.state.players.delete(sessionId);
+    log.info("player.removed", this.logCtx(undefined, { player: sessionId, seat, reason, ...(by !== undefined && { by }) }));
+    if (this.state.phase === "finished") return;
+    const survivor = soleSurvivor([...this.state.players.values()].map((p) => p.seat));
+    if (this.contested && survivor !== undefined) this.finish(survivor, "lastPlayer");
+    else if (seat === this.state.turnSeat) this.passTurn();
+    else this.restartClock(true);
   }
 
   /** The board as the rules see it, rebuilt from the synced state. */
@@ -126,25 +186,37 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
 
   /** Gives the turn to the next taken seat clockwise (the same seat if alone, 0 if nobody is seated). */
   private passTurn(): void {
-    const from = this.state.turnSeat;
-    const taken = new Set([...this.state.players.values()].map((p) => p.seat));
-    let to = 0;
-    for (let step = 1; step <= MAX_SEATS; step++) {
-      const seat = ((from - 1 + step + MAX_SEATS) % MAX_SEATS) + 1;
-      if (taken.has(seat)) {
-        to = seat;
-        break;
-      }
-    }
-    this.setTurn(to);
+    this.setTurn(nextSeat([...this.state.players.values()].map((p) => p.seat), this.state.turnSeat));
   }
 
-  /** A new turn always starts with the shift step. */
+  /** A new turn always starts with the shift step and a fresh clock. */
   private setTurn(seat: number): void {
     const from = this.state.turnSeat;
     this.state.turnSeat = seat;
     this.state.phase = "shift";
     log.info("turn.changed", this.logCtx(undefined, { from, to: seat }));
+    this.restartClock();
+  }
+
+  /**
+   * Gives the current turn a fresh time limit, or none: in a finished game, with nobody on turn, or
+   * while only one player is seated (until the waiting room exists, a lone player waits for company).
+   * With `keepRunning`, a clock that already runs is left alone; it only stops if it no longer applies.
+   */
+  private restartClock(keepRunning = false): void {
+    const applies = this.state.phase !== "finished" && this.state.turnSeat !== 0 && this.state.players.size >= 2;
+    if (keepRunning && applies && this.state.turnDeadline !== 0) return;
+    this.turnTimer?.clear();
+    this.turnTimer = undefined;
+    this.state.turnExpired = false;
+    this.state.turnDeadline = 0;
+    if (!applies) return;
+    this.state.turnDeadline = Date.now() + this.turnLimitMs;
+    this.turnTimer = this.clock.setTimeout(() => {
+      this.turnTimer = undefined;
+      this.state.turnExpired = true;
+      log.info("turn.expired", this.logCtx(undefined, { seat: this.state.turnSeat }));
+    }, this.turnLimitMs);
   }
 
   /** The next step within the same turn. */
@@ -182,17 +254,18 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
     const player = new Player({ seat, row: corner.row, col: corner.col, cards: stack.length, target: stack[0] ?? "" });
     this.state.players.set(client.sessionId, player);
     this.showOwnPlayer(client, player);
-    // Until the waiting room exists, the first player to sit down starts.
+    // Until the waiting room exists, the first player to sit down starts; the clock starts with company.
     if (this.state.turnSeat === 0) this.setTurn(seat);
+    else this.restartClock(true);
   }
 
+  /** Consented leave, or a dropped player's hold ran out (a kicked player is already gone). */
   onLeave(client: Client, code?: CloseCode) {
     super.onLeave(client, code);
-    const seat = this.state.players.get(client.sessionId)?.seat;
-    this.state.players.delete(client.sessionId);
+    this.holds.delete(client.sessionId);
     client.view?.dispose();
-    if (this.state.phase === "finished") return;
-    if (seat !== undefined && seat === this.state.turnSeat) this.passTurn();
+    const player = this.state.players.get(client.sessionId);
+    if (player) this.removePlayer(client.sessionId, player.connected ? "left" : "timeout");
   }
 
   /**
@@ -201,12 +274,15 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
    */
   onDrop(client: Client, code?: CloseCode) {
     const player = this.state.players.get(client.sessionId);
-    if (player) player.connected = false;
-    this.holdSeat(client, code, RECONNECT_WINDOW_SECONDS);
+    // Already removed (kicked): nothing to hold; onLeave follows.
+    if (!player) return;
+    player.connected = false;
+    this.holds.set(client.sessionId, this.holdSeat(client, code, this.disconnectLimitSeconds));
   }
 
   onReconnect(client: Client) {
     super.onReconnect(client);
+    this.holds.delete(client.sessionId);
     const player = this.state.players.get(client.sessionId);
     if (player) {
       player.connected = true;

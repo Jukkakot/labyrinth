@@ -1,4 +1,4 @@
-import { Room, type Client, type CloseCode, type RoomException, type RoomOptions } from "colyseus";
+import { Room, type Client, type CloseCode, type Deferred, type RoomException, type RoomOptions } from "colyseus";
 import type { z } from "zod";
 import { log, type LogFields } from "../logging/logger.js";
 import { defineCommand } from "./command.js";
@@ -51,11 +51,16 @@ export abstract class LoggedRoom<T extends RoomOptions = RoomOptions> extends Ro
     log.info("player.left", this.logCtx(client, { code }));
   }
 
-  /** Unintended disconnect: holds the seat for `seconds` so the client can reconnect. */
-  protected holdSeat(client: Client, code: CloseCode | undefined, seconds: number): void {
+  /**
+   * Unintended disconnect: holds the seat for `seconds` so the client can reconnect.
+   * Rejecting the returned hold ends it early (the player is then gone for good).
+   */
+  protected holdSeat(client: Client, code: CloseCode | undefined, seconds: number): Deferred<Client> {
     log.info("player.dropped", this.logCtx(client, { code, holdSeconds: seconds }));
+    const hold = this.allowReconnection(client, seconds);
     // Outcome is routed to onReconnect() or onLeave(); the catch covers disposal.
-    this.allowReconnection(client, seconds).catch(() => {});
+    hold.catch(() => {});
+    return hold;
   }
 
   onReconnect(client: Client): void | Promise<void> {
