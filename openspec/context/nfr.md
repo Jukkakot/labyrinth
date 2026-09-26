@@ -57,6 +57,9 @@ Apply to every change. Designs and task lists must show how they are met.
 - Rules: unit tests; every spec scenario maps to at least one test, named after
   it. Invariants are also covered with fast-check property tests.
 - Server: room integration tests with @colyseus/testing.
+- Client: unit tests for logic (session hooks, view model, helpers). Screens get only a few
+  render tests for key interactions; layout and visuals are checked with the Playwright MCP UI
+  check, not with a render test per spec scenario.
 - E2E: for now one Playwright smoke test (Galaxy S24 profile): the app starts and Play
   shows the board. Feature behaviour is covered by unit tests and server room tests,
   not by per-feature E2E UI tests.

@@ -63,5 +63,16 @@ everything works and is final.
   extra work just to produce it; skip it when nothing user-visible changed.
 - Bug reports ("around 14:30 in game brave-otters-sing, X happened"): follow
   [docs/operations.md → Investigating a reported bug](../docs/operations.md#investigating-a-reported-bug).
-- UI checks: Playwright MCP `playwright-mobile` (Galaxy S24) by default.
-- Before committing: `npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client`.
+- UI checks: Playwright MCP `playwright-mobile` (Galaxy S24), **portrait only** by default. Check
+  landscape and a narrow desktop only when a change reshapes a layout (new screen, new layout
+  structure). This overrides the global "test every UI change in three sizes" rule for this
+  project. Save screenshots under `.playwright-mcp/` (git-ignored) and close the tabs you opened
+  when the check is done.
+- Before a UI check or E2E run, make sure the dev servers are the current code: `npm run dev` in
+  this repo is `tsx watch` + Vite (both reload by themselves); anything else listening on
+  2567/5173 (an old build, another checkout) must be stopped first. Check with PowerShell
+  `Get-NetTCPConnection -LocalPort 2567,5173 -State Listen` and the owning process command line.
+- Before committing, run the check chain **once**, right before the commit (not after every task
+  group; while working, run only the tests of the workspace you touch):
+  `npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client`.
+- Changes may be large (a whole roadmap item at once); the user prefers progress over small steps.

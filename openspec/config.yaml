@@ -38,9 +38,9 @@ rules:
   design:
     - Explain how the change meets openspec/context/nfr.md (logging, tests, limits).
   tasks:
-    - Each task group lands its own tests (rules unit, server integration, E2E where a critical path changes).
+    - Each task group lands its own tests (rules unit, server integration, E2E where a critical path changes). Client tests cover logic (session hooks, view model, helpers); screens get only a few render tests for key interactions, and the UI check covers the rest.
     - Rule logic goes to packages/rules before server or client wiring.
-    - The last task group updates the docs/ wiki pages the change affects (turning Planned sections into Implemented, adding new structure, environments or procedures) and, when the change delivers a roadmap item, marks it done in openspec/context/roadmap.md.
+    - The last task group updates the docs/ wiki pages the change affects (turning Planned sections into Implemented, adding new structure, flows, contracts, environments or procedures) and, when the change delivers a roadmap item, marks it done in openspec/context/roadmap.md. The wiki stays short - no function lists, UI texts or per-component behaviour; those live in code and specs.
 
 operations:
   apply:

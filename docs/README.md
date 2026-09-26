@@ -31,6 +31,6 @@ mobile first (Android primary). Everything you need to know about the solution s
 
 Every OpenSpec change updates the wiki pages its work affects, as part of its own task list, and
 archiving checks this (`openspec/config.yaml`). Write here what changes rarely (structure, flows,
-conventions, environments, procedures), not what changes constantly (function lists, APIs) —
-that stays in code and specs. Sections describing something not built yet are marked
+contracts, conventions, environments, procedures), not what changes constantly (function lists,
+APIs, UI texts, component behaviour) — that stays in code and specs. Keep pages short. Sections describing something not built yet are marked
 **Planned** with the roadmap item that delivers them.
