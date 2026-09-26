@@ -1,0 +1,124 @@
+# Spec Delta
+
+## Purpose
+
+Computer-controlled players: how the host seats and removes them, how they play their turns under
+the same rules as people, and how a game with bots ends when no person is left.
+
+## ADDED Requirements
+
+### Requirement: Adding and removing bots
+In the waiting room the host SHALL be able to seat a bot in any free seat and to remove a bot from
+its seat. A bot takes an ordinary seat: it gets that seat's start corner, pawn shape and colour, and
+counts as a seated player for the start and for the seat count. A bot MUST get the first name from
+Robo, Pixel, Byte, Nova that no other bot in the game has. Adding a bot MUST be rejected, without
+changing the game, when:
+- the sender has no seat: `NOT_SEATED`;
+- the sender is not the host: `NOT_HOST`;
+- the game is no longer in its waiting room: `WRONG_PHASE`;
+- the named seat is taken, or is being taken by a person who is joining right now: `SEAT_TAKEN`.
+
+Removing a bot MUST be rejected in the same way for `NOT_SEATED`, `NOT_HOST` and `WRONG_PHASE`, and
+with `NOT_A_BOT` when the named seat holds no bot. A removed bot's seat is free again. A bot is
+never the host.
+
+#### Scenario: Host adds a bot
+- **WHEN** the host, alone in the waiting room, adds a bot to seat 3
+- **THEN** everyone sees Robo in seat 3 marked as a bot, and the host may start the game
+
+#### Scenario: Second bot gets the next name
+- **WHEN** the host adds bots to seats 2 and 4
+- **THEN** seat 2 holds Robo and seat 4 holds Pixel
+
+#### Scenario: Guest tries to add a bot
+- **WHEN** a guest sends an add-bot for a free seat
+- **THEN** it is rejected with `NOT_HOST` and the waiting room is unchanged
+
+#### Scenario: Seat already taken
+- **WHEN** the host adds a bot to the seat a guest sits in
+- **THEN** it is rejected with `SEAT_TAKEN`
+
+#### Scenario: Host removes a bot
+- **WHEN** the host removes the bot in seat 3
+- **THEN** seat 3 is free again for everyone
+
+#### Scenario: Removing a person
+- **WHEN** the host sends a remove-bot for a seat held by a person
+- **THEN** it is rejected with `NOT_A_BOT` and that person keeps the seat
+
+#### Scenario: No bots after the start
+- **WHEN** the host sends an add-bot after the game has started
+- **THEN** it is rejected with `WRONG_PHASE`
+
+#### Scenario: A person joins where a bot was
+- **WHEN** the host removes the bot in seat 2 and a new player joins
+- **THEN** the new player gets seat 2
+
+### Requirement: Bots play their turns
+When a bot becomes the current player, it SHALL play its turn by itself under the same rules as a
+person: first a shift, then a move. It MUST wait about 1.5 seconds before the shift and about 1
+second between the shift and the move, so the people in the game can follow what it does. Its
+commands MUST be checked exactly like a person's. A bot MUST always finish its turn: if an action
+it chose were rejected, it MUST instead make an allowed shift and then stay. A bot never kicks
+anyone, and its connection never drops. A bot's current target stays secret like everyone else's.
+
+#### Scenario: Bot's turn
+- **WHEN** the turn passes to a bot
+- **THEN** after a short pause the bot's shift slides the tiles, after another short pause its pawn walks, and the turn passes on
+
+#### Scenario: Bot starts the game
+- **WHEN** a game starts and the bot in seat 2 is chosen to begin
+- **THEN** the bot plays its first turn without anyone doing anything
+
+#### Scenario: Bot target stays secret
+- **WHEN** a person looks at a game with a bot
+- **THEN** they can see how many treasures the bot has found and has left, but not the bot's current target
+
+### Requirement: Bot turn choice
+A bot SHALL choose its turn from every allowed shift (every insertion point except the forbidden
+reverse, and every rotation of the spare tile). If some shift lets it reach its current target, the
+target tile or its start corner when every treasure is found, it MUST pick such a shift and move
+onto the target. Otherwise it MUST pick the shift and reachable square that leave its pawn as close
+as possible to the target, counting rows plus columns; a target pushed out onto the spare tile is
+treated as out of reach for that shift. Among equally good choices it picks at random, and the
+choice MUST be reproducible from the game's recorded seed. A game among bots only MUST always come
+to an end.
+
+#### Scenario: Target reachable this turn
+- **WHEN** a shift exists after which the bot's target tile is connected to its pawn
+- **THEN** the bot makes such a shift and moves onto the target tile, collecting the treasure
+
+#### Scenario: Target out of reach
+- **WHEN** no shift connects the bot's pawn to its target
+- **THEN** the bot ends its move on a reachable square that is as close to the target as any choice allows
+
+#### Scenario: Never the forbidden reverse
+- **WHEN** the previous player pushed in at N1
+- **THEN** the bot does not push in at S1
+
+#### Scenario: Heading home
+- **WHEN** the bot has found all its treasures and its start corner can be reached after some shift
+- **THEN** the bot moves home and wins
+
+#### Scenario: Bots finish a game
+- **WHEN** four bots play a game from the start
+- **THEN** one of them wins after a bounded number of turns
+
+### Requirement: Game ends without people
+A started game SHALL end as soon as no person is left in it (every person has left, been kicked or
+been removed after a long disconnect), whatever bots remain; bots MUST NOT play on alone and MUST
+NOT be declared the winner in that case. While at least one person is in the game, a person
+leaving MUST be handled as before: the last player standing, person or bot, wins, and otherwise the
+game goes on with the bots.
+
+#### Scenario: Solo player leaves a bot game
+- **WHEN** the only person in a game with two bots leaves
+- **THEN** the game ends without a winner and nothing more happens in it
+
+#### Scenario: One of two people leaves
+- **WHEN** two people and a bot are playing and one person leaves
+- **THEN** the game goes on between the remaining person and the bot
+
+#### Scenario: Person kicks the only bot
+- **WHEN** a person and a bot remain, the bot's turn time is up and the person kicks it
+- **THEN** the person wins as the last player standing
