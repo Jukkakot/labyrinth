@@ -7,3 +7,6 @@ export const RULES_VERSION = "0.1.0";
 export * from "./geometry.js";
 export * from "./tile.js";
 export * from "./board.js";
+export * from "./rng.js";
+export * from "./tileSet.js";
+export * from "./setup.js";

@@ -122,6 +122,38 @@ fixed squares, connections).
 - **Test fixtures**: `@labyrinth/rules/testing` — `boardFromRows(["L90 I0 T0 …" × 7], "I0")`
   (ids assigned row-major, spare = 49), `uniformBoard()`, `withTile()`.
 
+### Tile set, treasures and setup — Implemented
+
+Spec: `openspec/specs/board-setup/`. Code: `packages/rules/src/tileSet.ts`, `rng.ts`, `setup.ts`.
+
+- **One static catalogue** `TILE_SET` (50 tiles). Each id has the same kind and treasure in every
+  game, so only positions, rotations and the seed are per game:
+
+  | Ids | Tiles | Treasures |
+  |---|---|---|
+  | 0–15 | fixed, row-major over the fixed squares (0, 3, 12, 15 = start corners) | objects on the 12 fixed T-junctions |
+  | 16–27 | movable straight | — |
+  | 28–43 | movable corners | creatures on 28–33 |
+  | 44–49 | movable T-junctions | creatures |
+
+- **Treasures** (`TREASURES`, `TreasureId`): 24 own names (objects: `crown` … `chest`;
+  creatures: `dragon` … `troll`), not the original game's. `treasureOf(tileId)`.
+- **Fixed layout** (`FIXED_LAYOUT`), as in the original game (checked against the physical game):
+
+  ```
+  row 0   ┌  ┬  ┬  ┐      start corners open inward,
+  row 2   ├  ├  ┬  ┤      edge T-junctions closed toward the edge,
+  row 4   ├  ┴  ┤  ┤      inner four closed W (2,2), N (2,4), E (4,4), S (4,2)
+  row 6   └  ┴  ┴  ┘
+  ```
+
+- **`setupBoard(seed)`**: seed = integer 0…2³²−1 → pure-rand `xoroshiro128plus` → Fisher–Yates
+  shuffle of the 34 movable ids → 33 movable squares row-major, last one is the spare → one
+  rotation draw per tile. Same seed ⇒ same board; the draw order is a contract pinned by the
+  golden test in `setup.test.ts` (seed 1). Changing it is a deliberate, visible change.
+- **`boardToText(board)`** (`@labyrinth/rules/testing`): box-drawing text of a board, fixed squares
+  in brackets, plus the spare — use it in tests and bug reports.
+
 ### Shifting — Planned (`tile-shift`)
 
 - Rows/cols 1, 3, 5 are pushable → 12 insertion points named by entry side + index (`N1` pushes

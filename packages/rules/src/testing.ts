@@ -1,6 +1,6 @@
 import { BOARD_SIZE } from "./geometry.js";
-import { createBoard, type Board } from "./board.js";
-import type { Rotation, Tile, TileKind } from "./tile.js";
+import { createBoard, isFixed, type Board } from "./board.js";
+import { openings, type Rotation, type Tile, type TileKind } from "./tile.js";
 
 const KIND_BY_LETTER: Record<string, TileKind> = { I: "straight", L: "corner", T: "tee" };
 
@@ -38,4 +38,36 @@ export function uniformBoard(token = "I0"): Board {
 export function withTile(board: Board, index: number, token: string): Board {
   const squares = board.squares.map((t, i) => (i === index ? parseToken(token, t.id) : t));
   return createBoard({ squares, spare: board.spare });
+}
+
+const GLYPHS: Record<string, string> = {
+  NS: "│", EW: "─", NE: "└", ES: "┌", SW: "┐", NW: "┘",
+  NES: "├", NSW: "┤", ESW: "┬", NEW: "┴",
+};
+
+/** One box-drawing glyph for a tile's openings. */
+export function tileGlyph(tile: Tile): string {
+  return GLYPHS[openings(tile).join("")] ?? "?";
+}
+
+/**
+ * Readable text of a board for tests, logs and bug reports: one glyph per
+ * square showing its openings, fixed squares in brackets, then the spare.
+ *
+ * ```
+ * [┌] ─  [┬] …
+ * ```
+ */
+export function boardToText(board: Board): string {
+  const lines: string[] = [];
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    const cells: string[] = [];
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      const glyph = tileGlyph(board.squares[row * BOARD_SIZE + col]!);
+      cells.push(isFixed({ row, col }) ? `[${glyph}]` : ` ${glyph} `);
+    }
+    lines.push(cells.join(""));
+  }
+  lines.push(`spare: ${tileGlyph(board.spare)} (tile ${board.spare.id})`);
+  return lines.join("\n");
 }

@@ -73,3 +73,13 @@ So the start corners are (0,0) 90°, (0,6) 180°, (6,6) 270° and (6,0) 0°. Tes
 - [The fixed layout comes from our reading of the original game; the inner T-junctions in particular] → The spec shows it as a diagram for the user to check against the physical game before implementation. The data table is the single place to fix it.
 - [Golden test ties the implementation to one draw order] → Intended: reproducibility is a requirement. Any change to it must update the golden test consciously.
 - [pure-rand major versions changed its API before] → Pinned to `^8`. The RNG sits behind `createRng`, so a swap touches one file and the golden test.
+
+## Implementation notes
+
+- The golden board of seed 1 was checked against the spec diagram: fixed squares read
+  row 0 `┌ ┬ ┬ ┐`, row 2 `├ ├ ┬ ┤`, row 4 `├ ┴ ┤ ┤`, row 6 `└ ┴ ┴ ┘`; the user confirmed the
+  inner four T-junctions against the physical game before implementation.
+- Extra exports used by tests and later changes: `MOVABLE_TILE_IDS`, `fixedSquareOf(id)`,
+  `FIXED_TILE_COUNT`, `TILE_COUNT`, `isValidSeed`, `MAX_SEED`, `tileGlyph`.
+- Tree-shaking keeps the new rules code out of the client bundle until the client uses it
+  (bundle unchanged at 90.9 kB gzip).
