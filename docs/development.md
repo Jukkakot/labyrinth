@@ -18,6 +18,7 @@ Run before every commit (CI runs the same):
 
 ```
 npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client
+npm run e2e   # smoke test, when UI or connection code changed
 ```
 
 - Lint: oxlint (root `.oxlintrc.json`). No formatter.
@@ -32,7 +33,17 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run size -
 | Rules | Vitest; fast-check properties over random boards (`boardArb` in `board.test.ts`); test names follow spec scenarios (`board › Rotation › Rotating a corner`) | Implemented |
 | Server | Vitest + @colyseus/testing (real rooms, SDK clients in-process); `captureLogs()` asserts log lines | Implemented |
 | Client | Vitest; jsdom + Testing Library for components (`// @vitest-environment jsdom`) | Implemented |
-| E2E | Playwright, Galaxy S24 profile, two players in two contexts | Planned (`show-board`) |
+| E2E | Playwright, Galaxy S24 profile — **one smoke test** for now (app starts, Play shows the whole board, fits 360×780) | Implemented |
+
+### E2E smoke
+
+- `npm run e2e` starts the dev server and client (or reuses running ones) and runs
+  `e2e/tests/smoke.spec.ts` on the Galaxy S24 profile.
+- Each test plays in its own quick-play pool (`?pool=…`), so runs never share games.
+- On failure: screenshot and trace in `e2e/test-results/` (`npx playwright show-trace …`); CI
+  uploads them as the `playwright-report` artifact. Check `logs/dev.log` for the `client.error`
+  line — that is how the empty-state bug was found.
+- Scope: smoke only. Feature behaviour belongs in unit and room tests.
 
 ## Debugging — Implemented
 

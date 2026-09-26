@@ -16,8 +16,18 @@
 
 ## Release flow — Implemented
 
-commit → push to `main` → CI (lint, typecheck, test, build) → Pages deploy (client) and Render
-deploy (server, only after green CI). No staging environment.
+commit (Claude, locally) → **the user pushes** to `main` → CI (lint, typecheck, tests, build, bundle
+size, E2E smoke) → Pages deploy (client) and Render deploy (server, only after green CI). No staging
+environment.
+
+### After a deploy (manual checks)
+
+1. Open https://jukkakot.github.io/labyrinth/ on the phone (or Playwright MCP `playwright-mobile`)
+   and tap Pelaa; the first request may take about a minute if the server was asleep.
+2. Open the same page in a second tab or device, Pelaa → same game id, two pawns.
+3. Tap the game id → "Kopioitu".
+4. In Render logs (`list_logs`, text = the game id) find `game.setup`; its seed reproduces the
+   shown board: `boardToText(setupBoard(seed))`.
 
 ## Configuration — Implemented
 

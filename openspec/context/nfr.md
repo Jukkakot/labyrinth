@@ -57,8 +57,9 @@ Apply to every change. Designs and task lists must show how they are met.
 - Rules: unit tests; every spec scenario maps to at least one test, named after
   it. Invariants are also covered with fast-check property tests.
 - Server: room integration tests with @colyseus/testing.
-- E2E: Playwright smoke tests with the Galaxy S24 device profile in CI for critical paths
-  (start game, shift, move), extended as those paths are built.
+- E2E: for now one Playwright smoke test (Galaxy S24 profile): the app starts and Play
+  shows the board. Feature behaviour is covered by unit tests and server room tests,
+  not by per-feature E2E UI tests.
 - Further testing practices (bot simulations, a11y checks, coverage limits,
   visual regression) are decided when there is something to test; visual
   regression is out for now.
@@ -79,7 +80,8 @@ Apply to every change. Designs and task lists must show how they are met.
 - No analytics, no cookies, no consent banner.
 
 ## Development workflow
-- Commit directly to main; CI guards it and Render deploys only after green CI.
+- Claude commits locally; the user pushes and deploys manually (early phase). CI guards
+  main and Render deploys only after green CI.
 - No code formatter; oxlint only.
 - Dependencies are updated manually (no Renovate/Dependabot).
 

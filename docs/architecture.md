@@ -84,19 +84,51 @@ builds first.
   screen) log `client.error`. `setLogContext({ room, player })` tags entries with the game.
 - Build version `VITE_APP_VERSION` = short commit (set in CI and the Pages deploy).
 
-## State sync principle — Planned (`show-board`)
+### Client structure — Implemented
 
-- The server syncs only authoritative facts that cannot be derived: tile ids and rotations per
-  square and spare, last insertion, pawn squares, phase, current player, turn deadline, found
-  treasures, player flags, result. Tile kinds and treasures per tile are static per game and sent
-  once.
+```
+client/src/
+  App.tsx              StartScreen until playing, then GameScreen
+  screens/             StartScreen (idle / connecting / error), GameScreen
+  session/             useGameSession (quick play, per-tab rejoin), viewModel (state → Board + seats)
+  game/                Board, TileView, Pawn, SpareTile, GameIdBadge, treasureIcons
+  ui/                  tokens.css + shared components: Screen, Message, Button, Badge, LanguageSwitcher
+  logging/ i18n/ config.ts CrashBoundary.tsx
+```
+
+- **UI foundation:** every colour, spacing step and radius is a token in `ui/tokens.css` (light and
+  dark). Components use CSS Modules; anything shown in two places is a shared component (`Screen`
+  page frame, `Message` title/text/action, `Button` primary/secondary ≥ 44 px, `Badge`).
+- **Board rendering:** one SVG, 100 units per tile, corridor style — rounded tile, corridor arms
+  from the centre to each open side, Tabler treasure icon (`game/treasureIcons.ts`, typed over
+  every `TreasureId`). Fixed tiles: darker fill plus a corner notch. Corridors are clipped at the
+  board edge. Pawns: seat colour (Okabe–Ito tokens `--seat-1…4`) + shape (circle, square,
+  triangle, diamond), own pawn with a dashed ring.
+- **Quick play:** `joinOrCreate("game", { pool? })`; `?pool=…` in the URL keeps a group of players
+  (or an E2E test) in their own games. While connecting the start screen says so, and after 5 s
+  adds that the server may be waking up.
+
+## State sync principle — Implemented (board, seats); rest Planned
+
+- Synced today (`server/src/rooms/schema/GameState.ts`):
+  `players: map<sessionId, { connected, seat 1–4 }>`, `squares: array<{ id, rotation }>` (49,
+  row-major), `spare: { id, rotation }`. The client rebuilds a rules `Board` from these plus the
+  static `TILE_SET` (`client/src/session/viewModel.ts`). The seed is a private room field, logged
+  as `game.setup`, never synced.
+- Still to come with their changes: last insertion, pawn squares, phase, current player, turn
+  deadline, found treasures, result. Tile kinds and treasures are static per tile id, so they are
+  never synced.
 - The client derives everything else with `@labyrinth/rules` (openings, reachable squares, slide
   animations from tile-id diffs, seat colour/shape).
 - UI-only state (shift preview, spare rotation before sending, settings) never crosses the
   network. The seed stays on the server. Don't optimise beyond this; Colyseus sends only deltas.
-- **Hidden information:** a player's current target goes only to that player and spectators
+- **Hidden information — Planned (`treasures-and-win`):** a player's current target goes only to that player and spectators
   (Colyseus StateView).
-- **Client identity:** Colyseus reconnection token in sessionStorage — one player per tab.
+- **Client identity — Implemented:** the Colyseus reconnection token is kept in sessionStorage
+  (`labyrinth.session`) — one player per tab; a reload rejoins the same seat, a failed rejoin
+  clears the token and shows the start screen.
+- **Seats — Implemented:** lowest free seat 1–4 on join; seat → start corner clockwise from the
+  top-left; `maxClients = 4`, so quick play opens a new game when every game is full.
 
 ## Board model — Implemented
 
@@ -137,7 +169,7 @@ Spec: `openspec/specs/board-setup/`. Code: `packages/rules/src/tileSet.ts`, `rng
   | 44–49 | movable T-junctions | creatures |
 
 - **Treasures** (`TREASURES`, `TreasureId`): 24 own names (objects: `crown` … `chest`;
-  creatures: `dragon` … `troll`), not the original game's. `treasureOf(tileId)`.
+  creatures: `dragon` … `deer`), not the original game's. `treasureOf(tileId)`.
 - **Fixed layout** (`FIXED_LAYOUT`), as in the original game (checked against the physical game):
 
   ```

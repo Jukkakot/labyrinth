@@ -23,14 +23,15 @@
 
 ## 5. E2E
 
-- [x] 5.1 Create the `e2e` workspace (Playwright, Galaxy S24 project, webServer for server and client) and tests: quick play shows 49 tiles, spare and game id; two contexts join the same game and each sees both pawns with their own marked; reload keeps the seat; the board fits 360×780 without horizontal scroll; verify `npm run e2e` passes locally
-- [ ] 5.2 Add the `e2e` CI job (install chromium, run, upload report on failure); verify a green CI run
+- [x] 5.1 Create the `e2e` workspace (Playwright, Galaxy S24 project, webServer for server and client) with one smoke test: the app starts and quick play shows 49 tiles, the spare, the own pawn and the game id (scope reduced by the user: E2E is smoke-only for now; seats, rejoin and pools are covered by server room tests and session unit tests); verify `npm run e2e` passes locally
+- [x] 5.2 Add the `e2e` CI job (install chromium, run, upload report on failure); verify the job ran green on CI (run 36251044390, e2e: success)
 
 ## 6. Production check
 
-- [ ] 6.1 After deploy, play on https://jukkakot.github.io/labyrinth/ with Playwright MCP (Galaxy S24, two tabs): board shown, same board in both, badge copy works; find the game's `game.setup` line in Render logs and confirm `setupBoard(seed)` reproduces the shown board; verify with screenshots
-- [ ] 6.2 Investigate `room.leave()` through Render's proxy (design §10) and record the finding in `docs/operations.md`
+Moved out of this change (the user now deploys manually):
+- Production check on Pages/Render: listed for the user in the wiki (`docs/operations.md` → After a deploy).
+- `room.leave()` through Render's proxy: investigated in `lobby`, which adds the first leave action.
 
 ## 7. Wiki
 
-- [ ] 7.1 Update `docs/architecture.md` (State sync principle and client identity → Implemented with the actual schema, client structure, UI foundation and component rule, treasure icons) and `docs/development.md` (E2E: how to run, where reports go); mark `show-board` done in `openspec/context/roadmap.md`; verify links resolve
+- [x] 7.1 Update `docs/architecture.md` (State sync principle and client identity → Implemented with the actual schema, client structure, UI foundation and component rule, treasure icons) and `docs/development.md` (E2E: how to run, where reports go); mark `show-board` done in `openspec/context/roadmap.md`; verify links resolve

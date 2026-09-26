@@ -136,3 +136,6 @@ If the cause is client-side, it is handled when `lobby` adds a leave action. Not
   Fixed by treating a not-yet-decoded state as "no board yet" (unit test added).
 - **Board edge:** corridors open toward the board edge are clipped to the tiles' outer edge
   (`clipPath`), found in the Galaxy S24 screenshots.
+- **Scope change during apply (user decision):** E2E is a single smoke test for now (§9 test list
+  reduced). Production checks and the `room.leave()` investigation (§10) are no longer part of
+  this change: the user deploys manually, and the leave investigation moves to `lobby`.

@@ -24,7 +24,8 @@ initiative whenever they fit; do not wait to be asked. When unsure whether one f
 
 ## Working agreements
 
-- Push to `main` yourself after green checks when a deploy is needed.
+- Work locally: commit, but do not push, wait for CI or deploy. The user pushes and deploys
+  manually; list any production checks for them in the summary instead.
 - Bug reports ("around 14:30 in game brave-otters-sing, X happened"): follow
   [docs/operations.md → Investigating a reported bug](../docs/operations.md#investigating-a-reported-bug).
 - UI checks: Playwright MCP `playwright-mobile` (Galaxy S24) by default.
