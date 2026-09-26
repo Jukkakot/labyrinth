@@ -1,44 +1,38 @@
 schema: spec-driven
 
 context: |
-  Product: "Labyrinth" – a web multiplayer clone of the board game
-  Ravensburger "Das verrückte Labyrinth" (Finnish: Muuttuva labyrintti).
-  Players shift a row/column of the 7x7 board with the spare tile, then move
-  their pawn along connected paths to collect treasures. Future: computer
-  (bot) players can play alongside humans.
+  Labyrinth: web multiplayer clone of Ravensburger "Das verrückte Labyrinth"
+  (fi: Muuttuva labyrintti), original rules, humans and bots, mobile first.
 
-  Architecture (npm workspaces monorepo, TypeScript everywhere):
-  - packages/rules  (@labyrinth/rules): pure, deterministic game logic shared by
-    server and client. No dependencies on React, Colyseus or I/O. All
-    randomness comes from an injected seed so games and bugs are reproducible.
-  - server (@labyrinth/server): Colyseus 0.18 on Node 22. Authoritative: every
-    command is validated against the current phase and state and rejected with
-    a clear error code when invalid; the client is never trusted. One Room per
-    game, many concurrent games. Game state is in memory only (lost on
-    restart/deploy); persistence is out of scope until explicitly added. Bots
-    must go through the same command validation as human players.
-  - client (@labyrinth/client): React 19 + Vite, mobile-first web UI (mobile
-    portrait is the primary target, desktop must also work). Uses
-    @labyrinth/rules for previews/highlights, but the server state is the
-    source of truth.
+  Monorepo (npm workspaces, TypeScript):
+  - packages/rules: pure deterministic game logic (seeded randomness), shared
+    by server and client. No React, Colyseus or I/O.
+  - server: Colyseus on Node 22. Authoritative: invalid commands are rejected
+    with an error code and never change state. In-memory rooms only.
+  - client: React + Vite, mobile portrait first. Server state is the truth.
 
-  Conventions:
-  - All code, identifiers, file and package names are in English.
-  - UI text is Finnish first with English as the alternative; every
-    user-visible string goes through i18next (client/src/i18n/locales).
-  - Prefer established third-party libraries over hand-written plumbing; only
-    game rules are our own code.
-  - Tests: Vitest in every workspace. Spec scenarios map to tests in
-    packages/rules; server rooms are tested with @colyseus/testing.
-  - Interactive elements are at least 44x44 px.
-  - Hosting: client on GitHub Pages, server on Render; both deploy on push to
-    main via CI.
+  Always: English identifiers and names; UI text Finnish first + English via
+  i18next; prefer established libraries over hand-written plumbing; minimalist
+  UI; tap targets ≥44 px; budget 0 €.
+
+  Read the relevant files before writing artifacts (an existing spec in
+  openspec/specs wins over these):
+  - openspec/context/product.md: game rules, modes, lobby, UX decisions
+    → proposals and specs for any gameplay, lobby or UI change
+  - openspec/context/architecture.md: board coordinates, phases, commands,
+    bots, hidden information → any design touching game state or commands
+  - openspec/context/nfr.md: logging/audit, testing, abuse protection,
+    versioning, hosting limits → every design and task list
+  - openspec/context/roadmap.md: planned change order → when choosing or
+    scoping the next change
 
 rules:
   proposal:
     - State which workspaces (rules, server, client) the change touches.
   specs:
     - Specs describe game rules and observable behavior, never library or class names.
+  design:
+    - Explain how the change meets openspec/context/nfr.md (logging, tests, limits).
   tasks:
-    - Each task group lands its own Vitest tests.
+    - Each task group lands its own tests (rules unit, server integration, E2E where a critical path changes).
     - Rule logic goes to packages/rules before server or client wiring.
