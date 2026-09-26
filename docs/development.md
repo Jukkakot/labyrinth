@@ -39,6 +39,10 @@ npm run e2e   # smoke test, when UI or connection code changed
 
 - `npm run e2e` starts the dev server and client (or reuses running ones) and runs
   `e2e/tests/smoke.spec.ts` on the Galaxy S24 profile.
+- It reuses **whatever** listens on 2567/5173, e.g. a VS Code debug server started from an older
+  build. When that is not the current code, stop it first, or run the server with `PORT=2600` and
+  the client with `VITE_SERVER_URL=http://localhost:2600 npx vite --port 5180` and point
+  Playwright's `baseURL` there.
 - Each test plays in its own quick-play pool (`?pool=…`), so runs never share games.
 - On failure: screenshot and trace in `e2e/test-results/` (`npx playwright show-trace …`); CI
   uploads them as the `playwright-report` artifact. Check `logs/dev.log` for the `client.error`

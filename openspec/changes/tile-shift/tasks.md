@@ -18,8 +18,8 @@
 - [x] 4.1 Extend the view model and `useGameSession` (turn info, `shift()` via `request`, `pending`, `notice` with 4 s timeout); verify unit tests with a fake room (accepted → no notice, rejected → notice key, pending blocks a second shift)
 - [x] 4.2 Add `ui/Notice`, `game/TurnLine`, and fi/en strings (`turn.*`, `shift.*`, `errors.*`); verify component tests (own turn / other player's turn with name and shape, notice text for `REVERSE_PUSH_FORBIDDEN`) and locale parity
 - [x] 4.3 Add board shift targets (edge arrows, keyboard, disabled reverse), `ShiftControls` (spare, rotate, Työnnä, Peru, hint) and the preview/confirm flow in `GameScreen`; slide transitions in `TileView`; verify component tests for the `board-view` scenarios (preview then confirm sends once, change of mind, rotate twice → 180°, reverse arrow disabled, controls disabled on others' turn)
-- [ ] 4.4 Visual check on Galaxy S24 (light and dark): own turn with preview, other's turn; verify screenshots and that the E2E smoke test still passes; bundle budget passes
+- [x] 4.4 Visual check on Galaxy S24 (light and dark): own turn with preview, other's turn; verify screenshots and that the E2E smoke test still passes; bundle budget passes
 
 ## 5. Wiki
 
-- [ ] 5.1 Update `docs/architecture.md` (shift rule and insertion naming, turn model, command pattern example with the `shift` command, client interaction and animation) and mark `tile-shift` done in `openspec/context/roadmap.md`; verify links resolve
+- [x] 5.1 Update `docs/architecture.md` (shift rule and insertion naming, turn model, command pattern example with the `shift` command, client interaction and animation) and mark `tile-shift` done in `openspec/context/roadmap.md`; verify links resolve

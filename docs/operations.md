@@ -26,8 +26,11 @@ environment.
    and tap Pelaa; the first request may take about a minute if the server was asleep.
 2. Open the same page in a second tab or device, Pelaa → same game id, two pawns.
 3. Tap the game id → "Kopioitu".
-4. In Render logs (`list_logs`, text = the game id) find `game.setup`; its seed reproduces the
-   shown board: `boardToText(setupBoard(seed))`.
+4. In the first tab tap an edge arrow, then "Työnnä" → the line slides in both tabs and the
+   second tab says "Sinun vuorosi – työnnä laatta".
+5. In Render logs (`list_logs`, text = the game id) find `game.setup`; its seed reproduces the
+   starting board: `boardToText(setupBoard(seed))`. Each `cmd.accepted` `shift` line then replays
+   one shift with `shiftBoard`.
 
 ## Configuration — Implemented
 
@@ -67,6 +70,8 @@ timestamp. Read them in the Render dashboard (service → Logs) or with Render M
 | `http.request` | every HTTP request incl. matchmaking (`/health` only at debug) |
 | `room.created` / `room.disposed` / `room.error` | room lifecycle, uncaught room exceptions |
 | `player.joined` / `left` / `dropped` / `reconnected` | seat changes |
+| `game.setup` | a new game's seed |
+| `turn.changed` | every turn change, `{ from, to }` seats (0 = nobody) |
 | `cmd.accepted` / `cmd.rejected` / `cmd.failed` | every room command, exactly once, with code and state facts |
 | `framework.log` | Colyseus's own messages |
 | `server.started` / `server.shutdown`, `process.*` | process lifecycle and fatal errors |

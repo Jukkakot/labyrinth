@@ -7,7 +7,7 @@ One OpenSpec change at a time, in this order. Adjust as we learn.
 2. ~~`add-board-model`~~ (done): tiles, board, connections, rotation (rules only)
 3. ~~`add-board-setup`~~ (done): original tile distribution, treasures, seeded shuffle
 4. ~~`show-board`~~ (done): quick play creates a room; the client renders the board on mobile
-5. `tile-shift`
+5. ~~`tile-shift`~~ (done): shift rule, turn order, `shift` command, arrows with preview and confirm
 6. `pawn-movement`
 7. `treasures-and-win`
 8. `turn-rules`: 60 s limit, kick, disconnects

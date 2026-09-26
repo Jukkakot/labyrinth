@@ -51,7 +51,8 @@ builds first.
   - lifecycle log lines and logging of uncaught exceptions in hooks and timers;
   - `this.command(name, zodSchema, handler)` — the **only** way to define a command (below).
 - Room `game` → `GameRoom`: players map with a `connected` flag; unintended disconnects hold the
-  seat 60 s for reconnection (`holdSeat`).
+  seat 60 s for reconnection (`holdSeat`). Turn model and the `shift` command: see
+  [Game flow and commands](#game-flow-and-commands--implemented-shift-rest-planned).
 - HTTP: `GET /health` → `{ status, rulesVersion }`; `POST /client-logs` (client log batches).
   Development only: `/monitor` (room inspector), `/playground` (test client).
 - **Logging** (`server/src/logging/`): pino JSON lines to stdout; details in
@@ -66,7 +67,16 @@ builds first.
   and writes exactly one audit line (`cmd.accepted` / `cmd.rejected` / `cmd.failed`). An
   unexpected exception becomes `INTERNAL_ERROR`; the room keeps running.
 - A handler rejects by throwing `CommandRejection(code, facts)` **before changing state**.
-  Rooms add phase/turn to rejection lines by overriding `commandStateFacts()`.
+  Rooms add phase/turn to rejection lines by overriding `commandStateFacts()` (`GameRoom`:
+  `phase`, `turnSeat`, `lastInsertion`).
+- **Adding a command** (the `shift` command is the example):
+  1. `@labyrinth/protocol`: constants and types in `game-codes.ts` (ids, error codes), the zod
+     payload schema in `game-schema.ts` — separate so the client bundle never pulls in zod.
+  2. `GameRoom.messages`: `name: this.command(name, schema, handler)`. The handler checks
+     `requireTurn(client, phase)` (→ `NOT_SEATED` / `NOT_YOUR_TURN` / `WRONG_PHASE`) and the rule
+     preconditions, then computes the result with `@labyrinth/rules` and only then writes state.
+  3. Client: a method on `useGameSession` that calls `room.request()` and turns a rejection into
+     a notice key `errors.<CODE>` (unknown codes → `errors.generic`), plus fi/en strings.
 - **CORS:** Colyseus adds CORS headers to every HTTP response and by default echoes any origin.
   `server/src/cors.ts` restricts this through `matchMaker.controller.getCorsHeaders` to
   `ALLOWED_ORIGINS` (plus localhost/LAN origins outside production).
@@ -90,33 +100,54 @@ builds first.
 client/src/
   App.tsx              StartScreen until playing, then GameScreen
   screens/             StartScreen (idle / connecting / error), GameScreen
-  session/             useGameSession (quick play, per-tab rejoin), viewModel (state → Board + seats)
-  game/                Board, TileView, Pawn, SpareTile, GameIdBadge, treasureIcons
-  ui/                  tokens.css + shared components: Screen, Message, Button, Badge, LanguageSwitcher
+  session/             useGameSession (quick play, per-tab rejoin, commands), viewModel (state → GameView)
+  game/                Board, TileView, Pawn, SpareTile, ShiftTargets, ShiftControls, TurnLine,
+                       GameIdBadge, treasureIcons
+  ui/                  tokens.css + shared components: Screen, Message, Button, Badge, Notice,
+                       LanguageSwitcher
   logging/ i18n/ config.ts CrashBoundary.tsx
 ```
 
 - **UI foundation:** every colour, spacing step and radius is a token in `ui/tokens.css` (light and
   dark). Components use CSS Modules; anything shown in two places is a shared component (`Screen`
-  page frame, `Message` title/text/action, `Button` primary/secondary ≥ 44 px, `Badge`).
+  page frame, `Message` title/text/action, `Button` primary/secondary ≥ 44 px, `Badge`, `Notice`
+  floating polite status message, e.g. why a command was rejected).
 - **Board rendering:** one SVG, 100 units per tile, corridor style — rounded tile, corridor arms
   from the centre to each open side, Tabler treasure icon (`game/treasureIcons.ts`, typed over
   every `TreasureId`). Fixed tiles: darker fill plus a corner notch. Corridors are clipped at the
   board edge. Pawns: seat colour (Okabe–Ito tokens `--seat-1…4`) + shape (circle, square,
   triangle, diamond), own pawn with a dashed ring.
+- **Shift interaction** (`screens/GameScreen.tsx`):
+  - `TurnLine` above the board: "Sinun vuorosi – työnnä laatta" or "Pelaaja 2 työntää" with the
+    player's pawn shape and colour.
+  - On your turn `ShiftTargets` puts an arrow badge on each of the 12 entry edge tiles; the whole
+    tile is the tap target (`role="button"`, Enter/Space, labels count lines 1–7). The reverse of
+    the previous shift is shown faded with `aria-disabled`.
+  - Tapping an arrow previews locally with the same `shiftBoard()` the server uses: the board
+    shows the shifted line, the inserted spare is outlined (`--highlight`), and `ShiftControls`
+    shows the tile that would drop out. Tapping the same arrow again or "Työnnä" sends; "Peru"
+    cancels; another arrow switches the preview. The rotate button turns the local spare 90°.
+  - The preview and local rotation are dropped when a new synced board arrives (key: spare id,
+    last insertion, turn seat) or when the server rejects the shift. While a command is pending,
+    arrows and buttons wait.
+  - **Slide animation:** `TileView` is positioned with a CSS `transform` and a 200 ms transition,
+    and tiles are keyed by id, so tiles that change square slide (preview and real shifts alike).
+    The inserted tile appears in place and the pushed-out one disappears; the global
+    reduced-motion rule turns the transition off.
 - **Quick play:** `joinOrCreate("game", { pool? })`; `?pool=…` in the URL keeps a group of players
   (or an E2E test) in their own games. While connecting the start screen says so, and after 5 s
   adds that the server may be waking up.
 
-## State sync principle — Implemented (board, seats); rest Planned
+## State sync principle — Implemented (board, seats, turn); rest Planned
 
 - Synced today (`server/src/rooms/schema/GameState.ts`):
   `players: map<sessionId, { connected, seat 1–4 }>`, `squares: array<{ id, rotation }>` (49,
-  row-major), `spare: { id, rotation }`. The client rebuilds a rules `Board` from these plus the
+  row-major), `spare: { id, rotation }`, `turnSeat` (0 = nobody), `phase` (`"shift"`),
+  `lastInsertion` (`""` or an insertion id). The client rebuilds a rules `Board` from these plus the
   static `TILE_SET` (`client/src/session/viewModel.ts`). The seed is a private room field, logged
   as `game.setup`, never synced.
-- Still to come with their changes: last insertion, pawn squares, phase, current player, turn
-  deadline, found treasures, result. Tile kinds and treasures are static per tile id, so they are
+- Still to come with their changes: pawn squares, the `move` phase, turn deadline, found
+  treasures, result. Tile kinds and treasures are static per tile id, so they are
   never synced.
 - The client derives everything else with `@labyrinth/rules` (openings, reachable squares, slide
   animations from tile-id diffs, seat colour/shape).
@@ -186,17 +217,36 @@ Spec: `openspec/specs/board-setup/`. Code: `packages/rules/src/tileSet.ts`, `rng
 - **`boardToText(board)`** (`@labyrinth/rules/testing`): box-drawing text of a board, fixed squares
   in brackets, plus the spare — use it in tests and bug reports.
 
-### Shifting — Planned (`tile-shift`)
+### Shifting — Implemented
 
-- Rows/cols 1, 3, 5 are pushable → 12 insertion points named by entry side + index (`N1` pushes
-  column 1 down from the top).
+Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
 
-## Game flow and commands — Planned (`tile-shift` … `turn-rules`)
+- Rows/cols 1, 3, 5 are pushable → 12 insertion points (`INSERTIONS`) named by the side the spare
+  enters from + the line index: `N1` pushes column 1 down from the top, `S1` up from the bottom,
+  `W3` pushes row 3 right from the left, `E3` left from the right. `insertionLine(id)` lists the
+  line's squares entry first; `reverseOf(id)` is the opposite side, same index (`N1` ↔ `S1`).
+- `shiftBoard(board, id, rotation, pawns?)` → `{ board, pawns, pushedOut }`: the line moves one
+  square away from the entry, the spare goes to the entry square with the chosen (absolute)
+  rotation, the tile pushed off the far end becomes the new spare with its rotation unchanged.
+  Pawns on the line ride along; a pawn pushed off lands on the inserted tile. Pure: it says what a
+  shift does, not whether it is allowed (the server checks turn and the no-reverse rule).
+- Properties (fast-check): tile ids preserved, fixed squares unchanged, shift + reverse with the
+  pushed-out tile restores board and pawns.
 
-- Phases: `LOBBY → SHIFT → MOVE → (next player) SHIFT … → FINISHED`.
-- Commands: `shift{insertion, rotation}`, `move{square}` (own square = stay), `kick{player}`;
-  creator only: `addBot`, `removeBot`, `start`. Spare rotation stays client-side until the shift.
-- Each command is defined with `this.command()` (see Commands and rejection contract above).
-  Game codes to come: `NOT_YOUR_TURN`, `WRONG_PHASE`, `REVERSE_PUSH_FORBIDDEN`, `UNREACHABLE`, …
+## Game flow and commands — Implemented (shift); rest Planned
+
+- **Turn model — Implemented (temporary start rule):** `turnSeat` is the current player's seat.
+  The first player to sit down starts (`lobby` replaces this with a random start). After an
+  accepted shift, and when the current player leaves, the turn passes to the next taken seat
+  clockwise (1 → 2 → 3 → 4 → 1), skipping empty seats; a player alone keeps it; a dropped player
+  still holding their seat is not skipped. Every change logs `turn.changed { from, to }`.
+- **`shift { insertion, rotation }` — Implemented:** rejections `NOT_SEATED`, `NOT_YOUR_TURN`,
+  `WRONG_PHASE`, `REVERSE_PUSH_FORBIDDEN` (`GAME_ERROR_CODES`), a fixed line or bad rotation is
+  `INVALID_COMMAND`. Accepted: squares, spare and `lastInsertion` are written from `shiftBoard()`,
+  then the turn passes. `rotation` is the spare's absolute rotation; it stays client-side until
+  the shift.
+- **Planned:** phases `LOBBY → SHIFT → MOVE → (next player) SHIFT … → FINISHED` (`pawn-movement`
+  adds `move` between the shift and the turn passing); `move{square}` (own square = stay),
+  `kick{player}`; creator only: `addBot`, `removeBot`, `start`. Codes to come: `UNREACHABLE`, …
 - **Bots** (`bot-player`): an ordinary seat; the decision is a pure function in rules, submitted
   through the same command wrapper as humans.
