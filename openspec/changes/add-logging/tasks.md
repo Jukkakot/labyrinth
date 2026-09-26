@@ -27,21 +27,21 @@
 
 ## 6. Client logger
 
-- [ ] 6.1 Add pino to `@labyrinth/client`; create `client/src/logging/` with pino browser logger, buffered transmit (flush every 5 s, immediately on error, on `visibilitychange: hidden`/`pagehide` with `keepalive`), 200-entry cap, key-event allow-list, `?debug=1` debug mode, `ver` from `VITE_APP_VERSION`/`dev`; verify with Vitest and mocked `fetch`: warn is shipped, plain info is not, key event is, debug mode ships debug, failed send retries and caps the buffer
-- [ ] 6.2 Install `window` `error` and `unhandledrejection` listeners in `main.tsx` logging `client.error`; verify by unit test that dispatching an ErrorEvent ships a `client.error` entry with a stack
+- [x] 6.1 Add pino to `@labyrinth/client`; create `client/src/logging/` with pino browser logger, buffered transmit (flush every 5 s, immediately on error, on `visibilitychange: hidden`/`pagehide` with `keepalive`), 200-entry cap, key-event allow-list, `?debug=1` debug mode, `ver` from `VITE_APP_VERSION`/`dev`; verify with Vitest and mocked `fetch`: warn is shipped, plain info is not, key event is, debug mode ships debug, failed send retries and caps the buffer
+- [x] 6.2 Install `window` `error` and `unhandledrejection` listeners in `main.tsx` logging `client.error`; verify by unit test that dispatching an ErrorEvent ships a `client.error` entry with a stack
 
 ## 7. Crash screen
 
-- [ ] 7.1 Add react-error-boundary (plus jsdom and @testing-library/react as dev dependencies) and a crash fallback with i18n keys `crash.title` / `crash.reload` in fi and en, logging `client.error` in `onError`; verify by component test that a throwing child renders the Finnish message and reload button and ships one `client.error`, and that the locales key-parity test still passes
+- [x] 7.1 Add react-error-boundary (plus jsdom and @testing-library/react as dev dependencies) and a crash fallback with i18n keys `crash.title` / `crash.reload` in fi and en, logging `client.error` in `onError`; verify by component test that a throwing child renders the Finnish message and reload button and ships one `client.error`, and that the locales key-parity test still passes
 
 ## 8. Version and bundle budget in CI
 
-- [ ] 8.1 Set `VITE_APP_VERSION` from the short `GITHUB_SHA` in `deploy-client.yml` (and in CI build); verify the built bundle contains the commit id
-- [ ] 8.2 Add size-limit + @size-limit/file config (client `dist/assets/*.js`, gzip, 200 kB) and `npm run size` step in `ci.yml` after build; verify it passes at the current size and fails when the limit is temporarily set below it
+- [x] 8.1 Set `VITE_APP_VERSION` from the short `GITHUB_SHA` in `deploy-client.yml` (and in CI build); verify the built bundle contains the commit id
+- [x] 8.2 Add size-limit + @size-limit/file config (client `dist/assets/*.js`, gzip, 200 kB) and `npm run size` step in `ci.yml` after build; verify it passes at the current size and fails when the limit is temporarily set below it
 
 ## 9. Integration check
 
-- [ ] 9.1 Run `npm run dev`, join a room from the Colyseus playground and open the client with `?debug=1` and a forced error; verify `logs/dev.log` contains server `player.joined`, an `http.request`, and a `src:"client"` `client.error` line, and the terminal shows them pretty-printed
-- [ ] 9.2 Update `openspec/context/nfr.md` key-order wording to match the spec (`level`, `evt` first; no server timestamp in production); verify lint, typecheck, test, build and size all pass
+- [x] 9.1 Run `npm run dev`, join a room from the Colyseus playground and open the client with `?debug=1` and a forced error; verify `logs/dev.log` contains server `player.joined`, an `http.request`, and a `src:"client"` `client.error` line, and the terminal shows them pretty-printed
+- [x] 9.2 Update `openspec/context/nfr.md` key-order wording to match the spec (`level`, `evt` first; no server timestamp in production); verify lint, typecheck, test, build and size all pass
 - [ ] 9.3 Once the Render service exists, check Render's log retention on the free tier and that Render MCP can filter logs by text (`"room":"<id>"`) and time range; record retention in `openspec/context/nfr.md` and adjust the bug runbook in `.claude/CLAUDE.md` if the query shape differs
-- [ ] 9.4 Update the wiki: `docs/operations.md` Logs section to Implemented (format, key order, event catalogue location, `/client-logs`, `?debug=1`, `logs/dev.log`), `docs/architecture.md` (command wrapper and rejection contract, readable room ids, LoggedRoom — Implemented), `docs/development.md` (reading dev logs); mark `add-logging` done in `openspec/context/roadmap.md`; verify every link in the touched pages resolves
+- [x] 9.4 Update the wiki: `docs/operations.md` Logs section to Implemented (format, key order, event catalogue location, `/client-logs`, `?debug=1`, `logs/dev.log`), `docs/architecture.md` (command wrapper and rejection contract, readable room ids, LoggedRoom — Implemented), `docs/development.md` (reading dev logs); mark `add-logging` done in `openspec/context/roadmap.md`; verify every link in the touched pages resolves

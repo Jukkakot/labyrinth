@@ -8,21 +8,17 @@ import { GameRoom } from "./rooms/GameRoom.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 
-// Audit every HTTP request, matchmaking included (it bypasses Express).
-function auditHttpRequests(): void {
-  attachHttpAudit(server.transport?.server);
-}
-
 const server = defineServer({
   logger: frameworkLogger,
-
-  beforeListen: auditHttpRequests,
 
   rooms: {
     game: defineRoom(GameRoom).enableRealtimeListing(),
   },
 
   express: (app) => {
+    // The transport exists by now: audit every HTTP request on the Node server,
+    // matchmaking included (it bypasses Express).
+    attachHttpAudit(server.transport?.server);
     configureCors();
     // Render sits behind one proxy; needed for per-client rate limits.
     app.set("trust proxy", 1);

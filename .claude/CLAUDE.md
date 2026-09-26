@@ -28,4 +28,4 @@ initiative whenever they fit; do not wait to be asked. When unsure whether one f
 - Bug reports ("around 14:30 in game brave-otters-sing, X happened"): follow
   [docs/operations.md → Investigating a reported bug](../docs/operations.md#investigating-a-reported-bug).
 - UI checks: Playwright MCP `playwright-mobile` (Galaxy S24) by default.
-- Before committing: `npm run lint && npm run typecheck && npm test && npm run build`.
+- Before committing: `npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client`.

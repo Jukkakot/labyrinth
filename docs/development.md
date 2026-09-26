@@ -8,16 +8,20 @@
   - client on http://localhost:5173 (also on the LAN for phones: see the Vite output)
 - In development the client is served at `/`; production uses `/labyrinth/`.
 - Two browser tabs are two players (session per tab).
+- Logs: the terminal shows pretty lines; `logs/dev.log` has the same entries as JSON (server and
+  client). Add `?debug=1` to the client URL to also get its debug entries. Clear the file only
+  while the server is stopped (it keeps the file open).
 
 ## Checks — Implemented
 
 Run before every commit (CI runs the same):
 
 ```
-npm run lint && npm run typecheck && npm test && npm run build
+npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client
 ```
 
 - Lint: oxlint (root `.oxlintrc.json`). No formatter.
+- Bundle budget: client JavaScript ≤ 200 kB gzip (size-limit, fails CI).
 - Tests: Vitest in every workspace. Server test files run one at a time because each boots a
   real Colyseus server (`fileParallelism: false`).
 
@@ -26,8 +30,8 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Level | Tools | Status |
 |---|---|---|
 | Rules | Vitest; fast-check for invariants; test names follow spec scenarios | Implemented (first rules come with `add-board-model`) |
-| Server | Vitest + @colyseus/testing (real rooms, SDK clients in-process) | Implemented |
-| Client | Vitest (+ Testing Library for logic-heavy components) | Implemented (unit) |
+| Server | Vitest + @colyseus/testing (real rooms, SDK clients in-process); `captureLogs()` asserts log lines | Implemented |
+| Client | Vitest; jsdom + Testing Library for components (`// @vitest-environment jsdom`) | Implemented |
 | E2E | Playwright, Galaxy S24 profile, two players in two contexts | Planned (`show-board`) |
 
 ## Debugging — Implemented

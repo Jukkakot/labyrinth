@@ -29,14 +29,45 @@ deploy (server, only after green CI). No staging environment.
 | `NODE_ENV=production` | `render.yaml` env | Disables `/monitor` and `/playground` |
 | `PORT` | set by Render | Server listen port |
 
-## Logs — Implemented (format: Planned, `add-logging`)
+## Logs — Implemented
 
-- All logs — server and, from `add-logging` on, client logs relayed through the server — go to
-  Render's log stream. Render stamps each line with a UTC timestamp.
-- Read them in the Render dashboard (service → Logs) or with Render MCP
-  `list_logs(resource=[service id], text=[…], startTime, endTime)`.
-- Planned format: one JSON object per line, `level` and `evt` first, `room` = readable game id
-  (e.g. `brave-otters-sing`). See `openspec/changes/add-logging/`.
+All logs — server and client — end up in Render's log stream. Render stamps each line with a UTC
+timestamp. Read them in the Render dashboard (service → Logs) or with Render MCP
+`list_logs(resource=[service id], text=[…], startTime, endTime)`.
+
+**Format:** one JSON object per line, keys in this order:
+
+```
+{"level":"warn","evt":"cmd.rejected","room":"brave-otters-sing","player":"r39lF4Y3r",
+ "cmd":"shift","code":"REVERSE_PUSH_FORBIDDEN", …,"src":"server","ver":"a1b2c3d","msg":"…"}
+```
+
+- `level` debug/info/warn/error; production writes `info` and up (`LOG_LEVEL` overrides).
+- `evt` from a fixed catalogue: server events in `server/src/logging/events.ts`, client events in
+  `packages/protocol/src/log-events.ts`. Filter by `"evt":"cmd.rejected"` etc.
+- `room` is the readable game id shown to players; `player` the session id.
+- `src` `server` or `client`; `ver` short git commit of the side that logged (`dev` locally).
+- Errors: `err` (server) or `stack` (client) inside the line — never multi-line.
+- Server lines have no own timestamp in production; client lines carry the client clock in `ts`.
+
+**What gets logged:**
+
+| Event | When |
+|---|---|
+| `http.request` | every HTTP request incl. matchmaking (`/health` only at debug) |
+| `room.created` / `room.disposed` / `room.error` | room lifecycle, uncaught room exceptions |
+| `player.joined` / `left` / `dropped` / `reconnected` | seat changes |
+| `cmd.accepted` / `cmd.rejected` / `cmd.failed` | every room command, exactly once, with code and state facts |
+| `framework.log` | Colyseus's own messages |
+| `server.started` / `server.shutdown`, `process.*` | process lifecycle and fatal errors |
+| `client.*` | client warnings/errors, crashes, key events (connection, rejections) |
+
+**Client logs** are batched and sent to `POST /client-logs` (JSON as text/plain; max 50 entries,
+30 requests/min per IP; IPs are never logged). Opening the game with `?debug=1` makes that one
+client ship its debug and info entries too.
+
+**Locally:** the terminal shows pretty lines and `logs/dev.log` (git-ignored) gets the JSON lines,
+server and client together.
 
 ## Investigating a reported bug
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CLIENT_LOG_LIMITS, clientLogBatchSchema } from "./log.js";
+import { CLIENT_LOG_LIMITS } from "./log-events.js";
+import { clientLogBatchSchema } from "./log-schema.js";
 
 const entry = { level: "error", evt: "client.error", ts: "2026-09-26T10:15:02.000Z", msg: "boom" } as const;
 

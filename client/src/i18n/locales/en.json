@@ -10,5 +10,10 @@
   },
   "footer": {
     "rulesVersion": "Rules v{{version}}"
+  },
+  "crash": {
+    "title": "Something went wrong",
+    "body": "The game ran into an unexpected error. Reload the page to continue.",
+    "reload": "Reload"
   }
 }

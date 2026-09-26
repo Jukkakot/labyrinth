@@ -30,6 +30,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Version from commit
+        run: echo "VITE_APP_VERSION=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
       - run: npm ci
       - run: npm test -w @labyrinth/rules -w @labyrinth/protocol -w @labyrinth/client
       - run: npm run build -w @labyrinth/client

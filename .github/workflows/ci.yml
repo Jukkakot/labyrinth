@@ -18,8 +18,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Version from commit
+        run: echo "VITE_APP_VERSION=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Bundle size budget
+        run: npm run size -w @labyrinth/client

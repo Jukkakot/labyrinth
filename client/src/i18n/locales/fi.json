@@ -10,5 +10,10 @@
   },
   "footer": {
     "rulesVersion": "Säännöt v{{version}}"
+  },
+  "crash": {
+    "title": "Jokin meni pieleen",
+    "body": "Peli kohtasi odottamattoman virheen. Lataa sivu uudelleen jatkaaksesi.",
+    "reload": "Lataa uudelleen"
   }
 }

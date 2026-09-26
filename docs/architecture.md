@@ -14,12 +14,15 @@ convention, delivered by that roadmap change.
 │  previews and highlights     │               │  every command              │
 └──────────────┬───────────────┘               └──────────────┬──────────────┘
                │ imports                                       │ imports
-               └────────────▶ packages/rules ◀─────────────────┘
-                              pure, deterministic game logic
+               ├────────────▶ packages/rules ◀─────────────────┤
+               │              pure, deterministic game logic   │
+               └────────────▶ packages/protocol ◀──────────────┘
+                              shared contract: log events, command results
 ```
 
-- **Monorepo**, npm workspaces: `packages/rules` (`@labyrinth/rules`), `server`
-  (`@labyrinth/server`), `client` (`@labyrinth/client`). TypeScript everywhere.
+- **Monorepo**, npm workspaces: `packages/rules` (`@labyrinth/rules`), `packages/protocol`
+  (`@labyrinth/protocol`), `server` (`@labyrinth/server`), `client` (`@labyrinth/client`).
+  TypeScript everywhere.
 - **Hosting**: client on GitHub Pages, server on Render. Details in [operations.md](operations.md).
 - **No database.** Games live in server memory and are lost on restart, deploy or sleep.
 
@@ -30,20 +33,40 @@ convention, delivered by that roadmap change.
 | `packages/rules` | Game rules as pure functions on plain data. Randomness only from an injected seed. | Depend on React, Colyseus or any I/O. |
 | `server` | Rooms, matchmaking, command validation (via rules), state sync, bots. Source of truth. | Trust the client. |
 | `client` | Rendering, input, local previews, i18n, settings. | Hold authoritative state. |
+| `packages/protocol` | What client and server must agree on: log event catalogue and batch schema, command result type and common error codes (later: command payload schemas). Marked side-effect free; zod schemas sit in their own modules so the client bundle drops them. | Contain game logic or runtime behaviour. |
 
-**Sharing rules without a build step:** `@labyrinth/rules` exports a `source` condition pointing
-at `src/index.ts`. Vite (client), Vitest and `tsx` (server dev) resolve it, so edits are live. The
-server production build (`tsconfig.build.json`) disables the condition and uses the compiled
-`dist/`, which Render builds first.
+**Sharing packages without a build step:** `@labyrinth/rules` and `@labyrinth/protocol` export a
+`source` condition pointing at `src/index.ts`. Vite (client, also its `ssr` resolution for
+Vitest), server Vitest and `tsx` (server dev) resolve it, so edits are live. The server production
+build (`tsconfig.build.json`) disables the condition and uses the compiled `dist/`, which Render
+builds first.
 
 ## Server — Implemented
 
 - Entry `server/src/index.ts` → `@colyseus/tools` `listen()`; config in `server/src/app.config.ts`
   (rooms, Express routes).
+- Every room extends `LoggedRoom` (`server/src/rooms/LoggedRoom.ts`), which gives it:
+  - a **readable room id** (`brave-otters-sing`, `human-id`, unique among running rooms) — the id
+    players see and the `room` field in every log line;
+  - lifecycle log lines and logging of uncaught exceptions in hooks and timers;
+  - `this.command(name, zodSchema, handler)` — the **only** way to define a command (below).
 - Room `game` → `GameRoom`: players map with a `connected` flag; unintended disconnects hold the
-  seat 60 s for reconnection.
-- HTTP: `GET /health` → `{ status, rulesVersion }`. Development only: `/monitor` (room
-  inspector), `/playground` (test client).
+  seat 60 s for reconnection (`holdSeat`).
+- HTTP: `GET /health` → `{ status, rulesVersion }`; `POST /client-logs` (client log batches).
+  Development only: `/monitor` (room inspector), `/playground` (test client).
+- **Logging** (`server/src/logging/`): pino JSON lines to stdout; details in
+  [operations.md → Logs](operations.md#logs--implemented). HTTP requests are audited on the Node
+  HTTP server, not in Express, because Colyseus answers matchmaking before Express.
+
+### Commands and rejection contract — Implemented
+
+- Clients send commands with `room.request(name, payload)` and always get back
+  `CommandResult` (`@labyrinth/protocol`): `{ ok: true }` or `{ ok: false, code }`.
+- `LoggedRoom.command()` validates the payload with zod (→ `INVALID_COMMAND`), runs the handler,
+  and writes exactly one audit line (`cmd.accepted` / `cmd.rejected` / `cmd.failed`). An
+  unexpected exception becomes `INTERNAL_ERROR`; the room keeps running.
+- A handler rejects by throwing `CommandRejection(code, facts)` **before changing state**.
+  Rooms add phase/turn to rejection lines by overriding `commandStateFacts()`.
 - **CORS:** Colyseus adds CORS headers to every HTTP response and by default echoes any origin.
   `server/src/cors.ts` restricts this through `matchMaker.controller.getCorsHeaders` to
   `ALLOWED_ORIGINS` (plus localhost/LAN origins outside production).
@@ -55,6 +78,11 @@ server production build (`tsconfig.build.json`) disables the condition and uses 
 - Language: `?lng=en` → saved choice (localStorage) → Finnish. Browser language is ignored.
 - Server URL: `client/src/config.ts` `serverUrl()` from `VITE_SERVER_URL` (localhost in dev).
 - Mobile first: `100dvh`, safe-area insets, 44 px tap targets, light/dark via system.
+- **Logging** (`client/src/logging/`): `log.warn(evt, fields, msg)` etc. on pino's browser build;
+  entries are batched to `POST /client-logs` (every 5 s, at once on errors, keepalive on page
+  hide). Global `error`/`unhandledrejection` handlers and `CrashBoundary` (calm localized reload
+  screen) log `client.error`. `setLogContext({ room, player })` tags entries with the game.
+- Build version `VITE_APP_VERSION` = short commit (set in CI and the Pages deploy).
 
 ## State sync principle — Planned (`show-board`)
 
@@ -83,9 +111,7 @@ server production build (`tsconfig.build.json`) disables the condition and uses 
 - Phases: `LOBBY → SHIFT → MOVE → (next player) SHIFT … → FINISHED`.
 - Commands: `shift{insertion, rotation}`, `move{square}` (own square = stay), `kick{player}`;
   creator only: `addBot`, `removeBot`, `start`. Spare rotation stays client-side until the shift.
-- Every command goes through one wrapper (`add-logging`): schema validation, rules validation,
-  audit log line, uniform reply `{ ok }` / `{ ok: false, code }` via Colyseus `room.request()`.
-  Invalid commands never change state. Codes: `INVALID_COMMAND`, `NOT_YOUR_TURN`, `WRONG_PHASE`,
-  `REVERSE_PUSH_FORBIDDEN`, `UNREACHABLE`, `INTERNAL_ERROR`, …
+- Each command is defined with `this.command()` (see Commands and rejection contract above).
+  Game codes to come: `NOT_YOUR_TURN`, `WRONG_PHASE`, `REVERSE_PUSH_FORBIDDEN`, `UNREACHABLE`, …
 - **Bots** (`bot-player`): an ordinary seat; the decision is a pure function in rules, submitted
   through the same command wrapper as humans.

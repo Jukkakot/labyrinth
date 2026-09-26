@@ -32,7 +32,8 @@ export function serverVersion(env: NodeJS.ProcessEnv = process.env): string {
 function devDestination(): DestinationStream {
   return pino.multistream([
     { level: "trace", stream: pretty({ colorize: true, ignore: "src,ver", singleLine: true }) },
-    { level: "trace", stream: pino.destination({ dest: DEV_LOG_FILE, mkdir: true, sync: false }) },
+    // Sync so the file is always ready, even when the process exits right after an error.
+    { level: "trace", stream: pino.destination({ dest: DEV_LOG_FILE, mkdir: true, sync: true }) },
   ]);
 }
 
