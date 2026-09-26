@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import "../i18n";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
+import { clientVersion } from "../logging/logger.ts";
 import { StartScreen } from "./StartScreen.tsx";
 
 describe("board-view › Game identifier badge", () => {
@@ -15,7 +16,10 @@ describe("board-view › Game identifier badge", () => {
     });
 
     expect(copy).toHaveBeenCalledTimes(1);
-    expect(copy.mock.calls[0]![0]).toMatch(/^Peli brave-otters-sing · \d{1,2}\.\d{1,2}\.\d{4} \d{2}\.\d{2} · v dev$/);
+    // Version comes from the build (a commit id in CI, "dev" locally); the time separator depends on ICU.
+    const line = copy.mock.calls[0]![0];
+    expect(line).toMatch(/^Peli brave-otters-sing · \d{1,2}\.\d{1,2}\.\d{4} \d{2}[.:]\d{2} · v \S+$/);
+    expect(line.endsWith("v " + clientVersion())).toBe(true);
     expect(screen.getByRole("status").textContent).toBe("Kopioitu");
   });
 
