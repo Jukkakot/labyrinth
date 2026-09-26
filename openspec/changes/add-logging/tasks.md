@@ -2,14 +2,15 @@
 
 ## 1. Server logging core
 
-- [ ] 1.1 Add pino, pino-pretty, zod, express-rate-limit (+ types) to `@labyrinth/server`; verify `npm install` and `npm run typecheck` succeed
-- [ ] 1.2 Create `server/src/logging/events.ts` event catalogue (server and client event unions) and `logger.ts` wrapper (`log.<level>(evt, fields?, msg?)`, label levels, no base, `ver` from `RENDER_GIT_COMMIT`/`dev`, `LOG_LEVEL`, dev transports to pino-pretty + `logs/dev.log`, dev-only trailing `time`); verify with Vitest capturing a destination stream: each entry is one JSON line, `level` and `evt` are the first two keys, a multi-line stack stays on one line, production output has no `time`
+- [x] 1.1 Add pino, pino-pretty, zod, express-rate-limit (+ types) to `@labyrinth/server`; verify `npm install` and `npm run typecheck` succeed
+- [x] 1.2 Create `server/src/logging/events.ts` event catalogue (server and client event unions) and `logger.ts` wrapper (`log.<level>(evt, fields?, msg?)`, label levels, no base, `ver` from `RENDER_GIT_COMMIT`/`dev`, `LOG_LEVEL`, dev transports to pino-pretty + `logs/dev.log`, dev-only trailing `time`); verify with Vitest capturing a destination stream: each entry is one JSON line, `level` and `evt` are the first two keys, a multi-line stack stays on one line, production output has no `time`
+- [x] 1.3 Create `packages/protocol` (`@labyrinth/protocol`, side-effect free, zod) with the client log event catalogue, key events, limits and the client log batch schema; wire it into workspaces, Render build/filter and the Pages workflow; verify schema tests (valid batch, oversized batch, unknown level/event, oversized field)
 
 ## 2. Room lifecycle and uncaught errors
 
-- [ ] 2.1 Add `LoggedRoom` base class logging `room.created`, `room.disposed`, `player.joined/left/dropped/reconnected` and implementing `onUncaughtException`; make `GameRoom` extend it; verify with @colyseus/testing that join, leave, and drop + reconnect each produce the expected lines
-- [ ] 2.2 Add human-id and set a readable room id in `LoggedRoom.onCreate` (lowercase words joined by hyphens, ≤32 chars, regenerate on collision with a running room); verify by test that a created room's id matches the pattern and equals `room` in its `room.created` line, and that a forced collision yields a different id
-- [ ] 2.3 Pass a Colyseus `logger` adapter (`framework.log`) in `defineServer`, add process `uncaughtException`/`unhandledRejection` handlers and a `server.shutdown` log in `onBeforeShutdown`; verify with a test room whose clock timer throws that one `error` line with room id and stack is written and the server keeps serving
+- [x] 2.1 Add `LoggedRoom` base class logging `room.created`, `room.disposed`, `player.joined/left/dropped/reconnected` and implementing `onUncaughtException`; make `GameRoom` extend it; verify with @colyseus/testing that join, leave, and drop + reconnect each produce the expected lines
+- [x] 2.2 Add human-id and set a readable room id in `LoggedRoom.onCreate` (lowercase words joined by hyphens, ≤32 chars, regenerate on collision with a running room); verify by test that a created room's id matches the pattern and equals `room` in its `room.created` line, and that a forced collision yields a different id
+- [x] 2.3 Pass a Colyseus `logger` adapter (`framework.log`) in `defineServer`, add process `uncaughtException`/`unhandledRejection` handlers and a `server.shutdown` log in `onBeforeShutdown`; verify with a test room whose clock timer throws that one `error` line with room id and stack is written and the server keeps serving
 
 ## 3. Command wrapper and rejection contract
 

@@ -1,11 +1,14 @@
 import { defineServer, defineRoom, monitor, playground } from "colyseus";
 import { RULES_VERSION } from "@labyrinth/rules";
 import { configureCors } from "./cors.js";
+import { frameworkLogger } from "./logging/frameworkLogger.js";
 import { GameRoom } from "./rooms/GameRoom.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 
 const server = defineServer({
+  logger: frameworkLogger,
+
   rooms: {
     game: defineRoom(GameRoom).enableRealtimeListing(),
   },

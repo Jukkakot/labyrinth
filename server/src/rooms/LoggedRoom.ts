@@ -1,0 +1,47 @@
+import { Room, type Client, type CloseCode, type RoomException, type RoomOptions } from "colyseus";
+import { log, type LogFields } from "../logging/logger.js";
+import { uniqueRoomId } from "./roomId.js";
+
+/**
+ * Base class for all rooms: readable room id, lifecycle log lines and logging
+ * of uncaught exceptions. Subclasses overriding a hook must call `super`.
+ */
+export abstract class LoggedRoom<T extends RoomOptions = RoomOptions> extends Room<T> {
+  /** Context fields for log lines about this room and, optionally, a client. */
+  protected logCtx(client?: Client, extra?: LogFields): LogFields {
+    return { room: this.roomId, ...(client && { player: client.sessionId }), ...extra };
+  }
+
+  async onCreate(_options?: unknown): Promise<void> {
+    // Colyseus allows replacing roomId only during onCreate.
+    this.roomId = await uniqueRoomId();
+    log.info("room.created", this.logCtx(undefined, { name: this.roomName }));
+  }
+
+  onJoin(client: Client, _options?: unknown, _auth?: unknown): void | Promise<void> {
+    log.info("player.joined", this.logCtx(client));
+  }
+
+  onLeave(client: Client, code?: CloseCode): void | Promise<void> {
+    log.info("player.left", this.logCtx(client, { code }));
+  }
+
+  /** Unintended disconnect: holds the seat for `seconds` so the client can reconnect. */
+  protected holdSeat(client: Client, code: CloseCode | undefined, seconds: number): void {
+    log.info("player.dropped", this.logCtx(client, { code, holdSeconds: seconds }));
+    // Outcome is routed to onReconnect() or onLeave(); the catch covers disposal.
+    this.allowReconnection(client, seconds).catch(() => {});
+  }
+
+  onReconnect(client: Client): void | Promise<void> {
+    log.info("player.reconnected", this.logCtx(client));
+  }
+
+  onDispose(): void | Promise<void> {
+    log.info("room.disposed", this.logCtx());
+  }
+
+  onUncaughtException(error: RoomException, methodName: string): void {
+    log.error("room.error", this.logCtx(undefined, { method: methodName, err: error.cause ?? error }));
+  }
+}

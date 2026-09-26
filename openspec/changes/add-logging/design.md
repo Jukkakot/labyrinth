@@ -95,3 +95,16 @@ Express middleware records the start time and logs `http.request` on `res.on("fi
 - [Client can spam logs through a buggy loop] → Batch caps, buffer cap and server rate limit bound the volume.
 - [Omitting server timestamps] → Render's timestamp is authoritative in production. Local lines keep `time`.
 - [Colyseus logger interface is loosely typed (`any`)] → The adapter formats arbitrary arguments into `msg` and never throws.
+
+## Implementation notes
+
+- **Protocol package (decided during implementation):** definitions shared by client and server
+  (client log events, key events, limits, batch schema; later command schemas and error codes)
+  live in a new workspace `packages/protocol` (`@labyrinth/protocol`, depends on zod, marked
+  `sideEffects: false` so the client bundle only keeps what it uses). `packages/rules` stays pure
+  game logic. Server-only events stay in `server/src/logging/events.ts`.
+- **Development output:** pino forbids a custom level formatter together with
+  `transport.targets`, so development uses `pino.multistream` in the main thread (pino-pretty to
+  the terminal, file destination to `logs/dev.log`). Production writes to stdout directly.
+- `msg` is always the last key (pino places it after the object), so in development `time`
+  comes just before `msg`.
