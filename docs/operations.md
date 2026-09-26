@@ -71,12 +71,14 @@ timestamp. Read them in the Render dashboard (service → Logs) or with Render M
 |---|---|
 | `http.request` | every HTTP request incl. matchmaking (`/health` only at debug) |
 | `room.created` / `room.disposed` / `room.error` | room lifecycle, uncaught room exceptions |
-| `player.joined` / `left` / `dropped` / `reconnected` | seat changes |
+| `player.joined` / `left` / `dropped` / `reconnected` | connection changes (a dropped seat is held 5 min) |
+| `player.removed` | a player is taken out of a running game, `{ seat, reason, by? }` (`left`, `kicked` by seat `by`, `timeout` after 5 min disconnected) |
 | `game.setup` | a new game's seed |
 | `game.dealt` | the treasure deal, `{ dealSeed, seats }` (seed never synced) |
 | `treasure.collected` | a player collects their target, `{ seat, treasure, found, cards }` |
-| `game.finished` | someone won, `{ winner }` (seat) |
+| `game.finished` | someone won, `{ winner, reason }` (seat; `home` or `lastPlayer`) |
 | `turn.changed` | every turn change, `{ from, to }` seats (0 = nobody) |
+| `turn.expired` | the current turn's 60 s ran out, `{ seat }`; from now on the others may kick |
 | `phase.changed` | the step within a turn changes, `{ from, to, turnSeat }` (`shift` → `move`, `move` → `finished`) |
 | `cmd.accepted` / `cmd.rejected` / `cmd.failed` | every room command, exactly once, with code and state facts |
 | `framework.log` | Colyseus's own messages |

@@ -77,8 +77,8 @@ Autopilot decisions (made without review; revisit freely):
 11. **UI:**
     - `TurnTimer` inside `TurnLine`: `m:ss` in tabular numbers; last 10 s bold + warning token +
       a clock icon (not colour alone); "Aika loppui" when expired. It re-renders itself every
-      250 ms and is `aria-hidden`; the line's accessible text only changes with the state, so screen
-      readers are not flooded.
+      250 ms and has `role="timer"` (implicitly not live) with an "Aikaa jäljellä m:ss" label, so
+      screen readers can read it on demand without being flooded every second.
     - `KickControl` replaces the (disabled) step controls under the board for other seated players
       while `turnExpired`: text "Pelaaja N:n aika loppui" + secondary button "Poista pelaaja N"; a
       tap shows "Poistetaanko pelaaja N pelistä?" with "Poista" (primary) and "Peru". The confirm

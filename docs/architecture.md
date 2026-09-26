@@ -51,7 +51,7 @@ builds first.
   - lifecycle log lines and logging of uncaught exceptions in hooks and timers;
   - `this.command(name, zodSchema, handler)` — the **only** way to define a command (below).
 - Room `game` → `GameRoom`: players map with a `connected` flag; unintended disconnects hold the
-  seat 60 s for reconnection (`holdSeat`). Turn model, the `shift` / `move` commands, treasures and winning: see
+  seat 5 min for reconnection (`holdSeat`); turn clock, kicks and removals: see the game flow section. Turn model, the `shift` / `move` commands, treasures and winning: see
   [Game flow and commands](#game-flow-and-commands--implemented-shift-move-collect-win-rest-planned).
 - HTTP: `GET /health` → `{ status, rulesVersion, version, builtAt }` (`version` = short commit from
   `RENDER_GIT_COMMIT` or `"dev"`; `builtAt` = build time, `null` without a build). It is Render's
@@ -110,7 +110,8 @@ client/src/
   session/             useGameSession (quick play, per-tab rejoin, commands), viewModel (state → GameView)
   game/                Board, TileView, Pawn, PawnLayer (+ pawnMotion), SpareTile, ShiftTargets,
                        ShiftControls, MoveTargets, MoveControls, GameOverControls, TurnLine,
-                       PlayerStrip, GameIdBadge, treasureIcons, target (TargetMark)
+                       PlayerStrip, GameIdBadge, treasureIcons, target (TargetMark),
+                       TurnTimer (+ turnClock), KickControl
   ui/                  tokens.css + shared components: Screen, Message, Button, Badge, Notice,
                        LanguageSwitcher
   logging/ i18n/ config.ts CrashBoundary.tsx
@@ -178,6 +179,24 @@ client/src/
     winner's pawn, and `GameOverControls` ("Uusi peli") replaces the step controls; it calls
     `useGameSession().leave()` → `room.leave()` → the normal leave handling (token cleared, start
     screen).
+- **Turn clock, kicks and departures** (`GameView.turnDeadline`, `turnExpired`, `turnDisconnected`,
+  `canKick`):
+  - `TurnTimer` at the end of `TurnLine`: `m:ss` from `turnDeadline − Date.now()`, clamped to
+    0–60 s (`turnClock.ts`) so phone clock skew cannot show nonsense; ticks every 250 ms and only
+    re-renders itself; `role="timer"` (not announced every second) with an "Aikaa jäljellä …" label.
+    The last 10 s and "Aika loppui" are bold, `--danger` and use an alarm icon instead of the clock.
+    A dropped current player reads "Pelaaja N – yhteys katkennut".
+  - `KickControl` replaces the (disabled) step controls for other seated players while
+    `turnExpired`: "Pelaajan N aika loppui" + "Poista pelaaja N" → "Poistetaanko pelaaja N
+    pelistä?" with "Peru" / "Poista". It is keyed by the turn key, so a pending confirmation
+    vanishes when the turn changes. Only `turnExpired` (the server) enables it, never the local
+    countdown.
+  - `PlayerStrip`: a dropped player's chip is dashed with a faded pawn and a `wifi-off` icon, and
+    its accessible text adds "yhteys katkennut"; text contrast is unchanged.
+  - `GameScreen` notices a seat disappearing from a running game and shows "Pelaaja N poistui
+    pelistä" in the shared `Notice` (after rejection and collect messages).
+  - Kicked: the room closes with 4100; `useGameSession` sets `endReason: "kicked"` and the start
+    screen says "Sinut poistettiin pelistä, koska vuorosi aika loppui." until the next Play.
 - **Quick play:** `joinOrCreate("game", { pool? })`; `?pool=…` in the URL keeps a group of players
   (or an E2E test) in their own games. While connecting the start screen says so, and after 5 s
   adds that the server may be waking up.
@@ -195,7 +214,7 @@ client/src/
   build without a time, "?" when unknown, "Server: herätetään…" / "Server: ei vastannut" while
   waking or after giving up.
 
-## State sync principle — Implemented (board, seats, pawns, turn, treasures); rest Planned
+## State sync principle — Implemented (board, seats, pawns, turn, treasures, turn clock); rest Planned
 
 - Synced today (`server/src/rooms/schema/GameState.ts`):
   `players: map<sessionId, { connected, seat 1–4, row, col, cards, found[], target }>` (`row`/`col` =
@@ -203,11 +222,12 @@ client/src/
   current treasure or `""` when heading home, **view-filtered**),
   `squares: array<{ id, rotation }>` (49, row-major), `spare: { id, rotation }`, `turnSeat`
   (0 = nobody), `phase` (`"shift"` → `"move"`, `"finished"` after a win), `winnerSeat` (0 = none),
-  `lastInsertion` (`""` or an insertion id). The client rebuilds a rules `Board` from these plus the
+  `lastInsertion` (`""` or an insertion id), `turnDeadline` (server epoch ms when the turn's time
+  runs out, 0 = no clock; for the countdown only) and `turnExpired` (the server's "time is up",
+  which alone enables kicking). The client rebuilds a rules `Board` from these plus the
   static `TILE_SET` (`client/src/session/viewModel.ts`). The seed is a private room field, logged
   as `game.setup`, never synced.
-- Still to come with their changes: turn deadline. Tile kinds and treasures are static per tile
-  id, so they are never synced. The treasure stacks and the deal seed stay on the server.
+- Tile kinds and treasures are static per tile id, so they are never synced. The treasure stacks and the deal seed stay on the server.
 - The client derives everything else with `@labyrinth/rules` (openings, reachable squares, slide
   animations from tile-id diffs, seat colour/shape).
 - UI-only state (shift preview, spare rotation before sending, settings) never crosses the
@@ -298,6 +318,16 @@ Spec: `openspec/specs/treasures/`. Code: `packages/rules/src/treasures.ts`.
   home, ending on the own start corner wins. Passing through, shifts and other players' targets
   never count.
 
+### Turn rules — Implemented
+
+Spec: `openspec/specs/turns/`. Code: `packages/rules/src/turns.ts`.
+
+- `TURN_TIME_LIMIT_SECONDS` (60), `DISCONNECT_LIMIT_SECONDS` (300).
+- `nextSeat(taken, from)`: next taken seat clockwise, `from` when alone, 0 when nobody.
+- `kickRejection({ kicker, target, turnSeat, expired, finished })` → `WRONG_PHASE` /
+  `NOT_KICKABLE` / `TURN_NOT_EXPIRED` / undefined.
+- `soleSurvivor(taken)`: the only taken seat, else undefined.
+
 ### Shifting — Implemented
 
 Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
@@ -314,7 +344,7 @@ Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
 - Properties (fast-check): tile ids preserved, fixed squares unchanged, shift + reverse with the
   pushed-out tile restores board and pawns.
 
-## Game flow and commands — Implemented (shift, move, collect, win); rest Planned
+## Game flow and commands — Implemented (shift, move, collect, win, turn clock, kick, removals); rest Planned
 
 - **Turn model — Implemented (temporary start rule):** `turnSeat` is the current player's seat.
   The first player to sit down starts (`lobby` replaces this with a random start). A turn has two
@@ -336,7 +366,8 @@ Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
   `INVALID_COMMAND`. Accepted: the pawn moves, then `settleMove()` decides: a collected treasure
   is appended to `found` and the next card (or `""`) becomes `target`
   (`treasure.collected`); a win sets `winnerSeat`, `phase = "finished"` (`phase.changed`,
-  `game.finished`) and locks the room; otherwise the turn passes.
+  `game.finished { reason: "home" }`), stops the clock and locks the room; otherwise the turn
+  passes.
 - **Treasure deal — Implemented (temporary rule):** at room creation the room draws a second seed
   (`game.dealt { dealSeed }`) and deals **four stacks of 6**, one per seat, because without a
   waiting room the player count is unknown. Whoever takes a seat plays that seat's stack from the
@@ -345,7 +376,31 @@ Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
 - **Finished game — Implemented:** `requireTurn` rejects every shift/move with `WRONG_PHASE` once
   `phase` is `finished` (before the turn check, so everyone gets the same code); leaving starts no
   turn; the explicitly locked room stays locked when someone leaves, so quick play never joins it.
-- **Planned:** a `LOBBY` phase before the first shift (`lobby`); `kick{player}`; creator only:
+- **Turn clock — Implemented (temporary start rule):** every turn gets `TURN_TIME_LIMIT_SECONDS`
+  (60) for both steps: `setTurn()` → `restartClock()` writes `turnDeadline` and sets a
+  `this.clock` timeout that flips `turnExpired` and logs `turn.expired { seat }`. Nothing
+  automatic happens; the slow player may still act. Until `lobby`, the clock only runs while at
+  least two players are seated: it starts when the second player sits down (full 60 s from
+  then), a third joining does not restart it, and it stops when one is left. Room tests shorten
+  the limit through the instance field `turnLimitMs`.
+- **`kick { seat }` — Implemented:** any other seated player, once `turnExpired`. Rejections
+  (`kickRejection()` from rules): `NOT_SEATED`, `WRONG_PHASE` (finished), `NOT_KICKABLE` (not the
+  current player, or oneself — this also catches a stale kick after the turn passed),
+  `TURN_NOT_EXPIRED`. Accepted: the player is removed first (state changes before the reply), then
+  a connected player is closed with `CLOSE_CODES.KICKED` (4100, outside Colyseus' 4000–4010, so
+  the SDK passes it to `onLeave` without reconnecting) and a dropped player's seat hold is
+  rejected. Rejection lines carry the state fact `turnExpired`.
+- **Removal — Implemented:** `removePlayer(sessionId, reason)` is the single way out of a running
+  game: `left` (consented leave), `kicked` (with `by`), `timeout` (the 5-minute hold,
+  `DISCONNECT_LIMIT_SECONDS`, ran out; room tests shorten `disconnectLimitSeconds`). Pawn,
+  progress and seat go (a new player on that seat starts its stack from the first card); logs
+  `player.removed { seat, reason, by? }`. Then: in a finished game nothing more; if exactly one
+  player is left and the game is under way, that player wins (`game.finished { reason:
+  "lastPlayer" }`); else the turn passes if it was theirs. `onDrop`/`onLeave` check that the player
+  still exists, so a kick's closing hooks change nothing more. **Under way (temporary):** a
+  private `contested` flag set by a shift made while at least two players are seated; `lobby`
+  replaces it with the explicit start.
+- **Planned:** a `LOBBY` phase before the first shift (`lobby`); creator only:
   `addBot`, `removeBot`, `start`.
 - **Bots** (`bot-player`): an ordinary seat; the decision is a pure function in rules, submitted
   through the same command wrapper as humans.
