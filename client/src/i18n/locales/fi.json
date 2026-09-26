@@ -15,5 +15,53 @@
     "title": "Jokin meni pieleen",
     "body": "Peli kohtasi odottamattoman virheen. Lataa sivu uudelleen jatkaaksesi.",
     "reload": "Lataa uudelleen"
+  },
+  "treasures": {
+    "crown": "kruunu",
+    "key": "avain",
+    "gem": "jalokivi",
+    "coins": "kolikot",
+    "sword": "miekka",
+    "shield": "kilpi",
+    "book": "kirja",
+    "map": "kartta",
+    "scroll": "kirjakäärö",
+    "potion": "taikajuoma",
+    "lamp": "lamppu",
+    "chest": "aarrearkku",
+    "dragon": "lohikäärme",
+    "bat": "lepakko",
+    "spider": "hämähäkki",
+    "butterfly": "perhonen",
+    "ghost": "aave",
+    "cat": "kissa",
+    "fish": "kala",
+    "horse": "hevonen",
+    "beetle": "kovakuoriainen",
+    "mouse": "hiiri",
+    "skull": "pääkallo",
+    "deer": "peura"
+  },
+  "board": {
+    "label": "Pelilauta",
+    "treasure": "Aarre: {{name}}",
+    "pawn": "Pelaaja {{seat}}",
+    "pawnMe": "Pelaaja {{seat}} (sinä)",
+    "spare": "Ylimääräinen laatta",
+    "fixed": "kiinteä laatta"
+  },
+  "start": {
+    "play": "Pelaa",
+    "connecting": "Yhdistetään palvelimeen…",
+    "slow": "Palvelin saattaa olla heräämässä. Tämä voi kestää hetken.",
+    "errorTitle": "Peliin ei päästy",
+    "errorBody": "Yhteyttä palvelimeen ei saatu. Yritä hetken päästä uudelleen.",
+    "retry": "Yritä uudelleen"
+  },
+  "game": {
+    "idLabel": "Peli {{id}}. Napauta kopioidaksesi.",
+    "copyLine": "Peli {{id}} · {{date}} {{time}} · v {{ver}}",
+    "copied": "Kopioitu",
+    "copyFallback": "Kopioi tämä rivi bugiraporttiin:"
   }
 }

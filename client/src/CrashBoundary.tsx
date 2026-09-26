@@ -2,21 +2,24 @@ import type { ErrorInfo, ReactNode } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useTranslation } from "react-i18next";
 import { log } from "./logging/logger.ts";
+import { Button } from "./ui/Button.tsx";
+import { Message } from "./ui/Message.tsx";
+import { Screen } from "./ui/Screen.tsx";
 
 type ErrorLogger = Pick<typeof log, "error">;
 
 function CrashScreen() {
   const { t } = useTranslation();
   return (
-    <div className="app">
-      <main className="app-main crash" role="alert">
-        <h1>{t("crash.title")}</h1>
+    <Screen centered>
+      <Message
+        role="alert"
+        title={t("crash.title")}
+        action={<Button onClick={() => window.location.reload()}>{t("crash.reload")}</Button>}
+      >
         <p>{t("crash.body")}</p>
-        <button type="button" className="primary" onClick={() => window.location.reload()}>
-          {t("crash.reload")}
-        </button>
-      </main>
-    </div>
+      </Message>
+    </Screen>
   );
 }
 

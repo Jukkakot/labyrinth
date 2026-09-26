@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defaultServerConditions, defineConfig } from "vite";
 
@@ -15,5 +16,8 @@ export default defineConfig({
     resolve: {
       conditions: ["source", ...defaultServerConditions],
     },
+  },
+  test: {
+    setupFiles: ["./src/test/setup.ts"],
   },
 });

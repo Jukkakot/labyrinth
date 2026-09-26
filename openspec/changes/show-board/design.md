@@ -116,3 +116,13 @@ If the cause is client-side, it is handled when `lobby` adds a leave action. Not
 - [Render cold start makes E2E flaky if pointed at production] → E2E runs against local dev servers only. The production check is a separate, manual task.
 - [Reconnect token of a disposed room] → `reconnect` fails, the token is cleared and the start screen is shown. A test covers it.
 - [Board too small on short screens] → `60dvh` caps the height. Landscape optimisation is out of scope, and landscape must only not break.
+
+## Implementation notes
+
+- **Bundle:** 148.9 kB gzip after adding `@colyseus/sdk` and 25 Tabler icons (was 90.9 kB);
+  unused Tabler icons are tree-shaken. Budget 200 kB.
+- **UI components added beyond the list:** `ui/Screen` (page frame with top bar and footer) and
+  `ui/Message` (title, text, action) — shared by the start, connecting, error and crash screens.
+  `LanguageSwitcher` moved to `ui/` on a CSS Module.
+- **Testing Library cleanup:** Vitest globals are off, so `client/src/test/setup.ts` registers
+  `cleanup()`; configured in `vite.config.ts` `test.setupFiles`.

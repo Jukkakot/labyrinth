@@ -15,5 +15,53 @@
     "title": "Something went wrong",
     "body": "The game ran into an unexpected error. Reload the page to continue.",
     "reload": "Reload"
+  },
+  "treasures": {
+    "crown": "crown",
+    "key": "key",
+    "gem": "gem",
+    "coins": "coins",
+    "sword": "sword",
+    "shield": "shield",
+    "book": "book",
+    "map": "map",
+    "scroll": "scroll",
+    "potion": "potion",
+    "lamp": "lamp",
+    "chest": "treasure chest",
+    "dragon": "dragon",
+    "bat": "bat",
+    "spider": "spider",
+    "butterfly": "butterfly",
+    "ghost": "ghost",
+    "cat": "cat",
+    "fish": "fish",
+    "horse": "horse",
+    "beetle": "beetle",
+    "mouse": "mouse",
+    "skull": "skull",
+    "deer": "deer"
+  },
+  "board": {
+    "label": "Game board",
+    "treasure": "Treasure: {{name}}",
+    "pawn": "Player {{seat}}",
+    "pawnMe": "Player {{seat}} (you)",
+    "spare": "Spare tile",
+    "fixed": "fixed tile"
+  },
+  "start": {
+    "play": "Play",
+    "connecting": "Connecting to the server…",
+    "slow": "The server may be waking up. This can take a moment.",
+    "errorTitle": "Could not join a game",
+    "errorBody": "The server could not be reached. Try again in a moment.",
+    "retry": "Try again"
+  },
+  "game": {
+    "idLabel": "Game {{id}}. Tap to copy.",
+    "copyLine": "Game {{id}} · {{date}} {{time}} · v {{ver}}",
+    "copied": "Copied",
+    "copyFallback": "Copy this line into your bug report:"
   }
 }

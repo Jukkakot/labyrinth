@@ -1,0 +1,18 @@
+.spare {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Same on-screen size as a board tile at the board's maximum width. */
+.tile {
+  width: 56px;
+  height: 56px;
+  display: block;
+}
+
+.caption {
+  color: var(--muted);
+  font-size: var(--text-s);
+}

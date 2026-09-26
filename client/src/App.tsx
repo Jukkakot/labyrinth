@@ -1,22 +1,9 @@
-import { RULES_VERSION } from "@labyrinth/rules";
-import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "./LanguageSwitcher.tsx";
+import { GameScreen } from "./screens/GameScreen.tsx";
+import { StartScreen } from "./screens/StartScreen.tsx";
+import { useGameSession } from "./session/useGameSession.ts";
 
 export default function App() {
-  const { t } = useTranslation();
-
-  return (
-    <div className="app">
-      <header className="app-header">
-        <LanguageSwitcher />
-      </header>
-      <main className="app-main">
-        <h1>{t("app.title")}</h1>
-        <p>{t("app.tagline")}</p>
-      </main>
-      <footer className="app-footer">
-        {t("footer.rulesVersion", { version: RULES_VERSION })}
-      </footer>
-    </div>
-  );
+  const session = useGameSession();
+  if (session.status === "playing" && session.view) return <GameScreen view={session.view} />;
+  return <StartScreen session={session} />;
 }

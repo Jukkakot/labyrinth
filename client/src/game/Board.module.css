@@ -1,0 +1,7 @@
+/* Square and as large as fits: full width on a phone, capped by height on short or wide screens. */
+.board {
+  display: block;
+  width: min(100%, 60dvh, 640px);
+  aspect-ratio: 1;
+  height: auto;
+}

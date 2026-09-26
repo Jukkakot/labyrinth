@@ -11,15 +11,15 @@
 
 ## 3. Client foundation
 
-- [ ] 3.1 Move colour tokens into `client/src/ui/tokens.css` (plus spacing, radii, tap size, seat colours); add `ui/Button` and `ui/Badge` with CSS Modules; move the crash screen onto `Button`; verify component tests and a visual check of the start and crash screens on Galaxy S24 (Playwright MCP)
-- [ ] 3.2 Add `@tabler/icons-react`; create `game/treasureIcons.ts` (exhaustive over `TreasureId`) and `treasures.*` names in fi/en; verify a test that all 24 treasures map to 24 distinct icons and the locale parity test
+- [x] 3.1 Move colour tokens into `client/src/ui/tokens.css` (plus spacing, radii, tap size, seat colours); add `ui/Button` and `ui/Badge` with CSS Modules; move the crash screen onto `Button`; verify component tests and a visual check of the start and crash screens on Galaxy S24 (Playwright MCP)
+- [x] 3.2 Add `@tabler/icons-react`; create `game/treasureIcons.ts` (exhaustive over `TreasureId`) and `treasures.*` names in fi/en; verify a test that all 24 treasures map to 24 distinct icons and the locale parity test
 
 ## 4. Client game
 
-- [ ] 4.1 Add `@colyseus/sdk`; create `useGameSession` (join/reconnect via sessionStorage token, view model from state, `setLogContext`, `client.conn.lost/restored` logs, error state); verify unit tests of the state-to-view mapping (board rebuilt with `createBoard`, seats) and of token handling (stored on join, cleared on failed reconnect)
-- [ ] 4.2 Create `game/TileView`, `game/Board`, `game/Pawn`, `game/SpareTile` (corridor style, fixed-tile mark, treasure icons with accessible names, seat shapes and colours, own pawn marked); verify component tests: corner open E,S draws exactly two corridor arms, the dragon tile's accessible name, seat shapes
-- [ ] 4.3 Create `game/GameIdBadge` (copy line, "Kopioitu", selectable fallback) and `screens/StartScreen` / `screens/GameScreen` (connecting and slow-server states, error with retry); verify component tests for the copy line and fallback, and the error state
-- [ ] 4.4 Check the bundle budget with the SDK and icons; verify `npm run size -w @labyrinth/client` passes and record the size
+- [x] 4.1 Add `@colyseus/sdk`; create `useGameSession` (join/reconnect via sessionStorage token, view model from state, `setLogContext`, `client.conn.lost/restored` logs, error state); verify unit tests of the state-to-view mapping (board rebuilt with `createBoard`, seats) and of token handling (stored on join, cleared on failed reconnect)
+- [x] 4.2 Create `game/TileView`, `game/Board`, `game/Pawn`, `game/SpareTile` (corridor style, fixed-tile mark, treasure icons with accessible names, seat shapes and colours, own pawn marked); verify component tests: corner open E,S draws exactly two corridor arms, the dragon tile's accessible name, seat shapes
+- [x] 4.3 Create `game/GameIdBadge` (copy line, "Kopioitu", selectable fallback) and `screens/StartScreen` / `screens/GameScreen` (connecting and slow-server states, error with retry); verify component tests for the copy line and fallback, and the error state
+- [x] 4.4 Check the bundle budget with the SDK and icons; verify `npm run size -w @labyrinth/client` passes and record the size
 
 ## 5. E2E
 

@@ -1,0 +1,26 @@
+.tile {
+  fill: var(--tile);
+}
+
+/* Fixed tiles: darker fill plus a corner notch, so they are recognisable without colour. */
+.fixed {
+  fill: var(--tile-fixed);
+}
+
+.fixedMark {
+  fill: var(--tile-mark);
+}
+
+.corridor {
+  stroke: var(--corridor);
+  stroke-width: 30;
+  stroke-linecap: butt;
+}
+
+.hub {
+  fill: var(--corridor);
+}
+
+.icon {
+  color: var(--corridor-icon);
+}
