@@ -12,6 +12,7 @@ export const SERVER_LOG_EVENTS = [
   "room.created",
   "room.disposed",
   "room.error",
+  "game.setup",
   "player.joined",
   "player.left",
   "player.dropped",

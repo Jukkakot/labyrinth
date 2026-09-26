@@ -4,8 +4,8 @@ import type { Rotation, TileKind } from "./tile.js";
 
 /** Our own treasure names (not the original game's): objects on fixed tiles, creatures on movable ones. */
 export const TREASURES = [
-  "crown", "key", "gem", "coins", "sword", "shield", "book", "map", "scroll", "ring", "lamp", "chest",
-  "dragon", "owl", "bat", "spider", "beetle", "mouse", "lizard", "moth", "ghost", "fairy", "wizard", "troll",
+  "crown", "key", "gem", "coins", "sword", "shield", "book", "map", "scroll", "potion", "lamp", "chest",
+  "dragon", "bat", "spider", "butterfly", "ghost", "cat", "fish", "horse", "beetle", "mouse", "skull", "deer",
 ] as const;
 export type TreasureId = (typeof TREASURES)[number];
 

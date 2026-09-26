@@ -2,12 +2,12 @@
 
 ## 1. Rules: treasure names
 
-- [ ] 1.1 Rename `TREASURES` to the icon-aligned names (design §7); verify rules tests pass unchanged, including the golden board
+- [x] 1.1 Rename `TREASURES` to the icon-aligned names (design §7); verify rules tests pass unchanged, including the golden board
 
 ## 2. Server: seeded game, seats, synced board
 
-- [ ] 2.1 Extend `GameState` with `squares`/`spare` (`TileState { id, rotation }`) and `Player.seat`; in `GameRoom.onCreate` draw a seed (node:crypto), `setupBoard`, copy into state and log `game.setup` (add to the event catalogue); verify room tests: the client's synced squares/spare equal `setupBoard(seed)` for the logged seed, no seed in client state, two rooms get different seeds
-- [ ] 2.2 Assign the lowest free seat 1–4 on join; verify room tests: seats 1,2,3 in join order, a freed seat is reused, a fifth `joinOrCreate` lands in a new room
+- [x] 2.1 Extend `GameState` with `squares`/`spare` (`TileState { id, rotation }`) and `Player.seat`; in `GameRoom.onCreate` draw a seed (node:crypto), `setupBoard`, copy into state and log `game.setup` (add to the event catalogue); verify room tests: the client's synced squares/spare equal `setupBoard(seed)` for the logged seed, no seed in client state, two rooms get different seeds
+- [x] 2.2 Assign the lowest free seat 1–4 on join; verify room tests: seats 1,2,3 in join order, a freed seat is reused, a fifth `joinOrCreate` lands in a new room
 
 ## 3. Client foundation
 
