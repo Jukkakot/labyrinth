@@ -15,3 +15,13 @@ One OpenSpec change at a time, in this order. Adjust as we learn.
 10. `bot-player`
 11. `spectators-and-rematch`
 12. `settings`: confirmations, theme, sounds, turn notification
+
+## Improvement backlog
+
+Ideas for existing features, picked up after the roadmap items above or when a change touches the
+same area. Each becomes its own change (or joins a related one) when picked up.
+
+- **Server wake-up progress** (start screen, spec `game-session` → early wake-up; suggested
+  2026-09-27): while "Herätetään palvelinta…" is shown, count the seconds waited so far ("0:23"),
+  and show a loading animation, so the player sees that something is waiting and progressing
+  rather than stuck. Honour reduced motion.
