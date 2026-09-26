@@ -2,7 +2,17 @@
   "mcpServers": {
     "playwright": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@playwright/mcp@latest"]
+      "args": [
+        "/c", "npx", "-y", "@playwright/mcp@latest",
+        "--isolated", "--headless", "--output-dir", ".playwright-mcp/desktop"
+      ]
+    },
+    "playwright-mobile": {
+      "command": "cmd",
+      "args": [
+        "/c", "npx", "-y", "@playwright/mcp@latest",
+        "--isolated", "--headless", "--device", "iPhone 15", "--output-dir", ".playwright-mcp/mobile"
+      ]
     }
   }
 }

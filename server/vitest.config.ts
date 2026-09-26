@@ -13,5 +13,7 @@ export default defineConfig({
   },
   test: {
     testTimeout: 15_000,
+    // Each file boots a real Colyseus server; run files one at a time to avoid port clashes.
+    fileParallelism: false,
   },
 });

@@ -72,7 +72,7 @@ Express middleware records the start time and logs `http.request` on `res.on("fi
 - **Endpoint:** `POST /client-logs`.
   - The body is JSON sent as `text/plain`, which avoids a CORS preflight and works with `fetch(..., { keepalive: true })` on page hide.
   - Validated with zod: at most 50 entries per batch, `msg` at most 2 000 characters, `stack` at most 8 000 characters, known level, and `evt` from the client part of the catalogue.
-  - `cors` allows the GitHub Pages origin and localhost.
+  - CORS comes from the allow-list set up in setup-infrastructure (Colyseus CORS hook), so no extra middleware.
   - `express-rate-limit` allows 30 requests per minute per IP. The IP is used only in memory; the limiter's key is never logged.
 - **Client logger:** pino browser with `transmit.send` pushes entries into a buffer. The buffer is flushed every 5 s, immediately on `error`, and on `visibilitychange: hidden` / `pagehide`.
   - Levels shipped: `warn`+, plus the key events (logged at `info` with an allow-list).

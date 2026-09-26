@@ -28,7 +28,7 @@ Every later change (board, shifting, lobby, bots) will need to answer "what happ
 
 ## Impact
 
-- **server**: new logger module, HTTP audit middleware, `POST /client-logs` endpoint (CORS, rate limit, validation), command wrapper used by all future room commands, graceful-shutdown log. New dependencies: pino, pino-pretty (dev), zod, cors, express-rate-limit, human-id.
+- **server**: new logger module, HTTP audit middleware, `POST /client-logs` endpoint (CORS, rate limit, validation), command wrapper used by all future room commands, graceful-shutdown log. New dependencies: pino, pino-pretty (dev), zod, express-rate-limit, human-id.
 - **client**: logger with batching and shipping, global error handlers, crash screen (fi/en strings). New dependencies: pino (browser build), react-error-boundary, size-limit.
 - **CI**: new bundle size step. Version identifiers come from the git commit on Render and in GitHub Actions.
 - No change to game behaviour, and no persistent storage.

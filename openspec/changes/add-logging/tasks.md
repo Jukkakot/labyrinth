@@ -2,7 +2,7 @@
 
 ## 1. Server logging core
 
-- [ ] 1.1 Add pino, pino-pretty, zod, cors, express-rate-limit (+ types) to `@labyrinth/server`; verify `npm install` and `npm run typecheck` succeed
+- [ ] 1.1 Add pino, pino-pretty, zod, express-rate-limit (+ types) to `@labyrinth/server`; verify `npm install` and `npm run typecheck` succeed
 - [ ] 1.2 Create `server/src/logging/events.ts` event catalogue (server and client event unions) and `logger.ts` wrapper (`log.<level>(evt, fields?, msg?)`, label levels, no base, `ver` from `RENDER_GIT_COMMIT`/`dev`, `LOG_LEVEL`, dev transports to pino-pretty + `logs/dev.log`, dev-only trailing `time`); verify with Vitest capturing a destination stream: each entry is one JSON line, `level` and `evt` are the first two keys, a multi-line stack stays on one line, production output has no `time`
 
 ## 2. Room lifecycle and uncaught errors
@@ -22,7 +22,7 @@
 
 ## 5. Client log endpoint
 
-- [ ] 5.1 Add `POST /client-logs` (text/plain JSON body, zod schema: ≤50 entries, msg ≤2000, stack ≤8000, known level, client evt catalogue), CORS via the `ALLOWED_ORIGINS` config from setup-infrastructure, 30 req/min rate limit; each entry logged with `src: "client"`, client `ver`, `ts`; verify by tests: valid batch → 204 and one line per entry, oversized batch → 400 and no entries logged, 31st request in a minute → 429, no written line contains an IP address
+- [ ] 5.1 Add `POST /client-logs` (text/plain JSON body, zod schema: ≤50 entries, msg ≤2000, stack ≤8000, known level, client evt catalogue), CORS via the allow-list configured in setup-infrastructure (Colyseus CORS hook), 30 req/min rate limit; each entry logged with `src: "client"`, client `ver`, `ts`; verify by tests: valid batch → 204 and one line per entry, oversized batch → 400 and no entries logged, 31st request in a minute → 429, no written line contains an IP address
 
 ## 6. Client logger
 

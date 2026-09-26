@@ -30,11 +30,13 @@ Constraints: 0 € budget; the user pushes manually (the assistant never pushes)
 Render MCP's `create_web_service` cannot set `healthCheckPath`, `buildFilter` or the "deploy after CI checks pass" trigger. Those settings live in `render.yaml`, so the service is created once in the dashboard (New → Blueprint → `Jukkakot/labyrinth`). After that, Render MCP is used to verify the service, read deploys and read logs. The user does the one dashboard step; everything else is scripted or done by the assistant.
 
 ### 2. Server URL as build-time config
-The client reads `import.meta.env.VITE_SERVER_URL` from `client/src/config.ts`, which falls back to `http://localhost:2567` in development and throws at startup if the value is missing in a production build. The production value is a GitHub Actions repository variable (`gh variable set VITE_SERVER_URL`), used by `deploy-client.yml`. It is not a secret, so a variable rather than a secret. It is set once the Render URL is known.
+The client reads `import.meta.env.VITE_SERVER_URL` from `client/src/config.ts`, which falls back to `http://localhost:2567` in development. In a production build without the value it throws when first used, not at startup, so the first Pages deploy (before Render exists) still loads. The production value is a GitHub Actions repository variable (`gh variable set VITE_SERVER_URL`), used by `deploy-client.yml`. It is not a secret, so a variable rather than a secret. It is set once the Render URL is known.
 - Alternative considered: runtime discovery (fetching a config file). It adds a request and a failure mode for no benefit at this size.
 
-### 3. CORS with the `cors` package and an explicit allow-list
-`ALLOWED_ORIGINS` is a comma-separated list: `https://jukkakot.github.io` in `render.yaml`, and `http://localhost:5173` plus LAN dev origins by default in development. The middleware is applied to Express routes. Colyseus's matchmaking keeps its own CORS handling, which the implementation checks from the Pages origin.
+### 3. CORS through Colyseus's own hook and an explicit allow-list
+`ALLOWED_ORIGINS` is a comma-separated list: `https://jukkakot.github.io` in `render.yaml`. In development, localhost and LAN dev origins are allowed as well.
+- Found during implementation: Colyseus's HTTP router adds CORS headers to **every** response, Express routes included, and by default echoes any `Origin`. A separate `cors` middleware would therefore be redundant and would be overridden.
+- Instead, `configureCors()` uses the documented override `matchMaker.controller.getCorsHeaders`, and removes the wildcard default. An allowed origin is echoed with `Vary: Origin`; any other origin gets no `Access-Control-Allow-Origin` at all. This covers matchmaking and our own routes in one place.
 
 ### 4. Two Playwright MCP instances
 `playwright` (desktop viewport) and `playwright-mobile` (`--device "iPhone 15"`) in `.mcp.json`. The mobile instance matches the primary target, and having both avoids reconfiguring between checks. If the chosen browser is missing, the task installs it with `npx playwright install chromium` and pins `--browser chromium`.

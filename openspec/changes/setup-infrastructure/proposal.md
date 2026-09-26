@@ -28,7 +28,7 @@ The scaffold has deployment configuration (GitHub Pages workflow, `render.yaml`)
 
 ## Impact
 
-- **server**: CORS middleware (new dependency `cors`), `ALLOWED_ORIGINS` environment variable.
+- **server**: CORS allow-list through Colyseus's CORS hook (no new dependency), `ALLOWED_ORIGINS` environment variable.
 - **client**: `VITE_SERVER_URL` configuration module and typed env declaration.
 - **CI/deploy**: `deploy-client.yml` passes `VITE_SERVER_URL`; `render.yaml` adds `ALLOWED_ORIGINS`.
 - **Tooling**: `.mcp.json` (mobile Playwright instance), `.vscode/launch.json` and `extensions.json`, `.gitignore` exception for `.vscode/launch.json`.

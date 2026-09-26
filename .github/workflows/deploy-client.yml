@@ -34,6 +34,7 @@ jobs:
       - run: npm run build -w @labyrinth/client
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: client/dist
