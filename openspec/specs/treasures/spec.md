@@ -6,23 +6,27 @@ Give the game its goal: treasure cards dealt evenly, one secret target at a time
 ## Requirements
 
 ### Requirement: Treasure cards dealt evenly
-Every game SHALL deal the 24 treasure cards from a seeded shuffle, evenly, so that every seat gets the same number of cards in a fixed order (its stack). Until the waiting room exists, the cards MUST be dealt when the game is created, 6 to each of the four seats, and a player taking a seat MUST get that seat's stack with nothing found yet. The deal MUST be reproducible from its seed, and no treasure MUST appear in two stacks. The deal seed MUST stay on the server.
+Every game SHALL deal the 24 treasure cards from a seeded shuffle, evenly among the players seated when the game starts, so that every seated player gets the same number of cards (24 / number of players: 12, 8 or 6) in a fixed order (their stack). The cards MUST be dealt when the game starts, not before; in the waiting room nobody has cards or a target. The stacks go to the seated seats in seat order. The deal MUST be reproducible from its seed and the seated seats, and no treasure MUST appear in two stacks. The deal seed MUST stay on the server.
 
 #### Scenario: Four stacks of six
-- **WHEN** a new game is created
-- **THEN** each of the seats 1–4 has a stack of 6 different treasures, and together the stacks hold all 24 treasures once
+- **WHEN** a game starts with 4 players
+- **THEN** each of them has a stack of 6 different treasures, and together the stacks hold all 24 treasures once
 
 #### Scenario: Deal for fewer seats
-- **WHEN** the treasures are dealt for 2 or 3 seats
-- **THEN** each seat gets 12 or 8 cards, and together they hold all 24 treasures once
+- **WHEN** a game starts with seats 1 and 3 taken, or with 3 players
+- **THEN** each player gets 12 or 8 cards respectively, and together they hold all 24 treasures once
 
 #### Scenario: Reproducible deal
-- **WHEN** the cards are dealt twice with the same seed and the same seats
+- **WHEN** the cards are dealt twice with the same seed and the same seated seats
 - **THEN** every seat gets the same stack in the same order
 
 #### Scenario: Freed seat
-- **WHEN** a player leaves and a new player takes their seat
-- **THEN** the new player starts that seat's stack from the first card, with nothing found
+- **WHEN** the player in seat 2 leaves the waiting room before the start and nobody takes the seat
+- **THEN** the cards are dealt only to the players still seated, and seat 2 gets no stack
+
+#### Scenario: No cards before the start
+- **WHEN** a player looks at the waiting room
+- **THEN** no player has cards or a target yet
 
 ### Requirement: Secret current target
 Each player SHALL hunt one treasure at a time: their current target is the first card of their stack not yet found. A player's current target MUST be sent only to that player. How many cards each player has and which treasures each player has found MUST be visible to every player.
