@@ -1,0 +1,11 @@
+/* Wake-up status under Play. */
+.wake {
+  max-width: 32ch;
+  color: var(--muted);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.wake p {
+  margin: 0;
+}

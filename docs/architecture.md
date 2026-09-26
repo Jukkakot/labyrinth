@@ -53,7 +53,12 @@ builds first.
 - Room `game` → `GameRoom`: players map with a `connected` flag; unintended disconnects hold the
   seat 60 s for reconnection (`holdSeat`). Turn model and the `shift` command: see
   [Game flow and commands](#game-flow-and-commands--implemented-shift-rest-planned).
-- HTTP: `GET /health` → `{ status, rulesVersion }`; `POST /client-logs` (client log batches).
+- HTTP: `GET /health` → `{ status, rulesVersion, version, builtAt }` (`version` = short commit from
+  `RENDER_GIT_COMMIT` or `"dev"`; `builtAt` = build time, `null` without a build). It is Render's
+  health check and the client's wake-up request. `POST /client-logs` (client log batches).
+- **Build time:** the server `build` script writes `build/build-info.json` (`{ builtAt }`, UTC ISO)
+  after `tsc`; `server/src/buildInfo.ts` reads it once at startup. `tsx` dev and tests have no
+  file, so `builtAt` is `null`.
   Development only: `/monitor` (room inspector), `/playground` (test client).
 - **Logging** (`server/src/logging/`): pino JSON lines to stdout; details in
   [operations.md → Logs](operations.md#logs--implemented). HTTP requests are audited on the Node
@@ -92,7 +97,9 @@ builds first.
   entries are batched to `POST /client-logs` (every 5 s, at once on errors, keepalive on page
   hide). Global `error`/`unhandledrejection` handlers and `CrashBoundary` (calm localized reload
   screen) log `client.error`. `setLogContext({ room, player })` tags entries with the game.
-- Build version `VITE_APP_VERSION` = short commit (set in CI and the Pages deploy).
+- Build version `VITE_APP_VERSION` = short commit (set in CI and the Pages deploy). Build time
+  `__BUILD_TIME__` (UTC ISO of `vite build`, `null` for the dev server and tests) is defined in
+  `vite.config.ts` and read with `clientBuiltAt()` (`client/src/config.ts`).
 
 ### Client structure — Implemented
 
@@ -137,6 +144,19 @@ client/src/
 - **Quick play:** `joinOrCreate("game", { pool? })`; `?pool=…` in the URL keeps a group of players
   (or an E2E test) in their own games. While connecting the start screen says so, and after 5 s
   adds that the server may be waking up.
+- **Early wake-up** (`client/src/session/serverWake.ts`): `App` starts it once per page load
+  (a module singleton, so StrictMode, remounts and a rejoining tab do not refetch). It fetches
+  `/health` with a 20 s timeout per attempt and retries every 2 s on errors or non-2xx replies
+  until 90 s have passed; after an answer it never contacts the server again (no keep-alive).
+  States: `waking` (Play disabled, "Herätetään palvelinta…", after 5 s also "can take about a
+  minute"), `ready` (Play enabled), `failed` (Play enabled with a calm note; the normal connecting
+  and join-error flow follows). A missing server URL is `failed` at once. The body is read loosely:
+  a reply without `builtAt` is still `ready`, with the server time unknown. Logs one `client.info`
+  (`kind: "wake"`, `durMs`, `attempts`, `serverBuiltAt`) or `client.warn` line.
+- **Build times in the start screen footer** (`BuildInfo`): "Client …" and "Server …" in local time
+  and the UI language (shared `formatDateTime`, also used by the bug-report copy line); "dev" for a
+  build without a time, "?" when unknown, "Server: herätetään…" / "Server: ei vastannut" while
+  waking or after giving up.
 
 ## State sync principle — Implemented (board, seats, turn); rest Planned
 

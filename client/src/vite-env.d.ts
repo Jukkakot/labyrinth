@@ -10,3 +10,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** UTC ISO time of the production build; null for the dev server. Defined in vite.config.ts. */
+declare const __BUILD_TIME__: string | null;

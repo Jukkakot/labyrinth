@@ -16,3 +16,8 @@ export function resolveServerUrl(env: ServerUrlEnv): string {
 export function serverUrl(): string {
   return resolveServerUrl(import.meta.env);
 }
+
+/** When this client was built (UTC ISO), or `null` for a development build. */
+export function clientBuiltAt(): string | null {
+  return __BUILD_TIME__;
+}

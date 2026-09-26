@@ -11,6 +11,15 @@
   "footer": {
     "rulesVersion": "Säännöt v{{version}}"
   },
+  "build": {
+    "client": "Client {{time}}",
+    "server": "Server {{time}}",
+    "serverWaking": "Server: herätetään…",
+    "serverNoAnswer": "Server: ei vastannut",
+    "dev": "dev",
+    "unknown": "?",
+    "time": "{{date}} {{time}}"
+  },
   "crash": {
     "title": "Jokin meni pieleen",
     "body": "Peli kohtasi odottamattoman virheen. Lataa sivu uudelleen jatkaaksesi.",
@@ -56,7 +65,10 @@
     "slow": "Palvelin saattaa olla heräämässä. Tämä voi kestää hetken.",
     "errorTitle": "Peliin ei päästy",
     "errorBody": "Yhteyttä palvelimeen ei saatu. Yritä hetken päästä uudelleen.",
-    "retry": "Yritä uudelleen"
+    "retry": "Yritä uudelleen",
+    "waking": "Herätetään palvelinta…",
+    "wakingSlow": "Palvelin on ollut levossa. Herääminen voi kestää noin minuutin.",
+    "wakeFailed": "Palvelin ei vastannut vielä – voit silti yrittää."
   },
   "game": {
     "idLabel": "Peli {{id}}. Napauta kopioidaksesi.",

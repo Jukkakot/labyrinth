@@ -1,12 +1,16 @@
 import { defineServer, defineRoom, monitor, playground } from "colyseus";
 import { RULES_VERSION } from "@labyrinth/rules";
+import { readBuiltAt } from "./buildInfo.js";
 import { configureCors } from "./cors.js";
 import { frameworkLogger } from "./logging/frameworkLogger.js";
 import { mountClientLogs } from "./logging/clientLogs.js";
 import { attachHttpAudit } from "./logging/httpAudit.js";
+import { serverVersion } from "./logging/logger.js";
 import { GameRoom } from "./rooms/GameRoom.js";
 
 const isProduction = process.env.NODE_ENV === "production";
+/** Read once: which build is running (shown on the start screen, doubles as the wake-up request). */
+const builtAt = readBuiltAt();
 
 const server = defineServer({
   logger: frameworkLogger,
@@ -26,7 +30,7 @@ const server = defineServer({
     mountClientLogs(app);
 
     app.get("/health", (_req, res) => {
-      res.json({ status: "ok", rulesVersion: RULES_VERSION });
+      res.json({ status: "ok", rulesVersion: RULES_VERSION, version: serverVersion(), builtAt });
     });
 
     // Development-only debugging tools: room inspector and test client.

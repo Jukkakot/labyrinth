@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "tsx watch --conditions=source src/index.ts",
-    "build": "rimraf build && tsc -p tsconfig.build.json",
+    "build": "rimraf build && tsc -p tsconfig.build.json && node -e \"require('fs').writeFileSync('build/build-info.json', JSON.stringify({ builtAt: new Date().toISOString() }))\"",
     "start": "node build/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

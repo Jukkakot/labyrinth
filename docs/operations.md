@@ -22,8 +22,10 @@ environment.
 
 ### After a deploy (manual checks)
 
-1. Open https://jukkakot.github.io/labyrinth/ on the phone (or Playwright MCP `playwright-mobile`)
-   and tap Pelaa; the first request may take about a minute if the server was asleep.
+1. Open https://jukkakot.github.io/labyrinth/ on the phone (or Playwright MCP `playwright-mobile`).
+   If the server was asleep, Pelaa is greyed out with "Herätetään palvelinta…" (up to about a
+   minute); then Pelaa becomes available. The footer shows "Client …" and "Server …" build times:
+   they must match the Pages and Render deploys you just made (newer than the push). Tap Pelaa.
 2. Open the same page in a second tab or device, Pelaa → same game id, two pawns.
 3. Tap the game id → "Kopioitu".
 4. In the first tab tap an edge arrow, then "Työnnä" → the line slides in both tabs and the

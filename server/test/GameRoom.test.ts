@@ -28,8 +28,9 @@ describe("GameRoom", () => {
     await vi.waitFor(() => expect(room.state.players.has(client.sessionId)).toBe(false));
   });
 
-  it("serves a health check reporting the rules version", async () => {
+  it("serves a health check reporting the rules version and build", async () => {
     const res = await colyseus.http.get("/health");
-    expect(res.data).toMatchObject({ status: "ok", rulesVersion: expect.any(String) });
+    // Tests run from source, without a build: no build time.
+    expect(res.data).toEqual({ status: "ok", rulesVersion: expect.any(String), version: "dev", builtAt: null });
   });
 });
