@@ -1,5 +1,7 @@
 import { Room, type Client, type CloseCode, type RoomException, type RoomOptions } from "colyseus";
+import type { z } from "zod";
 import { log, type LogFields } from "../logging/logger.js";
+import { defineCommand } from "./command.js";
 import { uniqueRoomId } from "./roomId.js";
 
 /**
@@ -10,6 +12,29 @@ export abstract class LoggedRoom<T extends RoomOptions = RoomOptions> extends Ro
   /** Context fields for log lines about this room and, optionally, a client. */
   protected logCtx(client?: Client, extra?: LogFields): LogFields {
     return { room: this.roomId, ...(client && { player: client.sessionId }), ...extra };
+  }
+
+  /**
+   * Defines a command handler for `messages` (sent by clients with `room.request()`):
+   * payload validation, one audit line, uniform `{ ok }` reply. Throw
+   * `CommandRejection` from the handler, before changing state, to reject.
+   */
+  protected command<S extends z.ZodType>(
+    name: string,
+    schema: S,
+    handler: (client: Client, payload: z.infer<S>) => void | Promise<void>,
+  ) {
+    return defineCommand(
+      { logCtx: (client, extra) => this.logCtx(client, extra), stateFacts: () => this.commandStateFacts() },
+      name,
+      schema,
+      handler,
+    );
+  }
+
+  /** Room state added to rejected and failed command lines (phase, turn …). */
+  protected commandStateFacts(): Record<string, unknown> {
+    return {};
   }
 
   async onCreate(_options?: unknown): Promise<void> {

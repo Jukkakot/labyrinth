@@ -108,3 +108,14 @@ Express middleware records the start time and logs `http.request` on `res.on("fi
   the terminal, file destination to `logs/dev.log`). Production writes to stdout directly.
 - `msg` is always the last key (pino places it after the object), so in development `time`
   comes just before `msg`.
+- **HTTP audit on the Node server, not Express (task 4.2 finding):** Colyseus answers
+  `/matchmake/*` in its own `request` listener before Express sees it. The audit is therefore a
+  `request` listener on the transport's `http.Server`, attached in `beforeListen`, which covers
+  Express routes and matchmaking with exactly one line each.
+- **Commands:** `LoggedRoom.command(name, schema, handler)` builds the wrapper;
+  `commandStateFacts()` is the per-room hook for phase/turn facts on rejected and failed lines.
+  `CommandResult` and the common codes live in `@labyrinth/protocol`.
+- **Client-log body parsing:** Colyseus pre-reads request bodies only in `serverless()` mode, not
+  with `listen()`, so the route uses `express.text({ type: () => true, limit: "600kb" })`; parser
+  errors (e.g. too large) return the same 400 as any invalid batch. `trust proxy` is set to 1 so
+  the per-IP rate limit sees real clients behind Render's proxy.

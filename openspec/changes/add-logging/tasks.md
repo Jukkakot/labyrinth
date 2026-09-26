@@ -14,16 +14,16 @@
 
 ## 3. Command wrapper and rejection contract
 
-- [ ] 3.1 Implement `CommandRejection(code, facts)` and `command(schema, handler)` returning `{ ok: true } | { ok: false, code }` and logging `cmd.accepted` / `cmd.rejected` / `cmd.failed`; verify with a test-only room and a client using `room.request()`: accepted, rule rejection (state unchanged, code returned), malformed payload → `INVALID_COMMAND`, throwing handler → `INTERNAL_ERROR` with the room still usable, exactly one audit line each
+- [x] 3.1 Implement `CommandRejection(code, facts)` and `command(schema, handler)` returning `{ ok: true } | { ok: false, code }` and logging `cmd.accepted` / `cmd.rejected` / `cmd.failed`; verify with a test-only room and a client using `room.request()`: accepted, rule rejection (state unchanged, code returned), malformed payload → `INVALID_COMMAND`, throwing handler → `INTERNAL_ERROR` with the room still usable, exactly one audit line each
 
 ## 4. HTTP audit
 
-- [ ] 4.1 Add Express middleware logging `http.request` (method, path, status, durMs; `/health` at debug); verify by test that a normal request yields one `info` line and `/health` yields a `debug` line
-- [ ] 4.2 Check whether Colyseus matchmaking HTTP requests pass through the middleware; if not, audit them at the matchmaking hook; verify by test that joining a room via the SDK produces an `http.request` line for the matchmake call
+- [x] 4.1 Add HTTP audit logging `http.request` (on the Node HTTP server, see 4.2) (method, path, status, durMs; `/health` at debug); verify by test that a normal request yields one `info` line and `/health` yields a `debug` line
+- [x] 4.2 Check whether Colyseus matchmaking HTTP requests pass through the middleware; if not, audit them at the matchmaking hook; verify by test that joining a room via the SDK produces an `http.request` line for the matchmake call
 
 ## 5. Client log endpoint
 
-- [ ] 5.1 Add `POST /client-logs` (text/plain JSON body, zod schema: ≤50 entries, msg ≤2000, stack ≤8000, known level, client evt catalogue), CORS via the allow-list configured in setup-infrastructure (Colyseus CORS hook), 30 req/min rate limit; each entry logged with `src: "client"`, client `ver`, `ts`; verify by tests: valid batch → 204 and one line per entry, oversized batch → 400 and no entries logged, 31st request in a minute → 429, no written line contains an IP address
+- [x] 5.1 Add `POST /client-logs` (text/plain JSON body, zod schema: ≤50 entries, msg ≤2000, stack ≤8000, known level, client evt catalogue), CORS via the allow-list configured in setup-infrastructure (Colyseus CORS hook), 30 req/min rate limit; each entry logged with `src: "client"`, client `ver`, `ts`; verify by tests: valid batch → 204 and one line per entry, oversized batch → 400 and no entries logged, 31st request in a minute → 429, no written line contains an IP address
 
 ## 6. Client logger
 
