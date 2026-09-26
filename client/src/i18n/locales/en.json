@@ -1,0 +1,14 @@
+{
+  "app": {
+    "title": "Labyrinth",
+    "tagline": "The shifting labyrinth – multiplayer in your browser"
+  },
+  "language": {
+    "label": "Language",
+    "fi": "Suomi",
+    "en": "English"
+  },
+  "footer": {
+    "rulesVersion": "Rules v{{version}}"
+  }
+}

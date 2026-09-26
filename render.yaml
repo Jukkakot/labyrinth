@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: labyrinth-server
+    runtime: node
+    plan: free
+    region: frankfurt
+    # Built from the repo root so npm workspaces can link @labyrinth/rules.
+    buildCommand: npm ci --include=dev && npm run build -w @labyrinth/rules -w @labyrinth/server
+    startCommand: npm start -w @labyrinth/server
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - server/**
+        - packages/rules/**
+        - package-lock.json
+        - render.yaml
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"

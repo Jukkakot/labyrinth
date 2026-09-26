@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+*.local
+*.log
+.env
+.env.*.local
+coverage
+.playwright-mcp
+.colyseus-cloud.json
+.devmode.json
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store

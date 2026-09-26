@@ -1,0 +1,14 @@
+{
+  "app": {
+    "title": "Labyrintti",
+    "tagline": "Muuttuva labyrintti – moninpeli selaimessa"
+  },
+  "language": {
+    "label": "Kieli",
+    "fi": "Suomi",
+    "en": "English"
+  },
+  "footer": {
+    "rulesVersion": "Säännöt v{{version}}"
+  }
+}
