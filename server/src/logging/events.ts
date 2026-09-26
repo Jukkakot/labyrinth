@@ -18,6 +18,7 @@ export const SERVER_LOG_EVENTS = [
   "player.dropped",
   "player.reconnected",
   "turn.changed",
+  "phase.changed",
   "cmd.accepted",
   "cmd.rejected",
   "cmd.failed",

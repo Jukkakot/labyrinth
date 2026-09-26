@@ -78,7 +78,9 @@
   },
   "turn": {
     "mine": "Your turn – push a tile",
-    "other": "Player {{seat}} is pushing"
+    "other": "Player {{seat}} is pushing",
+    "mineMove": "Your turn – move your pawn",
+    "otherMove": "Player {{seat}} is moving"
   },
   "shift": {
     "hint": "Pick an arrow on the board edge",
@@ -98,6 +100,13 @@
     "NOT_YOUR_TURN": "It is not your turn",
     "WRONG_PHASE": "You can't do that right now",
     "REVERSE_PUSH_FORBIDDEN": "You can't push the tile straight back from the same spot",
-    "generic": "That didn't work. Try again."
+    "generic": "That didn't work. Try again.",
+    "UNREACHABLE": "Your pawn can't reach that square"
+  },
+  "move": {
+    "hint": "Tap a highlighted square",
+    "stay": "Stay",
+    "to": "Move to row {{row}}, column {{col}}",
+    "stayHere": "Your square – stay"
   }
 }

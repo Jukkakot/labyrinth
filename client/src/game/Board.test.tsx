@@ -37,23 +37,46 @@ describe("board-view › Treasures shown as icons", () => {
   });
 });
 
-describe("board-view › Pawns on start corners", () => {
+describe("board-view › Pawns on their squares", () => {
   it("Two players: circle top-left and square top-right, own pawn marked", () => {
     render(
       <Board
         board={setupBoard(1)}
         seats={[
-          { seat: 1, sessionId: "a", connected: true, isMe: true },
-          { seat: 2, sessionId: "b", connected: true, isMe: false },
+          { seat: 1, sessionId: "a", connected: true, isMe: true, square: { row: 0, col: 0 } },
+          { seat: 2, sessionId: "b", connected: true, isMe: false, square: { row: 0, col: 6 } },
         ]}
       />,
     );
     const mine = screen.getByRole("img", { name: "Pelaaja 1 (sinä)" });
     const other = screen.getByRole("img", { name: "Pelaaja 2" });
-    expect(mine.getAttribute("transform")).toBe("translate(0 0)");
-    expect(other.getAttribute("transform")).toBe("translate(600 0)");
+    expect(mine.style.transform).toBe("translate(0px, 0px)");
+    expect(other.style.transform).toBe("translate(600px, 0px)");
     expect(mine.querySelector("circle")).not.toBeNull(); // ownership ring
     expect(other.querySelector("circle")).toBeNull();
+  });
+});
+
+describe("board-view › Pawns on their squares (shared)", () => {
+  it("Shared square: both pawns visible, drawn smaller side by side", () => {
+    render(
+      <Board
+        board={setupBoard(1)}
+        seats={[
+          { seat: 1, sessionId: "a", connected: true, isMe: true, square: { row: 3, col: 2 } },
+          { seat: 2, sessionId: "b", connected: true, isMe: false, square: { row: 3, col: 2 } },
+          { seat: 3, sessionId: "c", connected: true, isMe: false, square: { row: 6, col: 6 } },
+        ]}
+      />,
+    );
+    const one = screen.getByRole("img", { name: "Pelaaja 1 (sinä)" });
+    const two = screen.getByRole("img", { name: "Pelaaja 2" });
+    expect(one.style.transform).toBe("translate(200px, 300px)");
+    expect(two.style.transform).toBe("translate(200px, 300px)");
+    expect(one.getAttribute("data-crowded")).toBe("true");
+    expect(two.getAttribute("data-crowded")).toBe("true");
+    expect(one.firstElementChild!.getAttribute("transform")).not.toBe(two.firstElementChild!.getAttribute("transform"));
+    expect(screen.getByRole("img", { name: "Pelaaja 3" }).getAttribute("data-crowded")).toBeNull();
   });
 });
 

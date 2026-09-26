@@ -8,7 +8,7 @@ One OpenSpec change at a time, in this order. Adjust as we learn.
 3. ~~`add-board-setup`~~ (done): original tile distribution, treasures, seeded shuffle
 4. ~~`show-board`~~ (done): quick play creates a room; the client renders the board on mobile
 5. ~~`tile-shift`~~ (done): shift rule, turn order, `shift` command, arrows with preview and confirm
-6. `pawn-movement`
+6. ~~`pawn-movement`~~ (done): pawn squares, shift → move turn, `move` command, reachable highlight, walking pawns
 7. `treasures-and-win`
 8. `turn-rules`: 60 s limit, kick, disconnects
 9. `lobby`: nickname, game list, private link, waiting room (also verify `room.leave()` through the Render proxy, see add-logging design notes)

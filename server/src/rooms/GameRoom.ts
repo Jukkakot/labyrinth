@@ -1,7 +1,21 @@
 import { randomInt } from "node:crypto";
 import type { Client, CloseCode } from "colyseus";
-import { shiftPayloadSchema } from "@labyrinth/protocol";
-import { createBoard, isInsertionId, MAX_SEED, reverseOf, setupBoard, shiftBoard, tileSpec, type Board, type Rotation, type Tile } from "@labyrinth/rules";
+import { movePayloadSchema, shiftPayloadSchema, type TurnPhase } from "@labyrinth/protocol";
+import {
+  createBoard,
+  isInsertionId,
+  isReachable,
+  MAX_SEED,
+  reverseOf,
+  setupBoard,
+  shiftBoard,
+  START_CORNERS,
+  tileSpec,
+  type Board,
+  type Rotation,
+  type Square,
+  type Tile,
+} from "@labyrinth/rules";
 import { log } from "../logging/logger.js";
 import { CommandRejection } from "./command.js";
 import { LoggedRoom } from "./LoggedRoom.js";
@@ -13,6 +27,11 @@ export const MAX_SEATS = 4;
 
 const toTileState = (tile: Tile) => new TileState({ id: tile.id, rotation: tile.rotation });
 const toTile = (t: TileState): Tile => ({ id: t.id, kind: tileSpec(t.id).kind, rotation: t.rotation as Rotation });
+const squareOf = (player: Player): Square => ({ row: player.row, col: player.col });
+const placePawn = (player: Player, sq: Square) => {
+  player.row = sq.row;
+  player.col = sq.col;
+};
 
 /** One Labyrinth game: seeded starting board and up to four seated players. */
 export class GameRoom extends LoggedRoom<{ state: GameState }> {
@@ -28,19 +47,37 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
       const last = this.state.lastInsertion;
       if (isInsertionId(last) && insertion === reverseOf(last)) throw new CommandRejection("REVERSE_PUSH_FORBIDDEN");
 
-      const { board } = shiftBoard(this.board(), insertion, rotation);
+      const players = [...this.state.players.values()];
+      const { board, pawns } = shiftBoard(this.board(), insertion, rotation, players.map(squareOf));
       board.squares.forEach((tile, i) => {
         const current = this.state.squares[i]!;
         if (current.id !== tile.id || current.rotation !== tile.rotation) this.state.squares[i] = toTileState(tile);
       });
       this.state.spare = toTileState(board.spare);
+      players.forEach((player, i) => placePawn(player, pawns[i]!));
       this.state.lastInsertion = insertion;
+      this.setPhase("move");
+    }),
+
+    move: this.command("move", movePayloadSchema, (client, target) => {
+      this.requireTurn(client, "move");
+      const player = this.state.players.get(client.sessionId)!;
+      if (!isReachable(this.board(), squareOf(player), target)) {
+        throw new CommandRejection("UNREACHABLE", { to: [target.row, target.col] });
+      }
+      placePawn(player, target);
       this.passTurn();
     }),
   };
 
   protected commandStateFacts() {
-    return { phase: this.state.phase, turnSeat: this.state.turnSeat, lastInsertion: this.state.lastInsertion };
+    const current = [...this.state.players.values()].find((p) => p.seat === this.state.turnSeat);
+    return {
+      phase: this.state.phase,
+      turnSeat: this.state.turnSeat,
+      lastInsertion: this.state.lastInsertion,
+      pawn: current ? [current.row, current.col] : undefined,
+    };
   }
 
   /** The board as the rules see it, rebuilt from the synced state. */
@@ -71,11 +108,19 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
     this.setTurn(to);
   }
 
+  /** A new turn always starts with the shift step. */
   private setTurn(seat: number): void {
     const from = this.state.turnSeat;
     this.state.turnSeat = seat;
     this.state.phase = "shift";
     log.info("turn.changed", this.logCtx(undefined, { from, to: seat }));
+  }
+
+  /** The next step within the same turn. */
+  private setPhase(phase: TurnPhase): void {
+    const from = this.state.phase;
+    this.state.phase = phase;
+    log.info("phase.changed", this.logCtx(undefined, { from, to: phase, turnSeat: this.state.turnSeat }));
   }
 
   async onCreate(options?: unknown) {
@@ -97,7 +142,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
   onJoin(client: Client) {
     super.onJoin(client);
     const seat = this.freeSeat();
-    this.state.players.set(client.sessionId, new Player({ seat }));
+    const corner = START_CORNERS[seat - 1]!;
+    this.state.players.set(client.sessionId, new Player({ seat, row: corner.row, col: corner.col }));
     // Until the waiting room exists, the first player to sit down starts.
     if (this.state.turnSeat === 0) this.setTurn(seat);
   }

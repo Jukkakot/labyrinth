@@ -51,8 +51,8 @@ builds first.
   - lifecycle log lines and logging of uncaught exceptions in hooks and timers;
   - `this.command(name, zodSchema, handler)` — the **only** way to define a command (below).
 - Room `game` → `GameRoom`: players map with a `connected` flag; unintended disconnects hold the
-  seat 60 s for reconnection (`holdSeat`). Turn model and the `shift` command: see
-  [Game flow and commands](#game-flow-and-commands--implemented-shift-rest-planned).
+  seat 60 s for reconnection (`holdSeat`). Turn model and the `shift` / `move` commands: see
+  [Game flow and commands](#game-flow-and-commands--implemented-shift-and-move-rest-planned).
 - HTTP: `GET /health` → `{ status, rulesVersion, version, builtAt }` (`version` = short commit from
   `RENDER_GIT_COMMIT` or `"dev"`; `builtAt` = build time, `null` without a build). It is Render's
   health check and the client's wake-up request. `POST /client-logs` (client log batches).
@@ -73,7 +73,7 @@ builds first.
   unexpected exception becomes `INTERNAL_ERROR`; the room keeps running.
 - A handler rejects by throwing `CommandRejection(code, facts)` **before changing state**.
   Rooms add phase/turn to rejection lines by overriding `commandStateFacts()` (`GameRoom`:
-  `phase`, `turnSeat`, `lastInsertion`).
+  `phase`, `turnSeat`, `lastInsertion`, `pawn`).
 - **Adding a command** (the `shift` command is the example):
   1. `@labyrinth/protocol`: constants and types in `game-codes.ts` (ids, error codes), the zod
      payload schema in `game-schema.ts` — separate so the client bundle never pulls in zod.
@@ -108,8 +108,8 @@ client/src/
   App.tsx              StartScreen until playing, then GameScreen
   screens/             StartScreen (idle / connecting / error), GameScreen
   session/             useGameSession (quick play, per-tab rejoin, commands), viewModel (state → GameView)
-  game/                Board, TileView, Pawn, SpareTile, ShiftTargets, ShiftControls, TurnLine,
-                       GameIdBadge, treasureIcons
+  game/                Board, TileView, Pawn, PawnLayer (+ pawnMotion), SpareTile, ShiftTargets,
+                       ShiftControls, MoveTargets, MoveControls, TurnLine, GameIdBadge, treasureIcons
   ui/                  tokens.css + shared components: Screen, Message, Button, Badge, Notice,
                        LanguageSwitcher
   logging/ i18n/ config.ts CrashBoundary.tsx
@@ -123,9 +123,13 @@ client/src/
   from the centre to each open side, Tabler treasure icon (`game/treasureIcons.ts`, typed over
   every `TreasureId`). Fixed tiles: darker fill plus a corner notch. Corridors are clipped at the
   board edge. Pawns: seat colour (Okabe–Ito tokens `--seat-1…4`) + shape (circle, square,
-  triangle, diamond), own pawn with a dashed ring.
+  triangle, diamond), own pawn with a dashed ring. Pawns stand on their synced squares; pawns
+  sharing a square are drawn at 60 % in their seat's quadrant (seat 1 top-left … seat 4
+  bottom-left), so nobody jumps around when another pawn arrives. The pawn layer never catches
+  taps (`pointer-events: none`), so move targets under pawns stay tappable.
 - **Shift interaction** (`screens/GameScreen.tsx`):
-  - `TurnLine` above the board: "Sinun vuorosi – työnnä laatta" or "Pelaaja 2 työntää" with the
+  - `TurnLine` above the board names the player and the step: "Sinun vuorosi – työnnä laatta" /
+    "Sinun vuorosi – siirrä nappulaa", or "Pelaaja 2 työntää" / "Pelaaja 2 siirtää", with the
     player's pawn shape and colour.
   - On your turn `ShiftTargets` puts an arrow badge on each of the 12 entry edge tiles; the whole
     tile is the tap target (`role="button"`, Enter/Space, labels count lines 1–7). The reverse of
@@ -134,13 +138,29 @@ client/src/
     shows the shifted line, the inserted spare is outlined (`--highlight`), and `ShiftControls`
     shows the tile that would drop out. Tapping the same arrow again or "Työnnä" sends; "Peru"
     cancels; another arrow switches the preview. The rotate button turns the local spare 90°.
+    The preview passes the pawn squares to `shiftBoard()` too, so pawns on the line are shown
+    where the shift would carry them.
   - The preview and local rotation are dropped when a new synced board arrives (key: spare id,
-    last insertion, turn seat) or when the server rejects the shift. While a command is pending,
-    arrows and buttons wait.
+    last insertion, turn seat, step) or when the server rejects the shift. While a command is
+    pending, arrows and buttons wait.
   - **Slide animation:** `TileView` is positioned with a CSS `transform` and a 200 ms transition,
     and tiles are keyed by id, so tiles that change square slide (preview and real shifts alike).
     The inserted tile appears in place and the pushed-out one disappears; the global
     reduced-motion rule turns the transition off.
+- **Move interaction** (move step; `GameView.reachable` = `reachableSquares()` of the viewer's
+  pawn, only on their own move step):
+  - `MoveTargets` outlines every reachable square (dashed outline + hub dot, not colour alone);
+    the whole tile is the tap target and tapping sends `move` at once (no confirmation yet; the
+    optional one comes with `settings`). The own square means stay.
+  - `MoveControls` replaces `ShiftControls` in the same slot: the spare, the hint "Napauta
+    korostettua ruutua" and the "Jää paikalleen" button. No arrows, no rotate button.
+  - **Pawn motion** (`PawnLayer` + `pawnMotion.ts`): when a pawn's square changes it walks a
+    `shortestPath()` square by square (step `min(120 ms, 900 ms / steps)`, CSS transform
+    transitions, timers for the steps); if the spare changed at the same time it was a shift, so
+    the pawn slides one square (200 ms, with its tile) or jumps when it wrapped to the inserted
+    tile. No path or `prefers-reduced-motion` → jump. A newer change finishes a walk at once.
+    The motion is derived during render from the last seen squares; only the remaining walk
+    steps run in an effect.
 - **Quick play:** `joinOrCreate("game", { pool? })`; `?pool=…` in the URL keeps a group of players
   (or an E2E test) in their own games. While connecting the start screen says so, and after 5 s
   adds that the server may be waking up.
@@ -158,15 +178,16 @@ client/src/
   build without a time, "?" when unknown, "Server: herätetään…" / "Server: ei vastannut" while
   waking or after giving up.
 
-## State sync principle — Implemented (board, seats, turn); rest Planned
+## State sync principle — Implemented (board, seats, pawns, turn); rest Planned
 
 - Synced today (`server/src/rooms/schema/GameState.ts`):
-  `players: map<sessionId, { connected, seat 1–4 }>`, `squares: array<{ id, rotation }>` (49,
-  row-major), `spare: { id, rotation }`, `turnSeat` (0 = nobody), `phase` (`"shift"`),
+  `players: map<sessionId, { connected, seat 1–4, row, col }>` (`row`/`col` = pawn square),
+  `squares: array<{ id, rotation }>` (49, row-major), `spare: { id, rotation }`, `turnSeat`
+  (0 = nobody), `phase` (`"shift"` → `"move"`),
   `lastInsertion` (`""` or an insertion id). The client rebuilds a rules `Board` from these plus the
   static `TILE_SET` (`client/src/session/viewModel.ts`). The seed is a private room field, logged
   as `game.setup`, never synced.
-- Still to come with their changes: pawn squares, the `move` phase, turn deadline, found
+- Still to come with their changes: turn deadline, found
   treasures, result. Tile kinds and treasures are static per tile id, so they are
   never synced.
 - The client derives everything else with `@labyrinth/rules` (openings, reachable squares, slide
@@ -201,7 +222,12 @@ fixed squares, connections).
   the position, not from the tile. `START_CORNERS` (0,0), (0,6), (6,6), (6,0), clockwise.
 - **Connections**: orthogonal neighbours are connected when each tile is open toward the other;
   an opening toward the board edge leads nowhere. `connectedNeighbours()` is the building block
-  for reachability (`pawn-movement`).
+  for reachability.
+- **Movement** (`packages/rules/src/move.ts`, spec `openspec/specs/pawn-movement/`):
+  `reachableSquares(board, from)` (BFS over connected neighbours; `from` first, rest row-major),
+  `isReachable(board, from, to)`, `shortestPath(board, from, to)` → `[from, …, to]` or
+  undefined. Pawns never block, so these take no pawns. Properties: own square always reachable,
+  reachability symmetric, every path step connected.
 - **Test fixtures**: `@labyrinth/rules/testing` — `boardFromRows(["L90 I0 T0 …" × 7], "I0")`
   (ids assigned row-major, spare = 49), `uniformBoard()`, `withTile()`.
 
@@ -253,20 +279,27 @@ Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
 - Properties (fast-check): tile ids preserved, fixed squares unchanged, shift + reverse with the
   pushed-out tile restores board and pawns.
 
-## Game flow and commands — Implemented (shift); rest Planned
+## Game flow and commands — Implemented (shift and move); rest Planned
 
 - **Turn model — Implemented (temporary start rule):** `turnSeat` is the current player's seat.
-  The first player to sit down starts (`lobby` replaces this with a random start). After an
-  accepted shift, and when the current player leaves, the turn passes to the next taken seat
-  clockwise (1 → 2 → 3 → 4 → 1), skipping empty seats; a player alone keeps it; a dropped player
-  still holding their seat is not skipped. Every change logs `turn.changed { from, to }`.
+  The first player to sit down starts (`lobby` replaces this with a random start). A turn has two
+  steps (`phase`): `shift`, then `move`. After an accepted move, and when the current player
+  leaves (in either step), the turn passes to the next taken seat clockwise (1 → 2 → 3 → 4 → 1),
+  skipping empty seats, and starts with `shift`; a player alone keeps it; a dropped player still
+  holding their seat is not skipped. Every turn change logs `turn.changed { from, to }`, the
+  step change `phase.changed { from, to, turnSeat }`.
+- **Pawns:** a joining player's pawn starts on their seat's start corner; pawns ride shifts (the
+  room passes all pawn squares to `shiftBoard()`); any number may share a square.
 - **`shift { insertion, rotation }` — Implemented:** rejections `NOT_SEATED`, `NOT_YOUR_TURN`,
   `WRONG_PHASE`, `REVERSE_PUSH_FORBIDDEN` (`GAME_ERROR_CODES`), a fixed line or bad rotation is
-  `INVALID_COMMAND`. Accepted: squares, spare and `lastInsertion` are written from `shiftBoard()`,
-  then the turn passes. `rotation` is the spare's absolute rotation; it stays client-side until
-  the shift.
-- **Planned:** phases `LOBBY → SHIFT → MOVE → (next player) SHIFT … → FINISHED` (`pawn-movement`
-  adds `move` between the shift and the turn passing); `move{square}` (own square = stay),
-  `kick{player}`; creator only: `addBot`, `removeBot`, `start`. Codes to come: `UNREACHABLE`, …
+  `INVALID_COMMAND`. Only in the `shift` step. Accepted: squares, spare, pawn squares and
+  `lastInsertion` are written from `shiftBoard()`, then the step becomes `move` (the turn does
+  not pass). `rotation` is the spare's absolute rotation; it stays client-side until the shift.
+- **`move { row, col }` — Implemented:** only in the `move` step; the own square = stay.
+  Rejections `NOT_SEATED`, `NOT_YOUR_TURN`, `WRONG_PHASE`, `UNREACHABLE` (fact `to`, plus the
+  state fact `pawn` = the current player's square); a square off the board is
+  `INVALID_COMMAND`. Accepted: the pawn moves and the turn passes.
+- **Planned:** phases `LOBBY → SHIFT → MOVE → (next player) SHIFT … → FINISHED` (`lobby`,
+  `treasures-and-win`); `kick{player}`; creator only: `addBot`, `removeBot`, `start`.
 - **Bots** (`bot-player`): an ordinary seat; the decision is a pure function in rules, submitted
   through the same command wrapper as humans.

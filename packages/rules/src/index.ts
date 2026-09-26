@@ -11,3 +11,4 @@ export * from "./rng.js";
 export * from "./tileSet.js";
 export * from "./setup.js";
 export * from "./shift.js";
+export * from "./move.js";

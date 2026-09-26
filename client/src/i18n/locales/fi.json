@@ -78,7 +78,9 @@
   },
   "turn": {
     "mine": "Sinun vuorosi – työnnä laatta",
-    "other": "Pelaaja {{seat}} työntää"
+    "other": "Pelaaja {{seat}} työntää",
+    "mineMove": "Sinun vuorosi – siirrä nappulaa",
+    "otherMove": "Pelaaja {{seat}} siirtää"
   },
   "shift": {
     "hint": "Valitse nuoli laudan reunalta",
@@ -98,6 +100,13 @@
     "NOT_YOUR_TURN": "Ei ole sinun vuorosi",
     "WRONG_PHASE": "Sitä ei voi tehdä juuri nyt",
     "REVERSE_PUSH_FORBIDDEN": "Et voi työntää laattaa takaisin samasta kohdasta",
-    "generic": "Siirto ei onnistunut. Yritä uudelleen."
+    "generic": "Siirto ei onnistunut. Yritä uudelleen.",
+    "UNREACHABLE": "Nappulasi ei pääse sinne"
+  },
+  "move": {
+    "hint": "Napauta korostettua ruutua",
+    "stay": "Jää paikalleen",
+    "to": "Siirry ruutuun: rivi {{row}}, sarake {{col}}",
+    "stayHere": "Oma ruutu – jää paikalleen"
   }
 }

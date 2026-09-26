@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
-import { INSERTION_IDS, type CommandResult, type ShiftPayload } from "@labyrinth/protocol";
+import { INSERTION_IDS, type CommandResult, type MovePayload, type ShiftPayload } from "@labyrinth/protocol";
 import { createBoard, INSERTIONS, shiftBoard, tileSpec, type Rotation } from "@labyrinth/rules";
 import appConfig from "../src/app.config.js";
 import { configureLogger } from "../src/logging/logger.js";
@@ -21,6 +21,7 @@ const boardOf = (state: GameState) => {
 };
 
 const shift = (client: Client, payload: ShiftPayload) => client.request("shift", payload) as Promise<CommandResult>;
+const move = (client: Client, payload: MovePayload) => client.request("move", payload) as Promise<CommandResult>;
 
 describe("protocol › insertion ids", () => {
   it("equal the rules' INSERTIONS", () => {
@@ -29,6 +30,13 @@ describe("protocol › insertion ids", () => {
 });
 
 describe("turns and tile-shift in a room", () => {
+  /** A whole turn: shift, then stay on the (possibly carried) pawn square. */
+  async function turn(room: { state: GameState }, client: Client, payload: ShiftPayload) {
+    expect(await shift(client, payload)).toEqual({ ok: true });
+    const me = room.state.players.get(client.sessionId)!;
+    expect(await move(client, { row: me.row, col: me.col })).toEqual({ ok: true });
+  }
+
   let colyseus: ColyseusTestServer<typeof appConfig>;
   let logs: ReturnType<typeof captureLogs>;
 
@@ -66,7 +74,7 @@ describe("turns and tile-shift in a room", () => {
 
     it("Current player leaves", async () => {
       const { room, clients } = await game(3);
-      await shift(clients[0]!, { insertion: "N1", rotation: 0 });
+      await turn(room, clients[0]!, { insertion: "N1", rotation: 0 });
       expect(room.state.turnSeat).toBe(2);
 
       await clients[1]!.leave();
@@ -81,22 +89,32 @@ describe("turns and tile-shift in a room", () => {
     });
   });
 
-  describe("Turn passes after a shift", () => {
+  describe("Turn passes after the move", () => {
+    it("Shift does not end the turn", async () => {
+      const { room, clients } = await game(2);
+      expect(await shift(clients[0]!, { insertion: "N1", rotation: 0 })).toEqual({ ok: true });
+      expect(room.state.turnSeat).toBe(1);
+      expect(room.state.phase).toBe("move");
+      expect(logs.byEvt("phase.changed")[0]).toMatchObject({ from: "shift", to: "move", turnSeat: 1 });
+    });
+
     it("Two players alternate (seats 1 and 3)", async () => {
       const { room, clients } = await game(3);
       await clients[1]!.leave();
       await vi.waitFor(() => expect(room.state.players.size).toBe(2));
 
-      expect(await shift(clients[0]!, { insertion: "N1", rotation: 0 })).toEqual({ ok: true });
+      await turn(room, clients[0]!, { insertion: "N1", rotation: 0 });
       expect(room.state.turnSeat).toBe(3);
-      expect(await shift(clients[2]!, { insertion: "W3", rotation: 0 })).toEqual({ ok: true });
+      expect(room.state.phase).toBe("shift");
+      await turn(room, clients[2]!, { insertion: "W3", rotation: 0 });
       expect(room.state.turnSeat).toBe(1);
     });
 
-    it("alone keeps the turn", async () => {
+    it("alone keeps the turn and starts again with a shift", async () => {
       const { room, clients } = await game(1);
-      expect(await shift(clients[0]!, { insertion: "N1", rotation: 0 })).toEqual({ ok: true });
+      await turn(room, clients[0]!, { insertion: "N1", rotation: 0 });
       expect(room.state.turnSeat).toBe(1);
+      expect(room.state.phase).toBe("shift");
     });
 
     it("Dropped player keeps their place", async () => {
@@ -104,8 +122,16 @@ describe("turns and tile-shift in a room", () => {
       // Seat 2's connection dropped; the seat is still held during the reconnect window.
       room.state.players.get(clients[1]!.sessionId)!.connected = false;
 
-      expect(await shift(clients[0]!, { insertion: "N1", rotation: 0 })).toEqual({ ok: true });
+      await turn(room, clients[0]!, { insertion: "N1", rotation: 0 });
       expect(room.state.turnSeat).toBe(2);
+    });
+
+    it("Current player leaves while moving", async () => {
+      const { room, clients } = await game(2);
+      await shift(clients[0]!, { insertion: "N1", rotation: 0 });
+      await clients[0]!.leave();
+      await vi.waitFor(() => expect(room.state.turnSeat).toBe(2));
+      expect(room.state.phase).toBe("shift");
     });
   });
 
@@ -118,7 +144,6 @@ describe("turns and tile-shift in a room", () => {
       expect(boardOf(room.state)).toEqual(shiftBoard(before, "E3", 180).board);
       expect(room.state.lastInsertion).toBe("E3");
       expect(logs.byEvt("cmd.accepted")[0]).toMatchObject({ cmd: "shift", payload: { insertion: "E3", rotation: 180 } });
-      expect(logs.byEvt("turn.changed").at(-1)).toMatchObject({ from: 1, to: 2 });
     });
 
     it("syncs the shifted board to the other player", async () => {
@@ -150,7 +175,7 @@ describe("turns and tile-shift in a room", () => {
 
     it("Reverse forbidden: S1 right after N1", async () => {
       const { room, clients } = await game(1);
-      await shift(clients[0]!, { insertion: "N1", rotation: 0 });
+      await turn(room, clients[0]!, { insertion: "N1", rotation: 0 });
       const before = boardOf(room.state);
 
       expect(await shift(clients[0]!, { insertion: "S1", rotation: 0 })).toEqual({ ok: false, code: "REVERSE_PUSH_FORBIDDEN" });
@@ -160,11 +185,11 @@ describe("turns and tile-shift in a room", () => {
     });
 
     it("Other shifts allowed after N1: N1, N3, W1", async () => {
-      const { clients } = await game(1);
-      await shift(clients[0]!, { insertion: "N1", rotation: 0 });
-      expect(await shift(clients[0]!, { insertion: "N1", rotation: 0 })).toEqual({ ok: true });
-      expect(await shift(clients[0]!, { insertion: "N3", rotation: 0 })).toEqual({ ok: true });
-      expect(await shift(clients[0]!, { insertion: "W1", rotation: 0 })).toEqual({ ok: true });
+      const { room, clients } = await game(1);
+      await turn(room, clients[0]!, { insertion: "N1", rotation: 0 });
+      await turn(room, clients[0]!, { insertion: "N1", rotation: 0 });
+      await turn(room, clients[0]!, { insertion: "N3", rotation: 0 });
+      await turn(room, clients[0]!, { insertion: "W1", rotation: 0 });
     });
 
     it("a fixed line is not an insertion point", async () => {

@@ -31,3 +31,14 @@
   min-height: var(--tap-min);
   color: var(--muted);
 }
+
+/* A hint on the left of an actions row (move step). */
+.lead {
+  margin: 0 auto 0 0;
+  align-self: center;
+  color: var(--muted);
+}
+
+.nowrap {
+  white-space: nowrap;
+}

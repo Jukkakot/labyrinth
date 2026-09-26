@@ -5,3 +5,7 @@
   aspect-ratio: 1;
   height: auto;
 }
+
+.pawns {
+  pointer-events: none;
+}

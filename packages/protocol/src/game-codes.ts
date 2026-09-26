@@ -10,14 +10,20 @@ export type InsertionIdCode = (typeof INSERTION_IDS)[number];
 export const ROTATION_VALUES = [0, 90, 180, 270] as const;
 
 /** Error codes of game commands, on top of `COMMON_ERROR_CODES`. */
-export const GAME_ERROR_CODES = ["NOT_SEATED", "NOT_YOUR_TURN", "WRONG_PHASE", "REVERSE_PUSH_FORBIDDEN"] as const;
+export const GAME_ERROR_CODES = ["NOT_SEATED", "NOT_YOUR_TURN", "WRONG_PHASE", "REVERSE_PUSH_FORBIDDEN", "UNREACHABLE"] as const;
 export type GameErrorCode = (typeof GAME_ERROR_CODES)[number];
 
-/** Turn phases. `move` arrives with pawn movement. */
-export const TURN_PHASES = ["shift"] as const;
+/** Turn steps: first the current player shifts, then moves (or stays). */
+export const TURN_PHASES = ["shift", "move"] as const;
 export type TurnPhase = (typeof TURN_PHASES)[number];
 
 export interface ShiftPayload {
   insertion: InsertionIdCode;
   rotation: (typeof ROTATION_VALUES)[number];
+}
+
+/** Target square of the `move` command; the pawn's own square means "stay". */
+export interface MovePayload {
+  row: number;
+  col: number;
 }

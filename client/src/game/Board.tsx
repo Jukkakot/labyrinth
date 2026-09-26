@@ -1,9 +1,10 @@
 import { useId } from "react";
-import { BOARD_SIZE, isFixed, START_CORNERS, type Board as BoardModel } from "@labyrinth/rules";
+import { BOARD_SIZE, isFixed, type Board as BoardModel } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import type { SeatView } from "../session/viewModel.ts";
 import styles from "./Board.module.css";
-import { Pawn } from "./Pawn.tsx";
+import { MoveTargets, type MoveTargetsProps } from "./MoveTargets.tsx";
+import { PawnLayer } from "./PawnLayer.tsx";
 import { ShiftTargets, type ShiftTargetsProps } from "./ShiftTargets.tsx";
 import { TILE_UNITS, TileView } from "./TileView.tsx";
 
@@ -14,12 +15,14 @@ export interface BoardProps {
   seats?: SeatView[];
   /** Insertion arrows on the edge tiles; only given on the viewer's own turn. */
   shiftTargets?: ShiftTargetsProps;
+  /** Reachable squares to tap; only given on the viewer's own move step. */
+  moveTargets?: MoveTargetsProps;
   /** Id of a tile to outline (the inserted spare in a preview). */
   highlightTileId?: number;
 }
 
-/** The 7×7 board as one scalable SVG; pawns stand on their seat's start corner. */
-export function Board({ board, seats = [], shiftTargets, highlightTileId }: BoardProps) {
+/** The 7×7 board as one scalable SVG, with the pawns on their squares and the controls of the current step. */
+export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId }: BoardProps) {
   const { t } = useTranslation();
   const clipId = useId();
   return (
@@ -44,20 +47,11 @@ export function Board({ board, seats = [], shiftTargets, highlightTileId }: Boar
           );
         })}
       </g>
-      {seats.map(({ seat, isMe, connected, sessionId }) => {
-        const corner = START_CORNERS[seat - 1];
-        if (!corner) return null;
-        return (
-          <Pawn
-            key={sessionId}
-            seat={seat}
-            isMe={isMe}
-            connected={connected}
-            x={corner.col * TILE_UNITS}
-            y={corner.row * TILE_UNITS}
-          />
-        );
-      })}
+      {moveTargets && <MoveTargets {...moveTargets} />}
+      {/* Pawns never catch taps: a move target under a pawn must stay tappable. */}
+      <g className={styles.pawns}>
+        <PawnLayer seats={seats} board={board} />
+      </g>
       {shiftTargets && <ShiftTargets {...shiftTargets} />}
     </svg>
   );

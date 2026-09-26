@@ -12,6 +12,9 @@ export const Player = schema({
   connected: t.boolean().default(true),
   /** 1–4, clockwise from the top-left start corner. */
   seat: t.uint8().default(0),
+  /** The square the pawn stands on; starts on the seat's start corner. */
+  row: t.uint8().default(0),
+  col: t.uint8().default(0),
 });
 export type Player = SchemaType<typeof Player>;
 
@@ -23,7 +26,7 @@ export const GameState = schema({
   spare: t.ref(TileState),
   /** Seat 1–4 of the current player; 0 when nobody is seated. */
   turnSeat: t.uint8().default(0),
-  /** What the current player does next: "shift" (a "move" step arrives with pawn movement). */
+  /** What the current player does next: "shift", then "move". */
   phase: t.string().default("shift"),
   /** Insertion id of the previous shift, or "" before the first one. */
   lastInsertion: t.string().default(""),

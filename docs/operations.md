@@ -74,6 +74,7 @@ timestamp. Read them in the Render dashboard (service → Logs) or with Render M
 | `player.joined` / `left` / `dropped` / `reconnected` | seat changes |
 | `game.setup` | a new game's seed |
 | `turn.changed` | every turn change, `{ from, to }` seats (0 = nobody) |
+| `phase.changed` | the step within a turn changes, `{ from, to, turnSeat }` (`shift` → `move`) |
 | `cmd.accepted` / `cmd.rejected` / `cmd.failed` | every room command, exactly once, with code and state facts |
 | `framework.log` | Colyseus's own messages |
 | `server.started` / `server.shutdown`, `process.*` | process lifecycle and fatal errors |

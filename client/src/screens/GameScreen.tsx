@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { reverseOf, rotate, shiftBoard, type InsertionId } from "@labyrinth/rules";
+import { reverseOf, rotate, shiftBoard, type InsertionId, type Square } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
+import { MoveControls } from "../game/MoveControls.tsx";
 import { ShiftControls } from "../game/ShiftControls.tsx";
 import { TurnLine } from "../game/TurnLine.tsx";
 import type { GameSession } from "../session/useGameSession.ts";
@@ -13,22 +14,23 @@ import { Screen } from "../ui/Screen.tsx";
 
 export interface GameScreenProps {
   view: GameView;
-  session: Pick<GameSession, "shift" | "pending" | "notice">;
+  session: Pick<GameSession, "shift" | "move" | "pending" | "notice">;
 }
 
 /**
- * The game: whose turn it is, the board and the shift controls. On your turn,
- * tapping an edge arrow previews the shift (with the same rule the server
- * uses); tapping it again or "Työnnä" sends it.
+ * The game: whose turn it is, the board and the controls of the current step.
+ * Shift step: tapping an edge arrow previews the shift (with the same rule the
+ * server uses); tapping it again or "Työnnä" sends it. Move step: tapping a
+ * highlighted square moves there at once; "Jää paikalleen" stays.
  */
 export function GameScreen({ view, session }: GameScreenProps) {
   const { t } = useTranslation();
-  const { shift, pending, notice } = session;
+  const { shift, move, pending, notice } = session;
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
 
   // A new synced board (someone shifted, the turn moved) drops the preview and the local rotation.
-  const boardKey = `${view.board.spare.id}|${view.lastInsertion ?? ""}|${view.turnSeat}`;
+  const boardKey = `${view.board.spare.id}|${view.lastInsertion ?? ""}|${view.turnSeat}|${view.step}`;
   const [seenKey, setSeenKey] = useState(boardKey);
   if (seenKey !== boardKey) {
     setSeenKey(boardKey);
@@ -38,11 +40,14 @@ export function GameScreen({ view, session }: GameScreenProps) {
 
   const spare = rotate(view.board.spare, turns);
   const preview = useMemo(
-    () => (selected ? shiftBoard(view.board, selected, spare.rotation) : undefined),
-    [view.board, selected, spare.rotation],
+    () => (selected ? shiftBoard(view.board, selected, spare.rotation, view.seats.map((s) => s.square)) : undefined),
+    [view.board, view.seats, selected, spare.rotation],
   );
+  // Pawns on the previewed line are shown where the shift would carry them.
+  const seats = preview ? view.seats.map((s, i) => ({ ...s, square: preview.pawns[i]! })) : view.seats;
   const forbidden = view.lastInsertion ? reverseOf(view.lastInsertion) : undefined;
-  const canAct = view.isMyTurn && !pending;
+  const shifting = view.isMyTurn && view.step === "shift";
+  const canAct = shifting && !pending;
 
   const confirm = async (insertion: InsertionId) => {
     const result = await shift(insertion, spare.rotation);
@@ -56,24 +61,39 @@ export function GameScreen({ view, session }: GameScreenProps) {
     else setSelected(insertion);
   };
 
+  const moveTo = (target: Square) => {
+    if (!pending) void move(target);
+  };
+  const me = view.seats.find((s) => s.isMe);
+
   return (
     <Screen start={<GameIdBadge roomId={view.roomId} />} end={<LanguageSwitcher />}>
       <TurnLine view={view} />
       <Board
         board={preview?.board ?? view.board}
-        seats={view.seats}
+        seats={seats}
         highlightTileId={preview ? spare.id : undefined}
-        shiftTargets={view.isMyTurn ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
+        shiftTargets={shifting ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
+        moveTargets={view.reachable ? { reachable: view.reachable, busy: pending, onSelect: moveTo } : undefined}
       />
-      <ShiftControls
-        spare={spare}
-        outgoing={preview?.pushedOut}
-        enabled={view.isMyTurn}
-        pending={pending}
-        onRotate={() => setTurns((n) => n + 1)}
-        onConfirm={() => selected && void confirm(selected)}
-        onCancel={() => setSelected(undefined)}
-      />
+      {view.step === "move" ? (
+        <MoveControls
+          spare={view.board.spare}
+          enabled={view.isMyTurn}
+          pending={pending}
+          onStay={() => me && moveTo(me.square)}
+        />
+      ) : (
+        <ShiftControls
+          spare={spare}
+          outgoing={preview?.pushedOut}
+          enabled={view.isMyTurn}
+          pending={pending}
+          onRotate={() => setTurns((n) => n + 1)}
+          onConfirm={() => selected && void confirm(selected)}
+          onCancel={() => setSelected(undefined)}
+        />
+      )}
       <Notice message={notice && t(notice)} />
     </Screen>
   );

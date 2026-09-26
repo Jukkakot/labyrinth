@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { setupBoard } from "@labyrinth/rules";
+import { reachableSquares, setupBoard } from "@labyrinth/rules";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadToken, saveToken } from "./sessionToken.ts";
 import { useGameSession, type Connector, type GameRoomLike } from "./useGameSession.ts";
@@ -51,6 +51,28 @@ describe("game-session › view model", () => {
     expect(toGameView(syncedState({ me: 1, b: 2 }), "r", "me")).toMatchObject({ turnSeat: 1, isMyTurn: true, lastInsertion: undefined });
     const other = toGameView(syncedState({ me: 1, b: 2 }, { turnSeat: 2, lastInsertion: "N1" }), "r", "me")!;
     expect(other).toMatchObject({ turnSeat: 2, isMyTurn: false, lastInsertion: "N1" });
+  });
+
+  it("pawns stand on their synced squares; without a square, on their start corner", () => {
+    const state = syncedState({ me: 1 });
+    state.players = new Map([
+      ["me", { seat: 1, connected: true, row: 3, col: 2 }],
+      ["b", { seat: 3, connected: true }],
+    ]);
+    const view = toGameView(state, "r", "me")!;
+    expect(view.seats.map((s) => s.square)).toEqual([
+      { row: 3, col: 2 },
+      { row: 6, col: 6 },
+    ]);
+  });
+
+  it("the move step lists reachable squares only for the player whose move it is", () => {
+    const mine = toGameView(syncedState({ me: 1, b: 2 }, { phase: "move" }), "r", "me")!;
+    expect(mine.step).toBe("move");
+    expect(mine.reachable).toEqual(reachableSquares(board, { row: 0, col: 0 }));
+    expect(toGameView(syncedState({ me: 1, b: 2 }, { phase: "move" }), "r", "b")!.reachable).toBeUndefined();
+    const shiftStep = toGameView(syncedState({ me: 1, b: 2 }), "r", "me")!;
+    expect(shiftStep).toMatchObject({ step: "shift", reachable: undefined });
   });
 
   it("returns undefined until the board has arrived", () => {
@@ -193,5 +215,21 @@ describe("game-session › shift command", () => {
       await first;
     });
     expect(result.current.pending).toBe(false);
+  });
+});
+
+describe("game-session › move command", () => {
+  it("sends the target square; a rejection gives its notice", async () => {
+    const room = fakeRoom({ request: vi.fn(async () => ({ ok: false, code: "UNREACHABLE" })) });
+    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play());
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+
+    await act(async () => {
+      await result.current.move({ row: 2, col: 4 });
+    });
+    expect(room.request).toHaveBeenCalledWith("move", { row: 2, col: 4 });
+    expect(result.current.notice).toBe("errors.UNREACHABLE");
   });
 });

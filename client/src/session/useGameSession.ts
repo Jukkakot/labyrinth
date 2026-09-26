@@ -1,5 +1,5 @@
 import { Client } from "@colyseus/sdk";
-import { GAME_ERROR_CODES, type CommandResult, type GameErrorCode, type ShiftPayload } from "@labyrinth/protocol";
+import { GAME_ERROR_CODES, type CommandResult, type GameErrorCode, type MovePayload, type ShiftPayload } from "@labyrinth/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { serverUrl } from "../config.ts";
 import { log, setLogContext } from "../logging/logger.ts";
@@ -65,6 +65,8 @@ export interface GameSession {
   play(): void;
   /** Sends a shift. Resolves undefined without sending while another command is pending. */
   shift(insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]): Promise<CommandResult | undefined>;
+  /** Sends a move (the own square = stay). Resolves undefined without sending while another command is pending. */
+  move(target: MovePayload): Promise<CommandResult | undefined>;
   /** True while a command waits for the server. */
   pending: boolean;
   /** i18n key of the message for the last rejected command, shown for NOTICE_MS. */
@@ -156,7 +158,8 @@ export function useGameSession(connector?: Connector): GameSession {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const shift = useCallback(async (insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]) => {
+  /** Sends one command at a time; a rejection becomes a notice. */
+  const send = useCallback(async (cmd: "shift" | "move", payload: ShiftPayload | MovePayload) => {
     const room = roomRef.current;
     if (!room || pendingRef.current) return undefined;
     pendingRef.current = true;
@@ -164,21 +167,27 @@ export function useGameSession(connector?: Connector): GameSession {
     setNotice(undefined);
     let result: CommandResult;
     try {
-      result = (await room.request("shift", { insertion, rotation } satisfies ShiftPayload)) as CommandResult;
+      result = (await room.request(cmd, payload)) as CommandResult;
     } catch (err) {
       // No reply (connection lost mid-request): nothing changed on the server as far as we know.
-      log.warn("client.warn", { kind: "command", cmd: "shift" }, err instanceof Error ? err.message : String(err));
+      log.warn("client.warn", { kind: "command", cmd }, err instanceof Error ? err.message : String(err));
       result = { ok: false, code: "INTERNAL_ERROR" };
     } finally {
       pendingRef.current = false;
       setPending(false);
     }
     if (!result.ok) {
-      log.warn("client.cmd.rejected", { cmd: "shift", code: result.code });
+      log.warn("client.cmd.rejected", { cmd, code: result.code });
       setNotice(noticeKey(result.code));
     }
     return result;
   }, []);
 
-  return { status, view, slow: status === "connecting" && slow, play, shift, pending, notice };
+  const shift = useCallback(
+    (insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]) => send("shift", { insertion, rotation }),
+    [send],
+  );
+  const move = useCallback(({ row, col }: MovePayload) => send("move", { row, col }), [send]);
+
+  return { status, view, slow: status === "connecting" && slow, play, shift, move, pending, notice };
 }

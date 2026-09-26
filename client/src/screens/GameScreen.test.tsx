@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { openings, rotate, setupBoard, shiftBoard, square, squareIndex } from "@labyrinth/rules";
+import { isReachable, openings, reachableSquares, rotate, setupBoard, shiftBoard, square, squareIndex } from "@labyrinth/rules";
 import { describe, expect, it, vi } from "vitest";
 import "../i18n";
 import type { GameSession } from "../session/useGameSession.ts";
@@ -9,24 +9,34 @@ import { GameScreen } from "./GameScreen.tsx";
 
 const board = setupBoard(7);
 
-function view(turn: { turnSeat?: number; lastInsertion?: string } = {}) {
+interface Turn {
+  turnSeat?: number;
+  lastInsertion?: string;
+  phase?: string;
+  /** My pawn square (default: my start corner). */
+  mine?: { row: number; col: number };
+}
+
+function view(turn: Turn = {}) {
   const state: SyncedState = {
     squares: board.squares.map(({ id, rotation }) => ({ id, rotation })),
     spare: { id: board.spare.id, rotation: board.spare.rotation },
     players: new Map([
-      ["me", { seat: 1, connected: true }],
+      ["me", { seat: 1, connected: true, ...(turn.mine ?? { row: 0, col: 0 }) }],
       ["other", { seat: 2, connected: true }],
     ]),
     turnSeat: turn.turnSeat ?? 1,
     lastInsertion: turn.lastInsertion ?? "",
+    phase: turn.phase ?? "shift",
   };
   return toGameView(state, "brave-otters-sing", "me")!;
 }
 
-function setup(turn?: Parameters<typeof view>[0], session: Partial<GameSession> = {}) {
+function setup(turn?: Turn, session: Partial<GameSession> = {}) {
   const shift = vi.fn<GameSession["shift"]>(async () => ({ ok: true }));
-  const utils = render(<GameScreen view={view(turn)} session={{ shift, pending: false, ...session }} />);
-  return { shift, ...utils };
+  const move = vi.fn<GameSession["move"]>(async () => ({ ok: true }));
+  const utils = render(<GameScreen view={view(turn)} session={{ shift, move, pending: false, ...session }} />);
+  return { shift, move, ...utils };
 }
 
 /** Where the board draws a tile: its translate in board units. */
@@ -135,7 +145,7 @@ describe("board-view › Tiles slide", () => {
       "brave-otters-sing",
       "me",
     )!;
-    rerender(<GameScreen view={synced} session={{ shift, pending: false }} />);
+    rerender(<GameScreen view={synced} session={{ shift, move: vi.fn(), pending: false }} />);
 
     // The N1 preview is gone; the board is the synced one.
     expect(tilePosition(container, moving.id)).toBe(at(0, 1));
@@ -185,5 +195,84 @@ describe("board-view › Rejected command message", () => {
       fireEvent.click(screen.getByRole("button", { name: "Työnnä" }));
     });
     expect(tilePosition(container, board.spare.id)).toBeUndefined();
+  });
+});
+
+const pawnOf = (name: string) => screen.getByRole("img", { name }).style.transform;
+
+describe("board-view › Pawns on their squares (game screen)", () => {
+  it("Preview carries a pawn: N3 shows the pawn on (2,3) at (3,3)", () => {
+    setup({ mine: { row: 2, col: 3 } });
+    expect(pawnOf("Pelaaja 1 (sinä)")).toBe(at(2, 3));
+    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+    expect(pawnOf("Pelaaja 1 (sinä)")).toBe(at(3, 3));
+    fireEvent.click(screen.getByRole("button", { name: "Peru" }));
+    expect(pawnOf("Pelaaja 1 (sinä)")).toBe(at(2, 3));
+  });
+});
+
+describe("board-view › Move controls", () => {
+  const reach = reachableSquares(board, square(0, 0));
+  const target = reach.at(-1)!;
+  const moveTargets = (container: HTMLElement) => container.querySelectorAll("[data-move-target]");
+
+  it("the test board has somewhere to go from the top-left corner", () => {
+    expect(reach.length).toBeGreaterThan(1);
+  });
+
+  it("Tap to move: every reachable square is a target; tapping one sends the move once", async () => {
+    const { container, move, shift } = setup({ phase: "move" });
+    expect(moveTargets(container)).toHaveLength(reach.length);
+    expect(container.querySelectorAll("[data-insertion]")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Käännä laattaa" })).toBeNull();
+    expect(screen.getByText("Sinun vuorosi – siirrä nappulaa")).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(container.querySelector(`[data-move-target="${target.row},${target.col}"]`)!);
+    });
+    expect(move).toHaveBeenCalledExactlyOnceWith(target);
+    expect(shift).not.toHaveBeenCalled();
+  });
+
+  it("Stay: the button and the own square both send the own square", async () => {
+    const { container, move } = setup({ phase: "move" });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Jää paikalleen" }));
+    });
+    expect(move).toHaveBeenLastCalledWith({ row: 0, col: 0 });
+    await act(async () => {
+      fireEvent.click(container.querySelector(`[data-move-target="0,0"]`)!);
+    });
+    expect(move).toHaveBeenCalledTimes(2);
+    expect(move).toHaveBeenLastCalledWith({ row: 0, col: 0 });
+  });
+
+  it("Unreachable square: no target there, so tapping it sends nothing", () => {
+    const { container, move } = setup({ phase: "move" });
+    const unreachable = [...Array(49).keys()].map((i) => square(Math.floor(i / 7), i % 7)).find((sq) => !isReachable(board, square(0, 0), sq))!;
+    expect(container.querySelector(`[data-move-target="${unreachable.row},${unreachable.col}"]`)).toBeNull();
+    fireEvent.click(container.querySelector(`[data-tile-id="${board.squares[squareIndex(unreachable)]!.id}"]`)!);
+    expect(move).not.toHaveBeenCalled();
+  });
+
+  it("Not during the shift: no squares are highlighted", () => {
+    const { container } = setup();
+    expect(moveTargets(container)).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Jää paikalleen" })).toBeNull();
+  });
+
+  it("pending: move targets and Stay wait", () => {
+    const { container, move } = setup({ phase: "move" }, { pending: true });
+    expect(moveTargets(container)[0]!.getAttribute("aria-disabled")).toBe("true");
+    expect((screen.getByRole("button", { name: "Odotetaan palvelinta…" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(moveTargets(container)[1] ?? moveTargets(container)[0]!);
+    expect(move).not.toHaveBeenCalled();
+  });
+
+  it("Other player's move step: no targets, no Stay, turn line says player 2 is moving", () => {
+    const { container } = setup({ phase: "move", turnSeat: 2 });
+    expect(moveTargets(container)).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Jää paikalleen" })).toBeNull();
+    expect(screen.getByText("Pelaaja 2 siirtää")).toBeTruthy();
   });
 });
