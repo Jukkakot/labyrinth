@@ -98,13 +98,34 @@ builds first.
   (Colyseus StateView).
 - **Client identity:** Colyseus reconnection token in sessionStorage — one player per tab.
 
-## Board geometry — Planned (`add-board-model`)
+## Board model — Implemented
 
-- Squares `(row, col)`, 0–6, origin top-left; row grows down, col right. Directions N, E, S, W.
-- A tile is its kind + rotation (clockwise 0/90/180/270); openings are derived.
-- Fixed tiles where row and col are both even. Rows/cols 1, 3, 5 are pushable → 12 insertion
-  points named by entry side + index (`N1` pushes column 1 down from the top).
-- Start corners (0,0), (0,6), (6,6), (6,0), clockwise.
+Spec: [`openspec/specs/board/`](../openspec/specs/). Code: `packages/rules/src/` —
+`geometry.ts` (squares, directions), `tile.ts` (kinds, openings, rotation), `board.ts` (board,
+fixed squares, connections).
+
+- **Squares** `(row, col)`, 0–6, `(0,0)` top-left; row grows down, col right. `square()` throws
+  `RangeError` off the board; `neighbour()` returns `undefined` beyond the edge.
+- **Directions** N (toward row 0), E, S, W; `DIRECTIONS` is clockwise order.
+- **Tiles** are plain data `{ id, kind, rotation }`: kind `straight` | `corner` | `tee`
+  (T-junction), rotation 0/90/180/270 clockwise. Openings are derived, never stored: at 0° the
+  shapes read like the letters I (N, S), L (N, E) and T (E, S, W). `rotate(tile, steps)` keeps id
+  and kind. Tile ids (0…49) never change — the client animates tiles by id.
+- **Board** = `{ squares: Tile[49] (row-major), spare: Tile }`, frozen, JSON round-trips through
+  `createBoard()`, which is the only validating entry point (49 squares, spare, unique ids, valid
+  kinds/rotations). Other functions trust a valid board.
+- **Fixed squares**: row and column both even (16 squares, `FIXED_SQUARES`); fixedness comes from
+  the position, not from the tile. `START_CORNERS` (0,0), (0,6), (6,6), (6,0), clockwise.
+- **Connections**: orthogonal neighbours are connected when each tile is open toward the other;
+  an opening toward the board edge leads nowhere. `connectedNeighbours()` is the building block
+  for reachability (`pawn-movement`).
+- **Test fixtures**: `@labyrinth/rules/testing` — `boardFromRows(["L90 I0 T0 …" × 7], "I0")`
+  (ids assigned row-major, spare = 49), `uniformBoard()`, `withTile()`.
+
+### Shifting — Planned (`tile-shift`)
+
+- Rows/cols 1, 3, 5 are pushable → 12 insertion points named by entry side + index (`N1` pushes
+  column 1 down from the top).
 
 ## Game flow and commands — Planned (`tile-shift` … `turn-rules`)
 

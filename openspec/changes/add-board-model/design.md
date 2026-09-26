@@ -49,3 +49,15 @@ A tile stores `kind` + `rotation`. `openings` looks up the kind's base set (stra
 
 - [Kind name `tee` in code vs "T-junction" in the spec] → The spec describes behaviour. `tee` is a valid identifier, and a comment maps the two.
 - [Throwing on invalid coordinates inside rules] → Only reachable through programmer error or unvalidated input. Commands are validated by the server wrapper (add-logging) before they reach rules, so a throw here surfaces as `INTERNAL_ERROR` with a stack, which is the right signal for a bug.
+
+## Implementation notes
+
+- **Spec correction:** the scenario "Rotating a T-junction to 270°" originally expected N, S and W.
+  By the spec's own rotation rule (tee at 0° = E, S, W; each quarter turn maps N→E→S→W→N) a tee
+  at 270° is open N, E and S (closed W); N, S, W is its 90° position. The first test run caught
+  the mismatch; the scenario was corrected, the rotation rule and code were right.
+- **Test fixtures as a subpath:** the compact layout helper is exported as
+  `@labyrinth/rules/testing` (not from the main entry), so game code and test helpers stay
+  apart; server tests can use it later. `packages/rules` is marked `sideEffects: false`.
+- **Extra helpers** beyond the task list, needed by the tests and by later changes:
+  `ALL_SQUARES`, `squareIndex`, `sameSquare`, `directionTo`, `isOpen`, `DIRECTIONS`.

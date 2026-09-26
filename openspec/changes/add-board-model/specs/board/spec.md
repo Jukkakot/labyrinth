@@ -49,7 +49,7 @@ A tile's rotation SHALL be one of 0°, 90°, 180° or 270° clockwise. Rotating 
 
 #### Scenario: Rotating a T-junction to 270°
 - **WHEN** the openings of a T-junction at rotation 270° are requested
-- **THEN** they are exactly N, S and W
+- **THEN** they are exactly N, E and S (closed toward W)
 
 #### Scenario: Straight tile symmetry
 - **WHEN** the openings of a straight tile at 0° and at 180° are compared

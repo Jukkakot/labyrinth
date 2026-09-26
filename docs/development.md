@@ -29,7 +29,7 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run size -
 
 | Level | Tools | Status |
 |---|---|---|
-| Rules | Vitest; fast-check for invariants; test names follow spec scenarios | Implemented (first rules come with `add-board-model`) |
+| Rules | Vitest; fast-check properties over random boards (`boardArb` in `board.test.ts`); test names follow spec scenarios (`board › Rotation › Rotating a corner`) | Implemented |
 | Server | Vitest + @colyseus/testing (real rooms, SDK clients in-process); `captureLogs()` asserts log lines | Implemented |
 | Client | Vitest; jsdom + Testing Library for components (`// @vitest-environment jsdom`) | Implemented |
 | E2E | Playwright, Galaxy S24 profile, two players in two contexts | Planned (`show-board`) |
