@@ -126,3 +126,13 @@ If the cause is client-side, it is handled when `lobby` adds a leave action. Not
   `LanguageSwitcher` moved to `ui/` on a CSS Module.
 - **Testing Library cleanup:** Vitest globals are off, so `client/src/test/setup.ts` registers
   `cleanup()`; configured in `vite.config.ts` `test.setupFiles`.
+- **Quick-play pools (added for E2E isolation):** `defineRoom(GameRoom).filterBy(["pool"])`;
+  the client passes `?pool=…` from the URL to `joinOrCreate`. Each E2E test plays in its own
+  pool, so tests never share games even though closed pages keep their seats for 60 s. Also
+  usable by hand to meet specific people.
+- **Bug found by E2E through the logs:** right after joining, the decoded state is empty until
+  the first patch; the view model threw `state.squares is not iterable`. The failing E2E showed
+  only the join-error screen, and `logs/dev.log` had the `client.error` line with the message.
+  Fixed by treating a not-yet-decoded state as "no board yet" (unit test added).
+- **Board edge:** corridors open toward the board edge are clipped to the tiles' outer edge
+  (`clipPath`), found in the Galaxy S24 screenshots.

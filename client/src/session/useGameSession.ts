@@ -22,12 +22,19 @@ export interface Connector {
   reconnect(token: string): Promise<GameRoomLike>;
 }
 
+/** Optional quick-play pool from `?pool=…`: players only meet others in the same pool. */
+export function quickPlayPool(search = globalThis.location?.search ?? ""): string | undefined {
+  const pool = new URLSearchParams(search).get("pool")?.trim();
+  return pool ? pool.slice(0, 64) : undefined;
+}
+
 export function createConnector(): Connector {
   let client: Client | undefined;
+  const pool = quickPlayPool();
   // Created on first use: serverUrl() throws in a production build without VITE_SERVER_URL.
   const get = () => (client ??= new Client(serverUrl()));
   return {
-    joinOrCreate: () => get().joinOrCreate("game") as unknown as Promise<GameRoomLike>,
+    joinOrCreate: () => get().joinOrCreate("game", pool ? { pool } : {}) as unknown as Promise<GameRoomLike>,
     reconnect: (token) => get().reconnect(token) as unknown as Promise<GameRoomLike>,
   };
 }

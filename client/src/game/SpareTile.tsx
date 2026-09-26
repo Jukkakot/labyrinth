@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { Tile } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import styles from "./SpareTile.module.css";
@@ -6,10 +7,16 @@ import { TILE_UNITS, TileView } from "./TileView.tsx";
 /** The spare tile, drawn exactly like a board tile, with its label. */
 export function SpareTile({ tile }: { tile: Tile }) {
   const { t } = useTranslation();
+  const clipId = useId();
   return (
     <figure className={styles.spare}>
       <svg viewBox={`0 0 ${TILE_UNITS} ${TILE_UNITS}`} className={styles.tile} aria-label={t("board.spare")} role="group">
-        <TileView tile={tile} />
+        <clipPath id={clipId}>
+          <rect x={3} y={3} width={TILE_UNITS - 6} height={TILE_UNITS - 6} rx={10} />
+        </clipPath>
+        <g clipPath={`url(#${clipId})`}>
+          <TileView tile={tile} />
+        </g>
       </svg>
       <figcaption className={styles.caption}>{t("board.spare")}</figcaption>
     </figure>

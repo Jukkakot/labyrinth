@@ -23,7 +23,7 @@
 
 ## 5. E2E
 
-- [ ] 5.1 Create the `e2e` workspace (Playwright, Galaxy S24 project, webServer for server and client) and tests: quick play shows 49 tiles, spare and game id; two contexts join the same game and each sees both pawns with their own marked; reload keeps the seat; the board fits 360×780 without horizontal scroll; verify `npm run e2e` passes locally
+- [x] 5.1 Create the `e2e` workspace (Playwright, Galaxy S24 project, webServer for server and client) and tests: quick play shows 49 tiles, spare and game id; two contexts join the same game and each sees both pawns with their own marked; reload keeps the seat; the board fits 360×780 without horizontal scroll; verify `npm run e2e` passes locally
 - [ ] 5.2 Add the `e2e` CI job (install chromium, run, upload report on failure); verify a green CI run
 
 ## 6. Production check

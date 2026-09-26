@@ -45,6 +45,8 @@ describe("game-session › view model", () => {
 
   it("returns undefined until the board has arrived", () => {
     expect(toGameView({ squares: [], players: new Map() }, "r", "me")).toBeUndefined();
+    // Right after joining, before the first patch, the decoded state is still empty.
+    expect(toGameView({}, "r", "me")).toBeUndefined();
   });
 });
 
@@ -100,5 +102,14 @@ describe("game-session › Quick play", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("game-session › quick-play pool", () => {
+  it("reads ?pool= and ignores an empty value", async () => {
+    const { quickPlayPool } = await import("./useGameSession.ts");
+    expect(quickPlayPool("?pool=e2e-123")).toBe("e2e-123");
+    expect(quickPlayPool("?pool=")).toBeUndefined();
+    expect(quickPlayPool("")).toBeUndefined();
   });
 });

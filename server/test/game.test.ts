@@ -98,5 +98,13 @@ describe("game-session", () => {
       const fifth = await colyseus.sdk.joinOrCreate("game");
       expect(fifth.roomId).not.toBe(first.roomId);
     });
+
+    it("quick-play pools are separate: same pool meets, different pools do not", async () => {
+      const a1 = await colyseus.sdk.joinOrCreate("game", { pool: "a" });
+      const a2 = await colyseus.sdk.joinOrCreate("game", { pool: "a" });
+      const b1 = await colyseus.sdk.joinOrCreate("game", { pool: "b" });
+      expect(a2.roomId).toBe(a1.roomId);
+      expect(b1.roomId).not.toBe(a1.roomId);
+    });
   });
 });

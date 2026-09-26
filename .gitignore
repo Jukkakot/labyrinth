@@ -18,3 +18,5 @@ coverage
 .idea
 .DS_Store
 logs/
+e2e/test-results
+e2e/playwright-report

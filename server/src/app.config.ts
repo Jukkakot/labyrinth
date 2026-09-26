@@ -12,7 +12,8 @@ const server = defineServer({
   logger: frameworkLogger,
 
   rooms: {
-    game: defineRoom(GameRoom).enableRealtimeListing(),
+    // `pool` partitions quick play (E2E isolation, manual testing groups).
+    game: defineRoom(GameRoom).filterBy(["pool"]).enableRealtimeListing(),
   },
 
   express: (app) => {
