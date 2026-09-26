@@ -66,7 +66,7 @@ everything works and is final.
 - UI checks: Playwright MCP `playwright-mobile` (Galaxy S24), **portrait only** by default. Check
   landscape and a narrow desktop only when a change reshapes a layout (new screen, new layout
   structure). This overrides the global "test every UI change in three sizes" rule for this
-  project. Save screenshots under `.playwright-mcp/` (git-ignored) and close the tabs you opened
+  project. Check facts with snapshots or DOM queries; screenshot only where the look needs judging. Save screenshots under `.playwright-mcp/` (git-ignored) and close the tabs you opened
   when the check is done.
 - Before a UI check or E2E run, make sure the dev servers are the current code: `npm run dev` in
   this repo is `tsx watch` + Vite (both reload by themselves); anything else listening on
