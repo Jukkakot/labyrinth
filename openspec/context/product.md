@@ -40,6 +40,9 @@ Agreed before any capability was specified. Once a capability has a spec under
 - Modern, minimalist, no clutter: no event log, no chat, no emoji reactions.
   The last push is shown on the board itself (animation + blocked reverse arrow).
 - Mobile portrait is the design target; landscape must not break; desktop works.
+  Android (Chrome) is the primary platform, iOS Safari must also work. Reference
+  device: Samsung Galaxy S24 (360×780 CSS px, DPR 3) — the default for design
+  checks and mobile tests.
   A dedicated landscape layout only if the board gets too small.
 - Shift: tap an edge arrow → ghost preview → tap again / Confirm. Move: reachable
   tiles are highlighted, tapping one moves immediately; "Stay" is a button.

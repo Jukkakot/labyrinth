@@ -42,7 +42,8 @@ spec under `openspec/specs/` wins over those files.
 - Flow: commit → push to main (Claude may push in this repo) → CI → Pages / Render deploy.
 - Config: GitHub variable `VITE_SERVER_URL`; Render env `ALLOWED_ORIGINS`.
 - Debugging: Render MCP `list_logs` (resource = service id, `text` filter, time range);
-  Playwright MCP `playwright` (desktop) and `playwright-mobile` (iPhone 15), both headless.
+  Playwright MCP `playwright-mobile` (Galaxy S24, the default for UI checks), `playwright-ios`
+  (iPhone 15) and `playwright` (desktop), all headless.
 
 ## Commands
 

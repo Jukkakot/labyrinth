@@ -53,7 +53,7 @@ Apply to every change. Designs and task lists must show how they are met.
 - Rules: unit tests; every spec scenario maps to at least one test, named after
   it. Invariants are also covered with fast-check property tests.
 - Server: room integration tests with @colyseus/testing.
-- E2E: Playwright smoke tests at a mobile viewport in CI for critical paths
+- E2E: Playwright smoke tests with the Galaxy S24 device profile in CI for critical paths
   (start game, shift, move), extended as those paths are built.
 - Further testing practices (bot simulations, a11y checks, coverage limits,
   visual regression) are decided when there is something to test; visual
@@ -80,5 +80,6 @@ Apply to every change. Designs and task lists must show how they are met.
 - Dependencies are updated manually (no Renovate/Dependabot).
 
 ## Browser support
-- Current iOS Safari, Chrome/Android, Firefox and Edge, back about two years. No
+- Chrome on Android is primary (reference device Galaxy S24); iOS Safari, Firefox
+  and Edge must also work. Versions back about two years. No
   legacy polyfills.

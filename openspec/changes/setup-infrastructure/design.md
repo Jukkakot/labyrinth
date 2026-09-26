@@ -38,8 +38,8 @@ The client reads `import.meta.env.VITE_SERVER_URL` from `client/src/config.ts`, 
 - Found during implementation: Colyseus's HTTP router adds CORS headers to **every** response, Express routes included, and by default echoes any `Origin`. A separate `cors` middleware would therefore be redundant and would be overridden.
 - Instead, `configureCors()` uses the documented override `matchMaker.controller.getCorsHeaders`, and removes the wildcard default. An allowed origin is echoed with `Vary: Origin`; any other origin gets no `Access-Control-Allow-Origin` at all. This covers matchmaking and our own routes in one place.
 
-### 4. Two Playwright MCP instances
-`playwright` (desktop viewport) and `playwright-mobile` (`--device "iPhone 15"`) in `.mcp.json`. The mobile instance matches the primary target, and having both avoids reconfiguring between checks. If the chosen browser is missing, the task installs it with `npx playwright install chromium` and pins `--browser chromium`.
+### 4. Three Playwright MCP instances
+`playwright` (desktop viewport), `playwright-mobile` (`--device "Galaxy S24"`, the reference device; Android is primary) and `playwright-ios` (`--device "iPhone 15"`) in `.mcp.json`. They run `--isolated` so they can be open at the same time, and `--headless` so no windows pop up. If the chosen browser is missing, the task installs it with `npx playwright install chromium` and pins `--browser chromium`.
 
 ### 5. VS Code debugging
 `.vscode/launch.json`:

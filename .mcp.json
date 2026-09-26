@@ -11,7 +11,14 @@
       "command": "cmd",
       "args": [
         "/c", "npx", "-y", "@playwright/mcp@latest",
-        "--isolated", "--headless", "--device", "iPhone 15", "--output-dir", ".playwright-mcp/mobile"
+        "--isolated", "--headless", "--device", "Galaxy S24", "--output-dir", ".playwright-mcp/mobile"
+      ]
+    },
+    "playwright-ios": {
+      "command": "cmd",
+      "args": [
+        "/c", "npx", "-y", "@playwright/mcp@latest",
+        "--isolated", "--headless", "--device", "iPhone 15", "--output-dir", ".playwright-mcp/ios"
       ]
     }
   }
