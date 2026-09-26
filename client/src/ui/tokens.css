@@ -19,6 +19,8 @@
   --tile-mark: #b9ab8e;
   --corridor: #1f3a2e;
   --corridor-icon: #fffaf0;
+  /* Preview marks (inserted tile, selected arrow) */
+  --highlight: #d55e00;
 
   /* Seats: Okabe–Ito, colour-blind safe; always paired with a pawn shape */
   --seat-1: #0072b2;
@@ -64,6 +66,7 @@
     --tile-mark: #56675d;
     --corridor: #8fc9a8;
     --corridor-icon: #141a17;
+    --highlight: #f0a060;
     --pawn-outline: #141a17;
   }
 }

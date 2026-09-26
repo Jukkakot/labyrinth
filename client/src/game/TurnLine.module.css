@@ -1,0 +1,22 @@
+.line {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-min);
+  color: var(--muted);
+  font-size: var(--text-m);
+}
+
+/* Your own turn is the most important thing on the screen. */
+.mine {
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--text-l);
+}
+
+.pawn {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}

@@ -63,5 +63,29 @@
     "copyLine": "Peli {{id}} · {{date}} {{time}} · v {{ver}}",
     "copied": "Kopioitu",
     "copyFallback": "Kopioi tämä rivi bugiraporttiin:"
+  },
+  "turn": {
+    "mine": "Sinun vuorosi – työnnä laatta",
+    "other": "Pelaaja {{seat}} työntää"
+  },
+  "shift": {
+    "hint": "Valitse nuoli laudan reunalta",
+    "rotate": "Käännä laattaa",
+    "confirm": "Työnnä",
+    "cancel": "Peru",
+    "waiting": "Odotetaan palvelinta…",
+    "newSpare": "Tippuu pois",
+    "fromN": "Työnnä ylhäältä sarakkeeseen {{line}}",
+    "fromS": "Työnnä alhaalta sarakkeeseen {{line}}",
+    "fromW": "Työnnä vasemmalta riviin {{line}}",
+    "fromE": "Työnnä oikealta riviin {{line}}",
+    "forbidden": "{{label}} – ei sallittu, työntäisi laatan takaisin"
+  },
+  "errors": {
+    "NOT_SEATED": "Et ole mukana tässä pelissä",
+    "NOT_YOUR_TURN": "Ei ole sinun vuorosi",
+    "WRONG_PHASE": "Sitä ei voi tehdä juuri nyt",
+    "REVERSE_PUSH_FORBIDDEN": "Et voi työntää laattaa takaisin samasta kohdasta",
+    "generic": "Siirto ei onnistunut. Yritä uudelleen."
   }
 }

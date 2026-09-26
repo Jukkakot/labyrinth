@@ -21,5 +21,11 @@ export const GameState = schema({
   /** 49 squares, row-major. */
   squares: t.array(TileState),
   spare: t.ref(TileState),
+  /** Seat 1–4 of the current player; 0 when nobody is seated. */
+  turnSeat: t.uint8().default(0),
+  /** What the current player does next: "shift" (a "move" step arrives with pawn movement). */
+  phase: t.string().default("shift"),
+  /** Insertion id of the previous shift, or "" before the first one. */
+  lastInsertion: t.string().default(""),
 });
 export type GameState = SchemaType<typeof GameState>;

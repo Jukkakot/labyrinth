@@ -4,6 +4,6 @@ import { useGameSession } from "./session/useGameSession.ts";
 
 export default function App() {
   const session = useGameSession();
-  if (session.status === "playing" && session.view) return <GameScreen view={session.view} />;
+  if (session.status === "playing" && session.view) return <GameScreen view={session.view} session={session} />;
   return <StartScreen session={session} />;
 }

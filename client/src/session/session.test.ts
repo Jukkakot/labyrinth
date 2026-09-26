@@ -8,8 +8,11 @@ import { toGameView, type SyncedState } from "./viewModel.ts";
 
 const board = setupBoard(1);
 
-function syncedState(players: Record<string, number>): SyncedState {
+function syncedState(players: Record<string, number>, turn: Partial<SyncedState> = {}): SyncedState {
   return {
+    turnSeat: 1,
+    lastInsertion: "",
+    ...turn,
     squares: board.squares.map(({ id, rotation }) => ({ id, rotation })),
     spare: { id: board.spare.id, rotation: board.spare.rotation },
     players: new Map(Object.entries(players).map(([id, seat]) => [id, { seat, connected: true }])),
@@ -26,6 +29,7 @@ function fakeRoom(overrides: Partial<GameRoomLike> = {}): GameRoomLike {
     onLeave: vi.fn(),
     onDrop: vi.fn(),
     onReconnect: vi.fn(),
+    request: vi.fn(async () => ({ ok: true })),
     ...overrides,
   };
 }
@@ -41,6 +45,12 @@ describe("game-session › view model", () => {
       [2, false],
     ]);
     expect(view.mySeat).toBe(1);
+  });
+
+  it("derives whose turn it is and the previous shift", () => {
+    expect(toGameView(syncedState({ me: 1, b: 2 }), "r", "me")).toMatchObject({ turnSeat: 1, isMyTurn: true, lastInsertion: undefined });
+    const other = toGameView(syncedState({ me: 1, b: 2 }, { turnSeat: 2, lastInsertion: "N1" }), "r", "me")!;
+    expect(other).toMatchObject({ turnSeat: 2, isMyTurn: false, lastInsertion: "N1" });
   });
 
   it("returns undefined until the board has arrived", () => {
@@ -111,5 +121,77 @@ describe("game-session › quick-play pool", () => {
     expect(quickPlayPool("?pool=e2e-123")).toBe("e2e-123");
     expect(quickPlayPool("?pool=")).toBeUndefined();
     expect(quickPlayPool("")).toBeUndefined();
+  });
+});
+
+describe("game-session › shift command", () => {
+  async function playing(room: GameRoomLike) {
+    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const hook = renderHook(() => useGameSession(connector));
+    act(() => hook.result.current.play());
+    await waitFor(() => expect(hook.result.current.status).toBe("playing"));
+    return hook;
+  }
+
+  it("accepted: sends the payload and shows no notice", async () => {
+    const room = fakeRoom();
+    const { result } = await playing(room);
+    let reply: unknown;
+    await act(async () => {
+      reply = await result.current.shift("N3", 90);
+    });
+    expect(reply).toEqual({ ok: true });
+    expect(room.request).toHaveBeenCalledWith("shift", { insertion: "N3", rotation: 90 });
+    expect(result.current.notice).toBeUndefined();
+    expect(result.current.pending).toBe(false);
+  });
+
+  it("rejected: notice key for the code, cleared after 4 s", async () => {
+    const room = fakeRoom({ request: vi.fn(async () => ({ ok: false, code: "REVERSE_PUSH_FORBIDDEN" })) });
+    const { result } = await playing(room);
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await result.current.shift("S1", 0);
+      });
+      expect(result.current.notice).toBe("errors.REVERSE_PUSH_FORBIDDEN");
+      act(() => vi.advanceTimersByTime(4_000));
+      expect(result.current.notice).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("unknown codes and lost replies fall back to the generic message", async () => {
+    const room = fakeRoom({ request: vi.fn(async () => Promise.reject(new Error("closed"))) });
+    const { result } = await playing(room);
+    await act(async () => {
+      await result.current.shift("N1", 0);
+    });
+    expect(result.current.notice).toBe("errors.generic");
+  });
+
+  it("pending blocks a second shift", async () => {
+    let resolve!: (r: unknown) => void;
+    const room = fakeRoom({ request: vi.fn(() => new Promise((r) => (resolve = r))) });
+    const { result } = await playing(room);
+
+    let first!: Promise<unknown>;
+    act(() => {
+      first = result.current.shift("N1", 0);
+    });
+    expect(result.current.pending).toBe(true);
+    let second: unknown = "not called";
+    await act(async () => {
+      second = await result.current.shift("N3", 0);
+    });
+    expect(second).toBeUndefined();
+    expect(room.request).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolve({ ok: true });
+      await first;
+    });
+    expect(result.current.pending).toBe(false);
   });
 });

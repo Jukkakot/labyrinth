@@ -1,4 +1,5 @@
 import { Client } from "@colyseus/sdk";
+import { GAME_ERROR_CODES, type CommandResult, type GameErrorCode, type ShiftPayload } from "@labyrinth/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { serverUrl } from "../config.ts";
 import { log, setLogContext } from "../logging/logger.ts";
@@ -15,6 +16,8 @@ export interface GameRoomLike {
   onLeave(cb: (code: number) => void): unknown;
   onDrop(cb: () => void): unknown;
   onReconnect(cb: () => void): unknown;
+  /** Sends a command; resolves with the server's `CommandResult`. */
+  request(type: string, payload: unknown): Promise<unknown>;
 }
 
 export interface Connector {
@@ -44,12 +47,28 @@ export type SessionStatus = "idle" | "connecting" | "playing" | "error";
 /** After this long in "connecting" the UI explains that the server may be waking up. */
 export const SLOW_CONNECT_MS = 5_000;
 
+/** How long a rejection message stays on screen. */
+export const NOTICE_MS = 4_000;
+
+export type NoticeKey = `errors.${GameErrorCode}` | "errors.generic";
+
+/** i18n key for a rejection code: `errors.<CODE>` for known game codes, else `errors.generic`. */
+export function noticeKey(code: string): NoticeKey {
+  return (GAME_ERROR_CODES as readonly string[]).includes(code) ? `errors.${code as GameErrorCode}` : "errors.generic";
+}
+
 export interface GameSession {
   status: SessionStatus;
   view?: GameView;
   /** True when connecting has taken longer than SLOW_CONNECT_MS. */
   slow: boolean;
   play(): void;
+  /** Sends a shift. Resolves undefined without sending while another command is pending. */
+  shift(insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]): Promise<CommandResult | undefined>;
+  /** True while a command waits for the server. */
+  pending: boolean;
+  /** i18n key of the message for the last rejected command, shown for NOTICE_MS. */
+  notice?: NoticeKey;
 }
 
 /**
@@ -62,10 +81,15 @@ export function useGameSession(connector?: Connector): GameSession {
   const [status, setStatus] = useState<SessionStatus>(() => (loadToken() ? "connecting" : "idle"));
   const [view, setView] = useState<GameView>();
   const [slow, setSlow] = useState(false);
+  const roomRef = useRef<GameRoomLike | undefined>(undefined);
+  const pendingRef = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [notice, setNotice] = useState<NoticeKey>();
 
   const getConnector = () => (connectorRef.current ??= createConnector());
 
   const attach = useCallback((room: GameRoomLike) => {
+    roomRef.current = room;
     saveToken(room.reconnectionToken);
     setLogContext({ room: room.roomId, player: room.sessionId });
     const update = (state: SyncedState) => {
@@ -79,6 +103,7 @@ export function useGameSession(connector?: Connector): GameSession {
       log.info("client.conn.restored", { room: room.roomId });
     });
     room.onLeave((code) => {
+      roomRef.current = undefined;
       clearToken();
       setLogContext({});
       setView(undefined);
@@ -124,5 +149,36 @@ export function useGameSession(connector?: Connector): GameSession {
       });
   }, [attach]);
 
-  return { status, view, slow: status === "connecting" && slow, play };
+  // Rejection messages disappear by themselves.
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(undefined), NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  const shift = useCallback(async (insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]) => {
+    const room = roomRef.current;
+    if (!room || pendingRef.current) return undefined;
+    pendingRef.current = true;
+    setPending(true);
+    setNotice(undefined);
+    let result: CommandResult;
+    try {
+      result = (await room.request("shift", { insertion, rotation } satisfies ShiftPayload)) as CommandResult;
+    } catch (err) {
+      // No reply (connection lost mid-request): nothing changed on the server as far as we know.
+      log.warn("client.warn", { kind: "command", cmd: "shift" }, err instanceof Error ? err.message : String(err));
+      result = { ok: false, code: "INTERNAL_ERROR" };
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
+    }
+    if (!result.ok) {
+      log.warn("client.cmd.rejected", { cmd: "shift", code: result.code });
+      setNotice(noticeKey(result.code));
+    }
+    return result;
+  }, []);
+
+  return { status, view, slow: status === "connecting" && slow, play, shift, pending, notice };
 }

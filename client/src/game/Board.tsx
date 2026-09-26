@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { SeatView } from "../session/viewModel.ts";
 import styles from "./Board.module.css";
 import { Pawn } from "./Pawn.tsx";
+import { ShiftTargets, type ShiftTargetsProps } from "./ShiftTargets.tsx";
 import { TILE_UNITS, TileView } from "./TileView.tsx";
 
 const SIZE = BOARD_SIZE * TILE_UNITS;
@@ -11,10 +12,14 @@ const SIZE = BOARD_SIZE * TILE_UNITS;
 export interface BoardProps {
   board: BoardModel;
   seats?: SeatView[];
+  /** Insertion arrows on the edge tiles; only given on the viewer's own turn. */
+  shiftTargets?: ShiftTargetsProps;
+  /** Id of a tile to outline (the inserted spare in a preview). */
+  highlightTileId?: number;
 }
 
 /** The 7×7 board as one scalable SVG; pawns stand on their seat's start corner. */
-export function Board({ board, seats = [] }: BoardProps) {
+export function Board({ board, seats = [], shiftTargets, highlightTileId }: BoardProps) {
   const { t } = useTranslation();
   const clipId = useId();
   return (
@@ -34,6 +39,7 @@ export function Board({ board, seats = [] }: BoardProps) {
               fixed={isFixed({ row, col })}
               x={col * TILE_UNITS}
               y={row * TILE_UNITS}
+              highlight={tile.id === highlightTileId}
             />
           );
         })}
@@ -52,6 +58,7 @@ export function Board({ board, seats = [] }: BoardProps) {
           />
         );
       })}
+      {shiftTargets && <ShiftTargets {...shiftTargets} />}
     </svg>
   );
 }

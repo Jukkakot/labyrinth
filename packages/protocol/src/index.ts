@@ -2,3 +2,5 @@
 export * from "./log-events.js";
 export * from "./log-schema.js";
 export * from "./command.js";
+export * from "./game-codes.js";
+export * from "./game-schema.js";

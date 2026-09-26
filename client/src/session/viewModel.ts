@@ -1,10 +1,12 @@
-import { createBoard, TILE_SET, type Board, type Rotation } from "@labyrinth/rules";
+import { createBoard, isInsertionId, TILE_SET, type Board, type InsertionId, type Rotation } from "@labyrinth/rules";
 
 /** The synced state as the client receives it (Colyseus schema instances satisfy this shape). */
 export interface SyncedState {
   squares?: Iterable<{ id: number; rotation: number }>;
   spare?: { id: number; rotation: number };
   players?: { forEach(cb: (player: { seat: number; connected: boolean }, sessionId: string) => void): void };
+  turnSeat?: number;
+  lastInsertion?: string;
 }
 
 export interface SeatView {
@@ -20,6 +22,11 @@ export interface GameView {
   /** Seated players sorted by seat. */
   seats: SeatView[];
   mySeat?: number;
+  /** Seat of the current player; 0 when nobody is seated. */
+  turnSeat: number;
+  isMyTurn: boolean;
+  /** The previous shift, whose reverse is forbidden. */
+  lastInsertion?: InsertionId;
 }
 
 const toTile = ({ id, rotation }: { id: number; rotation: number }) => ({
@@ -44,5 +51,15 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     if (p.seat > 0) seats.push({ seat: p.seat, sessionId, connected: p.connected, isMe: sessionId === mySessionId });
   });
   seats.sort((a, b) => a.seat - b.seat);
-  return { roomId, board, seats, mySeat: seats.find((s) => s.isMe)?.seat };
+  const mySeat = seats.find((s) => s.isMe)?.seat;
+  const turnSeat = state.turnSeat ?? 0;
+  return {
+    roomId,
+    board,
+    seats,
+    mySeat,
+    turnSeat,
+    isMyTurn: mySeat !== undefined && mySeat === turnSeat,
+    lastInsertion: isInsertionId(state.lastInsertion) ? state.lastInsertion : undefined,
+  };
 }

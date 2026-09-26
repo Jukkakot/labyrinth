@@ -14,10 +14,15 @@ export interface TileViewProps {
   /** Top-left corner in board units. */
   x?: number;
   y?: number;
+  /** Outline marking the tile, e.g. the spare inserted in a shift preview. */
+  highlight?: boolean;
 }
 
-/** One tile in the corridor style: plain tile, corridors from the centre to each open side, treasure icon. */
-export function TileView({ tile, fixed = false, x = 0, y = 0 }: TileViewProps) {
+/**
+ * One tile in the corridor style: plain tile, corridors from the centre to each open side, treasure icon.
+ * Positioned with a CSS transform so a tile that moves (same key, new x/y) slides there.
+ */
+export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false }: TileViewProps) {
   const { t } = useTranslation();
   const treasure = TILE_SET[tile.id]?.treasure;
   const Icon = treasure ? TREASURE_ICONS[treasure] : undefined;
@@ -26,7 +31,8 @@ export function TileView({ tile, fixed = false, x = 0, y = 0 }: TileViewProps) {
 
   return (
     <g
-      transform={`translate(${x} ${y})`}
+      style={{ transform: `translate(${x}px, ${y}px)` }}
+      className={styles.slide}
       data-tile-id={tile.id}
       data-openings={open.join("")}
       data-fixed={fixed || undefined}
@@ -41,6 +47,7 @@ export function TileView({ tile, fixed = false, x = 0, y = 0 }: TileViewProps) {
       ))}
       <circle cx={C} cy={C} r={15} className={styles.hub} />
       {Icon && <Icon x={33} y={33} width={34} height={34} size={34} stroke={2} className={styles.icon} />}
+      {highlight && <rect x={6} y={6} width={88} height={88} rx={8} className={styles.highlight} data-highlight />}
     </g>
   );
 }

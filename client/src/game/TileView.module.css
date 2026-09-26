@@ -1,3 +1,8 @@
+/* Moved tiles slide to their new square; the global reduced-motion rule turns this off. */
+.slide {
+  transition: transform 200ms ease;
+}
+
 .tile {
   fill: var(--tile);
 }
@@ -23,4 +28,10 @@
 
 .icon {
   color: var(--corridor-icon);
+}
+
+.highlight {
+  fill: none;
+  stroke: var(--highlight);
+  stroke-width: 6;
 }

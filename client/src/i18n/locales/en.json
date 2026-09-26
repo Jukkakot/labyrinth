@@ -63,5 +63,29 @@
     "copyLine": "Game {{id}} · {{date}} {{time}} · v {{ver}}",
     "copied": "Copied",
     "copyFallback": "Copy this line into your bug report:"
+  },
+  "turn": {
+    "mine": "Your turn – push a tile",
+    "other": "Player {{seat}} is pushing"
+  },
+  "shift": {
+    "hint": "Pick an arrow on the board edge",
+    "rotate": "Rotate tile",
+    "confirm": "Push",
+    "cancel": "Cancel",
+    "waiting": "Waiting for the server…",
+    "newSpare": "Drops out",
+    "fromN": "Push into column {{line}} from the top",
+    "fromS": "Push into column {{line}} from the bottom",
+    "fromW": "Push into row {{line}} from the left",
+    "fromE": "Push into row {{line}} from the right",
+    "forbidden": "{{label}} – not allowed, it would push the tile straight back"
+  },
+  "errors": {
+    "NOT_SEATED": "You are not in this game",
+    "NOT_YOUR_TURN": "It is not your turn",
+    "WRONG_PHASE": "You can't do that right now",
+    "REVERSE_PUSH_FORBIDDEN": "You can't push the tile straight back from the same spot",
+    "generic": "That didn't work. Try again."
   }
 }
