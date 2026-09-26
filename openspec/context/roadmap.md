@@ -2,6 +2,7 @@
 
 One OpenSpec change at a time, in this order. Adjust as we learn.
 
+0. `setup-infrastructure`: Pages and Render live, server URL, CORS, MCP and VS Code debugging
 1. `add-logging`: structured JSON logging, audit of commands and HTTP, client log shipping
 2. `add-board-model`: tiles, board, connections, rotation (rules only)
 3. `add-board-setup`: original tile distribution, treasures, seeded shuffle

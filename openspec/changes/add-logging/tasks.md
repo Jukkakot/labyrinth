@@ -22,7 +22,7 @@
 
 ## 5. Client log endpoint
 
-- [ ] 5.1 Add `POST /client-logs` (text/plain JSON body, zod schema: ≤50 entries, msg ≤2000, stack ≤8000, known level, client evt catalogue), CORS for GitHub Pages origin + localhost, 30 req/min rate limit; each entry logged with `src: "client"`, client `ver`, `ts`; verify by tests: valid batch → 204 and one line per entry, oversized batch → 400 and no entries logged, 31st request in a minute → 429, no written line contains an IP address
+- [ ] 5.1 Add `POST /client-logs` (text/plain JSON body, zod schema: ≤50 entries, msg ≤2000, stack ≤8000, known level, client evt catalogue), CORS via the `ALLOWED_ORIGINS` config from setup-infrastructure, 30 req/min rate limit; each entry logged with `src: "client"`, client `ver`, `ts`; verify by tests: valid batch → 204 and one line per entry, oversized batch → 400 and no entries logged, 31st request in a minute → 429, no written line contains an IP address
 
 ## 6. Client logger
 

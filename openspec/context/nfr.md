@@ -50,10 +50,14 @@ Apply to every change. Designs and task lists must show how they are met.
 - Privacy: the nickname is the only personal data. Never log IP addresses.
 
 ## Testing (required in every change)
-- Rules: unit tests; every spec scenario maps to at least one test.
+- Rules: unit tests; every spec scenario maps to at least one test, named after
+  it. Invariants are also covered with fast-check property tests.
 - Server: room integration tests with @colyseus/testing.
 - E2E: Playwright smoke tests at a mobile viewport in CI for critical paths
   (start game, shift, move), extended as those paths are built.
+- Further testing practices (bot simulations, a11y checks, coverage limits,
+  visual regression) are decided when there is something to test; visual
+  regression is out for now.
 
 ## Abuse protection
 - Nickname 2–16 characters, trimmed, no control characters or whitespace-only.

@@ -23,6 +23,17 @@
   `@labyrinth/rules`; the server submits the result through the same command
   handler as humans.
 
+## State sync principle
+- The server syncs only authoritative facts that cannot be derived: tile ids and
+  rotations per square and spare, last insertion, pawn squares, phase, current
+  player, turn deadline, found treasures, player flags, result. Tile kinds and
+  treasures per tile are static per game and sent once.
+- The client derives everything else with `@labyrinth/rules` (openings,
+  reachable squares, slide animations from tile-id diffs, seat colour/shape).
+- UI-only state (shift preview, spare rotation before sending, settings) never
+  crosses the network. The seed stays on the server.
+- Don't optimise beyond this; Colyseus already sends only deltas.
+
 ## Hidden information
 - Colyseus syncs state to all clients by default. A player's current target is
   sent only to that player and to spectators (Colyseus StateView).

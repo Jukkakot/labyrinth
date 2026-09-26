@@ -29,5 +29,5 @@ Out of scope, each in its own later change:
 
 ## Impact
 
-- **packages/rules**: new board and tile modules, exported from `@labyrinth/rules`, with Vitest tests. No new dependencies.
+- **packages/rules**: new board and tile modules, exported from `@labyrinth/rules`, with Vitest tests. Adds fast-check as a dev dependency for property tests.
 - **server / client**: no changes.

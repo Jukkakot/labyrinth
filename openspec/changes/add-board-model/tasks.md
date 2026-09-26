@@ -3,7 +3,7 @@
 ## 1. Directions, tiles and rotation
 
 - [ ] 1.1 Create `packages/rules/src/geometry.ts` with `Direction`, `BOARD_SIZE`, `Square`, `square(row, col)` (RangeError outside 0–6), `neighbour(sq, dir)` (undefined beyond edge), `opposite(dir)`, `rotateDirection(dir, steps)`; verify Vitest tests for the geometry scenarios (neighbour toward E, none beyond N edge, `(7,0)` rejected)
-- [ ] 1.2 Create `packages/rules/src/tile.ts` with `TileKind`, `Rotation`, `Tile`, `openings(tile)` (base I/L/T shapes rotated clockwise) and `rotate(tile, steps)`; verify tests for every rotation scenario (corner 0→90 opens E,S; tee at 270 opens N,S,W; straight 0 = 180; four rotations are identity for all kinds; id and kind preserved)
+- [ ] 1.2 Create `packages/rules/src/tile.ts` with `TileKind`, `Rotation`, `Tile`, `openings(tile)` (base I/L/T shapes rotated clockwise) and `rotate(tile, steps)`; add fast-check as a dev dependency; verify tests for every rotation scenario (corner 0→90 opens E,S; tee at 270 opens N,S,W; straight 0 = 180) and fast-check properties: four rotations are the identity for any tile, rotation preserves id, kind and number of openings
 
 ## 2. Board
 
