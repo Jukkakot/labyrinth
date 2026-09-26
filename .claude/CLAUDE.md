@@ -7,6 +7,12 @@ deploy, logs, bug runbook), development (run, test, debug, conventions). Start a
 investigation there, then verify against the code. Keep it current: every change updates the wiki
 pages it affects (enforced by `openspec/config.yaml` rules and archive guidance).
 
+## Session start
+
+At the start of every session, before doing anything else: read `openspec/context/roadmap.md` and
+run `openspec list`, then tell the user in two or three lines where the project stands (last
+finished change, active change and its task progress, the natural next step).
+
 ## OpenSpec workflow (use it proactively)
 
 This project is spec-driven with OpenSpec. Use the OpenSpec skills/commands on your own
@@ -18,6 +24,10 @@ initiative whenever they fit; do not wait to be asked. When unsure whether one f
 - Plan changes mid-way → `openspec-update-change`.
 - User approves a proposal → `openspec-apply-change`.
 - Change implemented, verified and committed → suggest `openspec-archive-change`.
+- **Fast lane** ("pikakaistalla", or a change with no new UX or rule decisions, e.g. a pure
+  refactor or technical fix): propose and apply in one go without stopping for review, then stop
+  at the end with the summary, a short "what to look at" list and "How to check". If a real
+  decision turns up while working, stop and ask instead of deciding.
 - Pure tooling or refactoring with no behaviour change needs no change; just do it (and still
   update the wiki if it affects it).
 - After finishing a step, name the natural next OpenSpec step.
