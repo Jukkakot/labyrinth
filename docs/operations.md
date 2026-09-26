@@ -74,10 +74,13 @@ server and client together.
 Report shape: "around 14:30 in game brave-otters-sing, X happened".
 
 1. Convert the reported local time (Europe/Helsinki) to UTC.
-2. Fetch Render logs for the server service, text filter `"room":"<game id>"`, window ±15 min
-   (widen if needed). Locally, read `logs/dev.log`.
+2. Fetch Render logs for the server service: `list_logs(resource=[service id], text=["<game id>"],
+   startTime, endTime)` with a window of ±15 min (widen if needed; `direction: "forward"` gives
+   chronological order). Render reads the JSON `level`, so `level: ["error"]` filters too.
+   Locally, read `logs/dev.log`.
 3. Follow the room timeline: `player.*`, `cmd.accepted`/`cmd.rejected`/`cmd.failed`,
    `client.error` (`src:"client"`), `framework.log`. Compare `ver` of client and server.
+   Client `ts` is the device clock and can be off by seconds; order by Render's timestamp.
 4. Reproduce as a failing test (rules unit test, or room test with @colyseus/testing). For UI
    bugs, reproduce with Playwright MCP (two tabs = two players).
 5. Fix; the failing test stays as a regression test. Record the root cause and the log lines

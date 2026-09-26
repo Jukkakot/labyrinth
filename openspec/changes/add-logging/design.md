@@ -119,3 +119,7 @@ Express middleware records the start time and logs `http.request` on `res.on("fi
   with `listen()`, so the route uses `express.text({ type: () => true, limit: "600kb" })`; parser
   errors (e.g. too large) return the same 400 as any invalid batch. `trust proxy` is set to 1 so
   the per-IP rate limit sees real clients behind Render's proxy.
+- **Observed in the production check (follow-up for `show-board`):** a Node SDK client calling
+  `room.leave()` through Render's proxy kept trying to reconnect, although the server logged a
+  clean consented leave (`player.left` code 4000, `room.disposed`). The server side is correct;
+  verify leave/close behaviour of the browser client through the proxy when it first connects.

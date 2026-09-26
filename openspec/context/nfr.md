@@ -47,7 +47,10 @@ Apply to every change. Designs and task lists must show how they are met.
   `?debug=1` raises one client to debug level.
 - Development: pretty-printed in the terminal and also written to
   `logs/dev.log` (git-ignored) so they can be read directly.
-- Reading production logs: Render dashboard or Render MCP.
+- Reading production logs: Render dashboard or Render MCP (text and time-range filters
+  verified; Render also indexes the JSON `level`). Retention on the free plan is not yet
+  verified: the API accepts queries up to 30 days back; check the oldest available lines once
+  the service is a week old (after 2026-10-03).
 - Privacy: the nickname is the only personal data. Never log IP addresses.
 
 ## Testing (required in every change)
