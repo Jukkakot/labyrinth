@@ -4,6 +4,7 @@ import appConfig from "../src/app.config.js";
 import { configureLogger } from "../src/logging/logger.js";
 import { ROOM_ID_PATTERN, uniqueRoomId } from "../src/rooms/roomId.js";
 import { captureLogs } from "./support/captureLogs.js";
+import { NAMES, waitingRoom, type TestClient } from "./support/game.js";
 
 describe("observability › Room lifecycle events", () => {
   let colyseus: ColyseusTestServer<typeof appConfig>;
@@ -22,21 +23,22 @@ describe("observability › Room lifecycle events", () => {
   });
 
   it("logs join and leave with room and player ids", async () => {
-    const room = await colyseus.createRoom("game", {});
-    const client = await colyseus.connectTo(room);
-    const other = await colyseus.connectTo(room);
+    const { room, clients } = await waitingRoom(colyseus, 2);
+    const [host, guest] = clients as [TestClient, TestClient];
 
-    await client.leave();
+    await guest.leave();
     await vi.waitFor(() => expect(logs.byEvt("player.left")).toHaveLength(1));
 
-    expect(logs.byEvt("player.joined").map((l) => l.player)).toEqual([client.sessionId, other.sessionId]);
-    expect(logs.byEvt("player.left")[0]).toMatchObject({ room: room.roomId, player: client.sessionId });
+    expect(logs.byEvt("player.joined").map((l) => [l.player, l.name])).toEqual([
+      [host.sessionId, NAMES[0]],
+      [guest.sessionId, NAMES[1]],
+    ]);
+    expect(logs.byEvt("player.left")[0]).toMatchObject({ room: room.roomId, player: guest.sessionId });
   });
 
   it("Dropped player returns: player.dropped then player.reconnected", async () => {
-    const room = await colyseus.createRoom("game", {});
-    const client = await colyseus.connectTo(room);
-    await colyseus.connectTo(room);
+    const { room, clients } = await waitingRoom(colyseus, 2);
+    const client = clients[0]!;
 
     // The SDK only auto-reconnects rooms up for 5 s by default; allow it at once.
     client.reconnection.minUptime = 0;
@@ -62,7 +64,7 @@ describe("observability › Readable game identifier", () => {
 
   it("Room creation: readable id that equals `room` in room.created", async () => {
     const logs = captureLogs();
-    const room = await colyseus.createRoom("game", {});
+    const room = await colyseus.createRoom("game", { nickname: NAMES[0] });
 
     expect(room.roomId).toMatch(ROOM_ID_PATTERN);
     expect(room.roomId.length).toBeLessThanOrEqual(32);

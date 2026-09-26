@@ -9,8 +9,8 @@ import { pawnMotion, RIDE_MS, STEP_MAX_MS } from "./pawnMotion.ts";
 
 const board = setupBoard(7);
 const at = (sq: Square) => `translate(${sq.col * 100}px, ${sq.row * 100}px)`;
-const seat = (sq: Square): SeatView[] => [{ seat: 1, sessionId: "me", connected: true, isMe: true, cards: 0, found: [], square: sq }];
-const pawn = () => screen.getByRole("img", { name: "Pelaaja 1 (sinä)" });
+const seat = (sq: Square): SeatView[] => [{ seat: 1, sessionId: "me", name: "Maija", connected: true, isMe: true, cards: 0, found: [], square: sq }];
+const pawn = () => screen.getByRole("img", { name: "Maija (sinä)" });
 const layer = (sq: Square, b = board) => <svg>{<PawnLayer seats={seat(sq)} board={b} />}</svg>;
 
 /** The farthest square reachable from the top-left corner, so the walk has several steps. */

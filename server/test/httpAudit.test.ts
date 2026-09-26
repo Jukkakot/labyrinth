@@ -38,7 +38,7 @@ describe("observability › HTTP request audit", () => {
   });
 
   it("Matchmaking: joining via the SDK produces an http.request line", async () => {
-    await colyseus.sdk.joinOrCreate("game");
+    await colyseus.sdk.joinOrCreate("game", { nickname: "Maija" });
     await vi.waitFor(() =>
       expect(logs.byEvt("http.request").some((l) => String(l.path).startsWith("/matchmake"))).toBe(true),
     );

@@ -10,11 +10,24 @@ export type InsertionIdCode = (typeof INSERTION_IDS)[number];
 export const ROTATION_VALUES = [0, 90, 180, 270] as const;
 
 /** Error codes of game commands, on top of `COMMON_ERROR_CODES`. */
-export const GAME_ERROR_CODES = ["NOT_SEATED", "NOT_YOUR_TURN", "WRONG_PHASE", "REVERSE_PUSH_FORBIDDEN", "UNREACHABLE", "NOT_KICKABLE", "TURN_NOT_EXPIRED"] as const;
+export const GAME_ERROR_CODES = [
+  "NOT_SEATED",
+  "NOT_YOUR_TURN",
+  "WRONG_PHASE",
+  "REVERSE_PUSH_FORBIDDEN",
+  "UNREACHABLE",
+  "NOT_KICKABLE",
+  "TURN_NOT_EXPIRED",
+  "NOT_HOST",
+  "NOT_ENOUGH_PLAYERS",
+] as const;
 export type GameErrorCode = (typeof GAME_ERROR_CODES)[number];
 
-/** Turn steps: first the current player shifts, then moves (or stays); "finished" once someone has won. */
-export const TURN_PHASES = ["shift", "move", "finished"] as const;
+/**
+ * Game phases: "waiting" in the waiting room before the host starts, then each turn's steps (the
+ * current player shifts, then moves or stays), and "finished" once someone has won.
+ */
+export const TURN_PHASES = ["waiting", "shift", "move", "finished"] as const;
 export type TurnPhase = (typeof TURN_PHASES)[number];
 
 export interface ShiftPayload {
@@ -28,6 +41,40 @@ export interface MovePayload {
   col: number;
 }
 
+/** The `start` command has no fields: only the host sends it, in the waiting room. */
+export type StartPayload = Record<string, never>;
+
+/** Nickname length in code points, after trimming. */
+export const NICKNAME_MIN_LENGTH = 2;
+export const NICKNAME_MAX_LENGTH = 16;
+
+/** Why a nickname is invalid. */
+export type NicknameIssue = "length" | "characters";
+
+/**
+ * The nickname rule, without zod so the client bundle can use it: after trimming, 2–16 code
+ * points and no control characters. Undefined when `trimmed` (already trimmed) is valid.
+ */
+export function nicknameIssue(trimmed: string): NicknameIssue | undefined {
+  const length = [...trimmed].length;
+  if (length < NICKNAME_MIN_LENGTH || length > NICKNAME_MAX_LENGTH) return "length";
+  if (/\p{Cc}/u.test(trimmed)) return "characters";
+  return undefined;
+}
+
+/** Options a client sends when it joins or creates a game room. */
+export interface JoinOptions {
+  nickname: string;
+  /** Matchmaking pool; only E2E tests set it, so their games stay out of the real list. */
+  pool?: string;
+  /** Create a private game: never listed and never picked by quick play. */
+  private?: boolean;
+}
+
+/** Codes the server refuses a join or a room creation with (as the join error's message). */
+export const JOIN_ERROR_CODES = ["INVALID_NICKNAME", "SERVER_FULL"] as const;
+export type JoinErrorCode = (typeof JOIN_ERROR_CODES)[number];
+
 /** Seat to kick: only the current player, once their turn time is up. */
 export interface KickPayload {
   seat: number;
@@ -40,4 +87,6 @@ export interface KickPayload {
 export const CLOSE_CODES = {
   /** Removed by another player after the turn time ran out. */
   KICKED: 4100,
+  /** The host left the waiting room, so the game was closed. */
+  HOST_LEFT: 4101,
 } as const;

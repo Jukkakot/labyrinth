@@ -31,8 +31,8 @@ function view(turn: Turn = {}) {
     squares: board.squares.map(({ id, rotation }) => ({ id, rotation })),
     spare: { id: board.spare.id, rotation: board.spare.rotation },
     players: new Map([
-      ["me", { seat: 1, connected: true, ...(turn.mine ?? { row: 0, col: 0 }), ...turn.me }],
-      ...(turn.otherGone ? [] : [["other", { seat: 2, connected: true, ...turn.other }] as const]),
+      ["me", { seat: 1, name: "Maija", connected: true, ...(turn.mine ?? { row: 0, col: 0 }), ...turn.me }],
+      ...(turn.otherGone ? [] : [["other", { seat: 2, name: "Pekka", connected: true, ...turn.other }] as const]),
     ]),
     turnSeat: turn.turnSeat ?? 1,
     lastInsertion: turn.lastInsertion ?? "",
@@ -152,7 +152,7 @@ describe("board-view › Tiles slide", () => {
       {
         squares: after.squares.map(({ id, rotation }) => ({ id, rotation })),
         spare: { id: after.spare.id, rotation: after.spare.rotation },
-        players: new Map([["me", { seat: 1, connected: true }]]),
+        players: new Map([["me", { seat: 1, name: "Maija", connected: true }]]),
         turnSeat: 1,
         lastInsertion: "N5",
       },
@@ -189,7 +189,7 @@ describe("board-view › Whose turn is shown (game screen)", () => {
     const { container } = setup({ turnSeat: 2 });
     expect(container.querySelectorAll("[data-insertion]")).toHaveLength(0);
     expect((screen.getByRole("button", { name: "Käännä laattaa" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText("Pelaaja 2 työntää")).toBeTruthy();
+    expect(screen.getByText("Pekka työntää")).toBeTruthy();
     expect(screen.queryByText("Valitse nuoli laudan reunalta")).toBeNull();
   });
 });
@@ -217,11 +217,11 @@ const pawnOf = (name: string) => screen.getByRole("img", { name }).style.transfo
 describe("board-view › Pawns on their squares (game screen)", () => {
   it("Preview carries a pawn: N3 shows the pawn on (2,3) at (3,3)", () => {
     setup({ mine: { row: 2, col: 3 } });
-    expect(pawnOf("Pelaaja 1 (sinä)")).toBe(at(2, 3));
+    expect(pawnOf("Maija (sinä)")).toBe(at(2, 3));
     fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
-    expect(pawnOf("Pelaaja 1 (sinä)")).toBe(at(3, 3));
+    expect(pawnOf("Maija (sinä)")).toBe(at(3, 3));
     fireEvent.click(screen.getByRole("button", { name: "Peru" }));
-    expect(pawnOf("Pelaaja 1 (sinä)")).toBe(at(2, 3));
+    expect(pawnOf("Maija (sinä)")).toBe(at(2, 3));
   });
 });
 
@@ -287,7 +287,7 @@ describe("board-view › Move controls", () => {
     const { container } = setup({ phase: "move", turnSeat: 2 });
     expect(moveTargets(container)).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "Jää paikalleen" })).toBeNull();
-    expect(screen.getByText("Pelaaja 2 siirtää")).toBeTruthy();
+    expect(screen.getByText("Pekka siirtää")).toBeTruthy();
   });
 });
 
@@ -369,9 +369,9 @@ describe("board-view › Game result shown", () => {
     expect(screen.getByRole("button", { name: "Uusi peli" })).toBeTruthy();
   });
 
-  it("Someone else wins: Pelaaja 2 voitti with their pawn, and Uusi peli leaves", () => {
+  it("Someone else wins: Pekka voitti with their pawn, and Uusi peli leaves", () => {
     const { leave } = setup(finished(2));
-    expect(screen.getByText("Pelaaja 2 voitti")).toBeTruthy();
+    expect(screen.getByText("Pekka voitti")).toBeTruthy();
     expect(document.querySelector("[data-winner-seat='2']")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Uusi peli" }));
     expect(leave).toHaveBeenCalledTimes(1);
@@ -379,23 +379,23 @@ describe("board-view › Game result shown", () => {
 });
 
 describe("board-view › Kick control", () => {
-  it("Offer after the time is up: player 2 sees 'Poista pelaaja 1' instead of the step controls", () => {
+  it("Offer after the time is up: the viewer sees 'Poista Pekka' instead of the step controls", () => {
     // The viewer is seat 1 in these helpers, so make seat 2 the slow one.
     setup({ turnSeat: 2, turnDeadline: Date.now() - 1, turnExpired: true });
-    expect(screen.getByText("Pelaajan 2 aika loppui")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Poista pelaaja 2" })).toBeTruthy();
+    expect(screen.getByText("Pekka – aika loppui")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Poista Pekka" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Käännä laattaa" })).toBeNull();
   });
 
   it("Confirm before kicking: nothing is sent until Poista; Peru goes back", () => {
     const { kick } = setup({ turnSeat: 2, turnExpired: true });
-    fireEvent.click(screen.getByRole("button", { name: "Poista pelaaja 2" }));
-    expect(screen.getByText("Poistetaanko pelaaja 2 pelistä?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Poista Pekka" }));
+    expect(screen.getByText("Poistetaanko Pekka pelistä?")).toBeTruthy();
     expect(kick).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Peru" }));
-    expect(screen.getByRole("button", { name: "Poista pelaaja 2" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Poista Pekka" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Poista pelaaja 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Poista Pekka" }));
     fireEvent.click(screen.getByRole("button", { name: "Poista" }));
     expect(kick).toHaveBeenCalledExactlyOnceWith(2);
   });
@@ -413,24 +413,58 @@ describe("board-view › Kick control", () => {
 
   it("Turn ends meanwhile: the confirmation disappears and nothing is sent", () => {
     const { rerender, kick, shift, move, leave } = setup({ turnSeat: 2, turnExpired: true });
-    fireEvent.click(screen.getByRole("button", { name: "Poista pelaaja 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Poista Pekka" }));
     rerender(<GameScreen view={view({ turnSeat: 1, turnDeadline: Date.now() + 60_000 })} session={{ shift, move, kick, leave, pending: false }} />);
-    expect(screen.queryByText("Poistetaanko pelaaja 2 pelistä?")).toBeNull();
+    expect(screen.queryByText("Poistetaanko Pekka pelistä?")).toBeNull();
     expect(kick).not.toHaveBeenCalled();
   });
 });
 
 describe("board-view › Departures announced", () => {
-  it("Someone leaves: 'Pelaaja 2 poistui pelistä' and their chip is gone", () => {
+  it("Someone leaves: 'Pekka poistui pelistä' and their chip is gone", () => {
     const { rerender, kick, shift, move, leave } = setup();
     rerender(<GameScreen view={view({ otherGone: true })} session={{ shift, move, kick, leave, pending: false }} />);
-    expect(screen.getByText("Pelaaja 2 poistui pelistä")).toBeTruthy();
+    expect(screen.getByText("Pekka poistui pelistä")).toBeTruthy();
     expect(screen.getByRole("list", { name: "Pelaajat ja löydetyt aarteet" }).querySelector("[data-seat='2']")).toBeNull();
   });
 
   it("leaving a finished game is not announced", () => {
     const { rerender, kick, shift, move, leave } = setup({ phase: "finished", winnerSeat: 1 });
     rerender(<GameScreen view={view({ phase: "finished", winnerSeat: 1, otherGone: true })} session={{ shift, move, kick, leave, pending: false }} />);
-    expect(screen.queryByText("Pelaaja 2 poistui pelistä")).toBeNull();
+    expect(screen.queryByText("Pekka poistui pelistä")).toBeNull();
+  });
+});
+
+describe("game-session › Leaving the game", () => {
+  const leaveButton = () => screen.getByRole("button", { name: "Poistu pelistä" });
+
+  it("Confirm before leaving: the question replaces the controls, and only Poistu leaves", () => {
+    const { leave } = setup();
+    fireEvent.click(leaveButton());
+    expect(leave).not.toHaveBeenCalled();
+    expect(screen.getByText("Poistutaanko pelistä? Nappulasi ja aarteesi poistuvat pelistä.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Käännä laattaa" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Poistu" }));
+    expect(leave).toHaveBeenCalledTimes(1);
+  });
+
+  it("Peru keeps the player in the game", () => {
+    const { leave } = setup();
+    fireEvent.click(leaveButton());
+    fireEvent.click(screen.getByRole("button", { name: "Peru" }));
+    expect(leave).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Käännä laattaa" })).toBeTruthy();
+  });
+
+  it("Leaving a finished game: no confirmation", () => {
+    const { leave } = setup({ phase: "finished", winnerSeat: 2 });
+    fireEvent.click(leaveButton());
+    expect(leave).toHaveBeenCalledTimes(1);
+  });
+
+  it("the leave action is a 44 px icon button in the top bar", () => {
+    setup();
+    expect(leaveButton().closest("header")).not.toBeNull();
+    expect(leaveButton().querySelector("svg.tabler-icon-door-exit")).not.toBeNull();
   });
 });

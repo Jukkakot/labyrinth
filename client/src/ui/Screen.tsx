@@ -17,8 +17,8 @@ export function Screen({ start, end, children, footer, centered = false }: Scree
   return (
     <div className={styles.screen}>
       <header className={styles.bar}>
-        <div>{start}</div>
-        <div>{end}</div>
+        <div className={styles.side}>{start}</div>
+        <div className={styles.side}>{end}</div>
       </header>
       <main className={[styles.content, centered && styles.centered].filter(Boolean).join(" ")}>{children}</main>
       {footer && <footer className={styles.footer}>{footer}</footer>}

@@ -25,14 +25,22 @@ environment.
 1. Open https://jukkakot.github.io/labyrinth/ on the phone (or Playwright MCP `playwright-mobile`).
    If the server was asleep, Pelaa is greyed out with "Herätetään palvelinta…" (up to about a
    minute); then Pelaa becomes available. The footer shows "Client …" and "Server …" build times:
-   they must match the Pages and Render deploys you just made (newer than the push). Tap Pelaa.
-2. Open the same page in a second tab or device, Pelaa → same game id, two pawns.
+   they must match the Pages and Render deploys you just made (newer than the push). Enter a
+   nickname and tap Pelaa → the waiting room, you are the host.
+2. Open the same page in a second tab or device: the game shows in "Avoimet pelit" as
+   "<name> · 1/4". Tap it → both tabs list two players; the host taps "Aloita peli" → both see the
+   board, same game id.
 3. Tap the game id → "Kopioitu".
-4. In the first tab tap an edge arrow, then "Työnnä" → the line slides in both tabs and the
-   second tab says "Sinun vuorosi – työnnä laatta".
+4. On the current player's tab tap an edge arrow, then "Työnnä" → the line slides in both tabs.
 5. In Render logs (`list_logs`, text = the game id) find `game.setup`; its seed reproduces the
-   starting board: `boardToText(setupBoard(seed))`. Each `cmd.accepted` `shift` line then replays
-   one shift with `shiftBoard`.
+   starting board: `boardToText(setupBoard(seed))`. `game.started` has the `dealSeed`, seats and
+   start seat. Each `cmd.accepted` `shift` line then replays one shift with `shiftBoard`.
+6. **Leave through the Render proxy:** in one tab tap the door icon → "Poistu". The tab is on the
+   start screen at once and the other tab wins. In the logs for the game id, look for how the
+   leave arrived: `player.left` with `code: 4000` (consented, removed at once, as intended) or
+   `player.dropped` followed 5 minutes later by `player.removed { reason: "timeout" }` (the proxy
+   turned the leave into a drop; the other player then waits for the removal). Record the result
+   here.
 
 ## Configuration — Implemented
 
@@ -71,10 +79,12 @@ timestamp. Read them in the Render dashboard (service → Logs) or with Render M
 |---|---|
 | `http.request` | every HTTP request incl. matchmaking (`/health` only at debug) |
 | `room.created` / `room.disposed` / `room.error` | room lifecycle, uncaught room exceptions |
-| `player.joined` / `left` / `dropped` / `reconnected` | connection changes (a dropped seat is held 5 min) |
-| `player.removed` | a player is taken out of a running game, `{ seat, reason, by? }` (`left`, `kicked` by seat `by`, `timeout` after 5 min disconnected) |
+| `room.closed` | the host left the waiting room, so the game closed for everyone, `{ reason: "hostLeft" }` |
+| `room.refused` | a join or creation refused, `{ reason }`: `nickname` (invalid) or `cap` (`open` games at the limit) |
+| `player.joined` / `left` / `dropped` / `reconnected` | connection changes (a dropped seat is held 5 min); `joined` carries the nickname `name` |
+| `player.removed` | a player is taken out of a game, `{ seat, reason, by? }` (`left`, `kicked` by seat `by`, `timeout` after 5 min disconnected) |
 | `game.setup` | a new game's seed |
-| `game.dealt` | the treasure deal, `{ dealSeed, seats }` (seed never synced) |
+| `game.started` | the host started the game, `{ dealSeed, seats, startSeat }` (reproduces the deal and who began; seed never synced) |
 | `treasure.collected` | a player collects their target, `{ seat, treasure, found, cards }` |
 | `game.finished` | someone won, `{ winner, reason }` (seat; `home` or `lastPlayer`) |
 | `turn.changed` | every turn change, `{ from, to }` seats (0 = nobody) |

@@ -14,6 +14,8 @@ const CROWD_SCALE = 0.6;
 
 export interface PawnProps {
   seat: number;
+  /** The player's nickname, for assistive technology. */
+  name?: string;
   isMe?: boolean;
   connected?: boolean;
   /** Top-left of the square it stands on, in board units. */
@@ -26,9 +28,9 @@ export interface PawnProps {
 }
 
 /** A player's pawn: seat colour + seat shape (never colour alone); the viewer's own pawn gets a ring. */
-export function Pawn({ seat, isMe = false, connected = true, x = 0, y = 0, moveMs = 0, crowded = false }: PawnProps) {
+export function Pawn({ seat, name = "", isMe = false, connected = true, x = 0, y = 0, moveMs = 0, crowded = false }: PawnProps) {
   const { t } = useTranslation();
-  const label = t(isMe ? "board.pawnMe" : "board.pawn", { seat });
+  const label = t(isMe ? "board.pawnMe" : "board.pawn", { name });
   const [dx, dy] = CROWD_OFFSET[seat] ?? [0, 0];
   return (
     <g

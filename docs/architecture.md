@@ -51,7 +51,10 @@ builds first.
   - lifecycle log lines and logging of uncaught exceptions in hooks and timers;
   - `this.command(name, zodSchema, handler)` — the **only** way to define a command (below).
 - Room `game` → `GameRoom`: players map with a `connected` flag; unintended disconnects hold the
-  seat 5 min for reconnection (`holdSeat`); turn clock, kicks and removals: see the game flow section. Turn model, the `shift` / `move` commands, treasures and winning: see
+  seat 5 min for reconnection (`holdSeat`); the waiting room, start, turn clock, kicks and removals:
+  see the [Lobby](#lobby--implemented) and game flow sections.
+- Room `lobby` → Colyseus' built-in `LobbyRoom`: pushes the listing of game rooms to the start
+  screen (see [Lobby](#lobby--implemented)). Turn model, the `shift` / `move` commands, treasures and winning: see
   [Game flow and commands](#game-flow-and-commands--implemented-shift-move-collect-win-rest-planned).
 - HTTP: `GET /health` → `{ status, rulesVersion, version, builtAt }` (`version` = short commit from
   `RENDER_GIT_COMMIT` or `"dev"`; `builtAt` = build time, `null` without a build). It is Render's
@@ -73,10 +76,11 @@ builds first.
   unexpected exception becomes `INTERNAL_ERROR`; the room keeps running.
 - A handler rejects by throwing `CommandRejection(code, facts)` **before changing state**.
   Rooms add phase/turn to rejection lines by overriding `commandStateFacts()` (`GameRoom`:
-  `phase`, `turnSeat`, `lastInsertion`, `pawn`).
+  `phase`, `hostSeat`, `seated`, `turnSeat`, `turnExpired`, `lastInsertion`, `pawn`).
 - **Adding a command** (the `shift` command is the example):
-  1. `@labyrinth/protocol`: constants and types in `game-codes.ts` (ids, error codes), the zod
-     payload schema in `game-schema.ts` — separate so the client bundle never pulls in zod.
+  1. `@labyrinth/protocol`: constants and types in `game-codes.ts` (ids, error codes, plain
+     rule functions such as `nicknameIssue()`), the zod payload schema in `game-schema.ts` —
+     separate so the client bundle never pulls in zod.
   2. `GameRoom.messages`: `name: this.command(name, schema, handler)`. The handler checks
      `requireTurn(client, phase)` (→ `NOT_SEATED` / `NOT_YOUR_TURN` / `WRONG_PHASE`) and the rule
      preconditions, then computes the result with `@labyrinth/rules` and only then writes state.
@@ -105,13 +109,17 @@ builds first.
 
 ```
 client/src/
-  App.tsx              StartScreen until playing, then GameScreen
-  screens/             StartScreen (idle / connecting / error), GameScreen
-  session/             useGameSession (quick play, per-tab rejoin, commands), viewModel (state → GameView)
+  App.tsx              StartScreen (with invite mode) until seated; WaitingRoomScreen while
+                       phase is waiting; then GameScreen
+  screens/             StartScreen (nickname, ways in, open games / connecting / error),
+                       WaitingRoomScreen, GameScreen
+  session/             useGameSession (joining, per-tab rejoin, commands, local-first leave),
+                       viewModel (state → GameView), useOpenGames (lobby listing), nickname
+                       (store + rule), inviteLink, serverWake, sessionToken
   game/                Board, TileView, Pawn, PawnLayer (+ pawnMotion), SpareTile, ShiftTargets,
                        ShiftControls, MoveTargets, MoveControls, GameOverControls, TurnLine,
                        PlayerStrip, GameIdBadge, treasureIcons, target (TargetMark),
-                       TurnTimer (+ turnClock), KickControl
+                       TurnTimer (+ turnClock), KickControl, LeaveControls
   ui/                  tokens.css + shared components: Screen, Message, Button, Badge, Notice,
                        LanguageSwitcher
   logging/ i18n/ config.ts CrashBoundary.tsx
@@ -131,8 +139,9 @@ client/src/
   taps (`pointer-events: none`), so move targets under pawns stay tappable.
 - **Shift interaction** (`screens/GameScreen.tsx`):
   - `TurnLine` above the board names the player and the step: "Sinun vuorosi – työnnä laatta" /
-    "Sinun vuorosi – siirrä nappulaa", or "Pelaaja 2 työntää" / "Pelaaja 2 siirtää", with the
-    player's pawn shape and colour.
+    "Sinun vuorosi – siirrä nappulaa", or "Maija työntää" / "Maija siirtää" (the nickname), with
+    the player's pawn shape and colour. Every player is named by nickname (`SeatView.name`):
+    turn line, strip, result, kick control, departures and the pawns' accessible names.
   - On your turn `ShiftTargets` puts an arrow badge on each of the 12 entry edge tiles; the whole
     tile is the tap target (`role="button"`, Enter/Space, labels count lines 1–7). The reverse of
     the previous shift is shown faded with `aria-disabled`.
@@ -170,36 +179,41 @@ client/src/
     slides and onto the spare / the dropping-out tile. `TileView` draws a solid `--target` ring
     plus a flag badge (home: house badge), distinct from the dashed move outline and the orange
     preview outline; the accessible name says "Kohteesi: …" / "Kotiruutusi …".
-  - `PlayerStrip` between the turn line and the board: one chip per seat (pawn, found/cards); the
-    viewer's chip also shows the target icon. A visually hidden summary sentence per chip is the
-    accessible text.
+  - `PlayerStrip` between the turn line and the board: one chip per seat (pawn, nickname capped at
+    5.5em with an ellipsis, found/cards); the viewer's chip also shows the target icon. Four chips
+    with 16-character names wrap to two rows at 360 px and still fit. A visually hidden summary
+    sentence per chip (with the full name) is the accessible text.
   - When the viewer's `found` grows, `GameScreen` shows "Löysit: …" in the shared `Notice` (a
     rejection message wins if both happen).
-  - Finished: `isMyTurn` is false, `TurnLine` shows "Voitit!" / "Pelaaja N voitti" with the
+  - Finished: `isMyTurn` is false, `TurnLine` shows "Voitit!" / "Maija voitti" with the
     winner's pawn, and `GameOverControls` ("Uusi peli") replaces the step controls; it calls
-    `useGameSession().leave()` → `room.leave()` → the normal leave handling (token cleared, start
-    screen).
+    `useGameSession().leave()` (local-first, see Lobby).
+  - **Leave action:** a `door-exit` icon button (44 px, "Poistu pelistä") in the top bar before the
+    language switcher. In a running game `LeaveConfirm` replaces the controls under the board
+    ("Poistutaanko pelistä? …", "Peru" / "Poistu", the `KickControl` pattern); in a finished game
+    it leaves at once.
 - **Turn clock, kicks and departures** (`GameView.turnDeadline`, `turnExpired`, `turnDisconnected`,
   `canKick`):
   - `TurnTimer` at the end of `TurnLine`: `m:ss` from `turnDeadline − Date.now()`, clamped to
     0–60 s (`turnClock.ts`) so phone clock skew cannot show nonsense; ticks every 250 ms and only
     re-renders itself; `role="timer"` (not announced every second) with an "Aikaa jäljellä …" label.
     The last 10 s and "Aika loppui" are bold, `--danger` and use an alarm icon instead of the clock.
-    A dropped current player reads "Pelaaja N – yhteys katkennut".
+    A dropped current player reads "Maija – yhteys katkennut".
   - `KickControl` replaces the (disabled) step controls for other seated players while
-    `turnExpired`: "Pelaajan N aika loppui" + "Poista pelaaja N" → "Poistetaanko pelaaja N
-    pelistä?" with "Peru" / "Poista". It is keyed by the turn key, so a pending confirmation
+    `turnExpired`: "Maija – aika loppui" + "Poista Maija" → "Poistetaanko Maija pelistä?" with
+    "Peru" / "Poista". It is keyed by the turn key, so a pending confirmation
     vanishes when the turn changes. Only `turnExpired` (the server) enables it, never the local
     countdown.
   - `PlayerStrip`: a dropped player's chip is dashed with a faded pawn and a `wifi-off` icon, and
     its accessible text adds "yhteys katkennut"; text contrast is unchanged.
-  - `GameScreen` notices a seat disappearing from a running game and shows "Pelaaja N poistui
-    pelistä" in the shared `Notice` (after rejection and collect messages).
-  - Kicked: the room closes with 4100; `useGameSession` sets `endReason: "kicked"` and the start
-    screen says "Sinut poistettiin pelistä, koska vuorosi aika loppui." until the next Play.
-- **Quick play:** `joinOrCreate("game", { pool? })`; `?pool=…` in the URL keeps a group of players
-  (or an E2E test) in their own games. While connecting the start screen says so, and after 5 s
-  adds that the server may be waking up.
+  - `GameScreen` notices a seat disappearing from a running game and shows "Maija poistui
+    pelistä" in the shared `Notice` (after rejection and collect messages). The departed player's
+    name is gone from the state, so it keeps the last seen seats.
+  - Kicked: the room closes with 4100; `useGameSession` sets `startNotice: "kicked"` and the start
+    screen says "Sinut poistettiin pelistä, koska vuorosi aika loppui." until the next attempt.
+- **Quick play:** `joinOrCreate("game", { nickname, pool? })`; `?pool=…` in the URL keeps a group
+  of players (or an E2E test) in their own games. While connecting the start screen says so, and
+  after 5 s adds that the server may be waking up.
 - **Early wake-up** (`client/src/session/serverWake.ts`): `App` starts it once per page load
   (a module singleton, so StrictMode, remounts and a rejoining tab do not refetch). It fetches
   `/health` with a 20 s timeout per attempt and retries every 2 s on errors or non-2xx replies
@@ -217,11 +231,13 @@ client/src/
 ## State sync principle — Implemented (board, seats, pawns, turn, treasures, turn clock); rest Planned
 
 - Synced today (`server/src/rooms/schema/GameState.ts`):
-  `players: map<sessionId, { connected, seat 1–4, row, col, cards, found[], target }>` (`row`/`col` =
-  pawn square; `cards` = stack size and `found` = collected treasures, both public; `target` =
-  current treasure or `""` when heading home, **view-filtered**),
+  `players: map<sessionId, { connected, seat 1–4, name, row, col, cards, found[], target }>`
+  (`name` = nickname; `row`/`col` = pawn square; `cards` = stack size, 0 until the start, and
+  `found` = collected treasures, both public; `target` = current treasure or `""` when heading
+  home, **view-filtered**),
   `squares: array<{ id, rotation }>` (49, row-major), `spare: { id, rotation }`, `turnSeat`
-  (0 = nobody), `phase` (`"shift"` → `"move"`, `"finished"` after a win), `winnerSeat` (0 = none),
+  (0 = nobody, e.g. in the waiting room), `phase` (`"waiting"` before the start, then `"shift"` →
+  `"move"`, `"finished"` after a win), `hostSeat` (0 until someone joined), `winnerSeat` (0 = none),
   `lastInsertion` (`""` or an insertion id), `turnDeadline` (server epoch ms when the turn's time
   runs out, 0 = no clock; for the countdown only) and `turnExpired` (the server's "time is up",
   which alone enables kicking). The client rebuilds a rules `Board` from these plus the
@@ -241,8 +257,9 @@ client/src/
 - **Client identity — Implemented:** the Colyseus reconnection token is kept in sessionStorage
   (`labyrinth.session`) — one player per tab; a reload rejoins the same seat, a failed rejoin
   clears the token and shows the start screen.
-- **Seats — Implemented:** lowest free seat 1–4 on join; seat → start corner clockwise from the
-  top-left; `maxClients = 4`, so quick play opens a new game when every game is full.
+- **Seats — Implemented:** lowest free seat 1–4 on join, only in the waiting room; seat → start
+  corner clockwise from the top-left; players keep their seat at the start; `maxClients = 4`, so
+  quick play opens a new game when every waiting game is full.
 
 ## Board model — Implemented
 
@@ -311,6 +328,10 @@ Spec: `openspec/specs/treasures/`. Code: `packages/rules/src/treasures.ts`.
 
 - `dealTreasures(seed, seatCount)` (2–4): seeded `shuffle()` of `TREASURES`, cut into consecutive
   stacks of 24 / n, seat 1 first. The first card is the first target.
+- `dealGame(seed, seats)` → `{ stacks: Map<seat, TreasureId[]>, startSeat }`: the whole opening.
+  The same RNG deals the stacks to the seated seats in ascending order, then draws the start seat
+  among them, so `game.started { dealSeed, seats, startSeat }` reproduces who got what and who
+  began.
 - `homeSquare(seat)`, `homeTileId(seat)` (start-corner tiles 0, 3, 15, 12), `tileOfTreasure()`,
   `targetTileId(seat, target | undefined)` (undefined = heading home).
 - `settleMove(board, { seat, square, target })` → `{ collected?, won }`: what the end of a move
@@ -324,7 +345,8 @@ Spec: `openspec/specs/turns/`. Code: `packages/rules/src/turns.ts`.
 
 - `TURN_TIME_LIMIT_SECONDS` (60), `DISCONNECT_LIMIT_SECONDS` (300).
 - `nextSeat(taken, from)`: next taken seat clockwise, `from` when alone, 0 when nobody.
-- `kickRejection({ kicker, target, turnSeat, expired, finished })` → `WRONG_PHASE` /
+- `kickRejection({ kicker, target, turnSeat, expired, waiting, finished })` → `WRONG_PHASE` (waiting
+  room or finished) /
   `NOT_KICKABLE` / `TURN_NOT_EXPIRED` / undefined.
 - `soleSurvivor(taken)`: the only taken seat, else undefined.
 
@@ -346,14 +368,14 @@ Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
 
 ## Game flow and commands — Implemented (shift, move, collect, win, turn clock, kick, removals); rest Planned
 
-- **Turn model — Implemented (temporary start rule):** `turnSeat` is the current player's seat.
-  The first player to sit down starts (`lobby` replaces this with a random start). A turn has two
+- **Turn model — Implemented:** `turnSeat` is the current player's seat; 0 in the waiting room.
+  The `start` command picks the first player at random (`dealGame()`). A turn has two
   steps (`phase`): `shift`, then `move`. After an accepted move, and when the current player
   leaves (in either step), the turn passes to the next taken seat clockwise (1 → 2 → 3 → 4 → 1),
   skipping empty seats, and starts with `shift`; a player alone keeps it; a dropped player still
   holding their seat is not skipped. Every turn change logs `turn.changed { from, to }`, the
   step change `phase.changed { from, to, turnSeat }`.
-- **Pawns:** a joining player's pawn starts on their seat's start corner; pawns ride shifts (the
+- **Pawns:** a seated player's pawn starts on their seat's start corner; pawns ride shifts (the
   room passes all pawn squares to `shiftBoard()`); any number may share a square.
 - **`shift { insertion, rotation }` — Implemented:** rejections `NOT_SEATED`, `NOT_YOUR_TURN`,
   `WRONG_PHASE`, `REVERSE_PUSH_FORBIDDEN` (`GAME_ERROR_CODES`), a fixed line or bad rotation is
@@ -368,39 +390,88 @@ Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
   (`treasure.collected`); a win sets `winnerSeat`, `phase = "finished"` (`phase.changed`,
   `game.finished { reason: "home" }`), stops the clock and locks the room; otherwise the turn
   passes.
-- **Treasure deal — Implemented (temporary rule):** at room creation the room draws a second seed
-  (`game.dealt { dealSeed }`) and deals **four stacks of 6**, one per seat, because without a
-  waiting room the player count is unknown. Whoever takes a seat plays that seat's stack from the
-  first card; a player who leaves loses their progress. `lobby` replaces this with
-  `dealTreasures(seed, n)` at the start (12 / 8 / 6 cards).
+- **Treasure deal — Implemented:** at the start the room draws `dealSeed` (`drawDealSeed()`, which
+  room tests replace to fix the start seat) and deals with `dealGame(dealSeed, seats)`: 12 / 8 / 6
+  cards to the seated players only. In the waiting room nobody has cards or a target.
 - **Finished game — Implemented:** `requireTurn` rejects every shift/move with `WRONG_PHASE` once
   `phase` is `finished` (before the turn check, so everyone gets the same code); leaving starts no
   turn; the explicitly locked room stays locked when someone leaves, so quick play never joins it.
-- **Turn clock — Implemented (temporary start rule):** every turn gets `TURN_TIME_LIMIT_SECONDS`
-  (60) for both steps: `setTurn()` → `restartClock()` writes `turnDeadline` and sets a
-  `this.clock` timeout that flips `turnExpired` and logs `turn.expired { seat }`. Nothing
-  automatic happens; the slow player may still act. Until `lobby`, the clock only runs while at
-  least two players are seated: it starts when the second player sits down (full 60 s from
-  then), a third joining does not restart it, and it stops when one is left. Room tests shorten
-  the limit through the instance field `turnLimitMs`.
+- **Turn clock — Implemented:** every turn of a started game gets `TURN_TIME_LIMIT_SECONDS` (60)
+  for both steps: `setTurn()` → `restartClock()` writes `turnDeadline` and sets a `this.clock`
+  timeout that flips `turnExpired` and logs `turn.expired { seat }`. Nothing automatic happens;
+  the slow player may still act. The clock applies whenever `phase` is `shift` or `move` with a
+  turn seat; the first turn's clock starts with the game, and the waiting room has none. Room
+  tests shorten the limit through the instance field `turnLimitMs`.
 - **`kick { seat }` — Implemented:** any other seated player, once `turnExpired`. Rejections
-  (`kickRejection()` from rules): `NOT_SEATED`, `WRONG_PHASE` (finished), `NOT_KICKABLE` (not the
+  (`kickRejection()` from rules): `NOT_SEATED`, `WRONG_PHASE` (waiting room or finished), `NOT_KICKABLE` (not the
   current player, or oneself — this also catches a stale kick after the turn passed),
   `TURN_NOT_EXPIRED`. Accepted: the player is removed first (state changes before the reply), then
   a connected player is closed with `CLOSE_CODES.KICKED` (4100, outside Colyseus' 4000–4010, so
   the SDK passes it to `onLeave` without reconnecting) and a dropped player's seat hold is
   rejected. Rejection lines carry the state fact `turnExpired`.
-- **Removal — Implemented:** `removePlayer(sessionId, reason)` is the single way out of a running
-  game: `left` (consented leave), `kicked` (with `by`), `timeout` (the 5-minute hold,
+- **Removal — Implemented:** `removePlayer(sessionId, reason)` is the single way out of a game: `left` (consented leave), `kicked` (with `by`), `timeout` (the 5-minute hold,
   `DISCONNECT_LIMIT_SECONDS`, ran out; room tests shorten `disconnectLimitSeconds`). Pawn,
   progress and seat go (a new player on that seat starts its stack from the first card); logs
-  `player.removed { seat, reason, by? }`. Then: in a finished game nothing more; if exactly one
-  player is left and the game is under way, that player wins (`game.finished { reason:
-  "lastPlayer" }`); else the turn passes if it was theirs. `onDrop`/`onLeave` check that the player
-  still exists, so a kick's closing hooks change nothing more. **Under way (temporary):** a
-  private `contested` flag set by a shift made while at least two players are seated; `lobby`
-  replaces it with the explicit start.
-- **Planned:** a `LOBBY` phase before the first shift (`lobby`); creator only:
-  `addBot`, `removeBot`, `start`.
+  `player.removed { seat, reason, by? }`. Then: in the waiting room the seat is free again, unless
+  it was the host's (the room closes, see Lobby); in a finished game nothing more; if exactly one
+  player is left in a started game, that player wins (`game.finished { reason: "lastPlayer" }`);
+  else the turn passes if it was theirs. `onDrop`/`onLeave` check that the player still exists, so
+  a kick's closing hooks change nothing more.
+- **Before the start:** `requireTurn` rejects shift and move in the waiting room with
+  `WRONG_PHASE` (before the turn check, like a finished game), and kicks are `WRONG_PHASE` too.
+- **Planned:** host-only `addBot` / `removeBot` in the waiting room (`bot-player`).
+
+## Lobby — Implemented
+
+Spec: `openspec/specs/lobby/`. Code: `server/src/rooms/GameRoom.ts`, `client/src/screens/`
+(`StartScreen`, `WaitingRoomScreen`), `client/src/session/` (`useGameSession`, `useOpenGames`,
+`nickname`, `inviteLink`).
+
+- **One room per game with a `waiting` phase.** The board is set up at creation (`game.setup`), but
+  the client shows `WaitingRoomScreen` while `phase` is `waiting`. The first player to join is the
+  host (`hostSeat`, synced); host powers end at the start.
+- **Nickname:** `nicknameIssue()` / `nicknameSchema` in protocol (trimmed, 2–16 code points, no
+  `\p{Cc}`), inside `joinOptionsSchema { nickname, pool?, private? }`. The server checks the
+  options in `onCreate` (no room is created) and in `onAuth` (before a seat is taken) and refuses
+  with a `ServerError` whose message is the code `INVALID_NICKNAME` (`room.refused { reason:
+  "nickname" }`). The client uses the same rule for the hint and the disabled buttons, and keeps
+  the last nickname used in localStorage (`labyrinth.nickname`), only to prefill the field.
+- **`start {}` — host only:** checks `NOT_SEATED` → `NOT_HOST` → `WRONG_PHASE` →
+  `NOT_ENOUGH_PLAYERS` (< 2), then deals (`dealGame`), sets each player's `cards` and `target`,
+  locks the room, sets the metadata `open: false`, logs `game.started { dealSeed, seats,
+  startSeat }` and calls `setTurn(startSeat)` (the clock starts). Nobody can join after the start
+  (locked → `joinOrCreate` skips it, `joinById` is refused).
+- **Leaving the waiting room:** a guest's seat is simply free again (the next joiner gets it).
+  When the host leaves, or a dropped host's 5-minute hold runs out, `closeRoom("hostLeft")` sets a
+  `closing` flag (so `onDrop` of the closed guests holds nothing), locks the room, closes every
+  other client with `CLOSE_CODES.HOST_LEFT` (4101), rejects pending holds and logs
+  `room.closed { reason }`; Colyseus disposes the empty room. The client shows "Pelin luoja
+  poistui, joten peli suljettiin" on the start screen.
+- **Open games list:** game rooms keep the metadata `{ host, open, pool }` (`host` = the host's
+  nickname once joined; `pool` = `""` outside E2E). The client joins `lobby` (`joinOrCreate`) with
+  `filter: { name: "game", metadata: { open: true, pool } }` while the start screen shows and the
+  wake-up is over, keeps the list from the `rooms` / `+` / `-` messages, drops locked, private and
+  full entries, orders oldest first and leaves the lobby when a game opens. Rows are 44 px buttons
+  "Maija · 2/4"; a stale tap gets "Peli ei ole enää avoinna".
+- **Private games and invite links:** `createPrivate` = `create("game", { …, private: true })` →
+  `setPrivate(true)` in `onCreate`: never listed, never matched by quick play. Every game's invite
+  link is `<page>?game=<room id>` (a `pool` parameter is kept). `App` reads `game` once at load (a
+  stored reconnection token wins); the start screen then shows invite mode ("Sinut on kutsuttu
+  peliin", "Liity peliin", "Muut pelit"), and `history.replaceState` drops `game` once the invite is
+  used or dismissed. The waiting room's "Kutsu pelaajia" uses `navigator.share`, else the clipboard
+  ("Linkki kopioitu").
+- **Join errors:** `SERVER_FULL` (message) → "Palvelin on täynnä…"; the SDK's matchmaking codes
+  522/524 (room gone, locked or expired) → "Peli ei ole enää avoinna"; anything else → the generic
+  error with "Yritä uudelleen", which repeats the last attempt. Logged as `client.warn { kind:
+  "join", reason }`.
+- **Game cap:** `MAX_OPEN_GAMES = 100`, a static counter on `GameRoom` (incremented after the
+  check in `onCreate`, decremented in `onDispose`); beyond it `onCreate` throws `SERVER_FULL` and
+  logs `room.refused { reason: "cap", open }`. Joining existing games still works. Room tests
+  lower `GameRoom.maxOpenGames`.
+- **Local-first leave:** `leave()` detaches at once (token cleared, view gone, `idle`), removes the
+  room's listeners and only then calls `room.leave()`, so a late `onLeave` or a reconnect through
+  Render's proxy cannot bring the game back. The server sees a consented leave (4000) or, at
+  worst, a drop that ends after the 5-minute hold; see the production check in
+  [operations.md](operations.md#after-a-deploy-manual-checks).
 - **Bots** (`bot-player`): an ordinary seat; the decision is a pure function in rules, submitted
   through the same command wrapper as humans.

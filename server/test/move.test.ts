@@ -6,13 +6,7 @@ import appConfig from "../src/app.config.js";
 import { configureLogger } from "../src/logging/logger.js";
 import type { GameState, Player } from "../src/rooms/schema/GameState.js";
 import { captureLogs } from "./support/captureLogs.js";
-
-/** The parts of an SDK room these tests use. */
-interface Client {
-  sessionId: string;
-  state: unknown;
-  request(type: string, payload: unknown): Promise<unknown>;
-}
+import { startedGame, type TestClient as Client } from "./support/game.js";
 
 const boardOf = (state: GameState) => {
   const tile = (t: { id: number; rotation: number }) => ({ id: t.id, kind: tileSpec(t.id).kind, rotation: t.rotation as Rotation });
@@ -39,13 +33,7 @@ describe("pawn-movement in a room", () => {
     logs = captureLogs();
   });
 
-  async function game(players: number) {
-    const room = await colyseus.createRoom<GameState>("game", {});
-    const clients: Client[] = [];
-    for (let i = 0; i < players; i++) clients.push(await colyseus.connectTo(room));
-    const player = (i: number) => room.state.players.get(clients[i]!.sessionId)!;
-    return { room, clients, player };
-  }
+  const game = (players: number) => startedGame(colyseus, players);
 
   /** Puts seat 1's pawn on a square that has somewhere to go (the random board decides where that is). */
   function placeOnCorridor(state: GameState, pawn: Player): Square[] {
@@ -67,16 +55,6 @@ describe("pawn-movement in a room", () => {
       ]);
     });
 
-    it("New player starts on their corner (seat 3 mid-game)", async () => {
-      const { room, clients, player } = await game(2);
-      await shift(clients[0]!, { insertion: "N1", rotation: 0 });
-      const late = await colyseus.connectTo(room);
-      const pawn = room.state.players.get(late.sessionId)!;
-      expect(pawn.seat).toBe(3);
-      expect(squareOf(pawn)).toEqual({ row: 6, col: 6 });
-      expect(player(0).seat).toBe(1);
-    });
-
     it("Pawn rides a shift on the server, and every player sees it", async () => {
       const { clients, player } = await game(2);
       player(1).row = 2;
@@ -89,7 +67,7 @@ describe("pawn-movement in a room", () => {
     });
 
     it("a pawn pushed off the board lands on the inserted tile", async () => {
-      const { clients, player } = await game(1);
+      const { clients, player } = await game(2);
       player(0).row = 6;
       player(0).col = 3;
       await shift(clients[0]!, { insertion: "N3", rotation: 0 });
@@ -172,7 +150,7 @@ describe("pawn-movement in a room", () => {
     });
 
     it("Square outside the board: INVALID_COMMAND", async () => {
-      const { room, clients } = await game(1);
+      const { room, clients } = await game(2);
       await shift(clients[0]!, { insertion: "N1", rotation: 0 });
       expect(await move(clients[0]!, { row: 7, col: 0 })).toEqual({ ok: false, code: "INVALID_COMMAND" });
       expect(room.state.phase).toBe("move");
@@ -186,7 +164,7 @@ describe("pawn-movement in a room", () => {
     });
 
     it("a stay after a wrapping shift uses the carried square", async () => {
-      const { clients, player } = await game(1);
+      const { clients, player } = await game(2);
       player(0).row = 6;
       player(0).col = 1;
       await shift(clients[0]!, { insertion: "N1", rotation: 0 });

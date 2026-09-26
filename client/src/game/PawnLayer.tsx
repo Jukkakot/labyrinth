@@ -79,6 +79,7 @@ export function PawnLayer({ seats, board }: { seats: SeatView[]; board: Board })
           <Pawn
             key={s.sessionId}
             seat={s.seat}
+            name={s.name}
             isMe={s.isMe}
             connected={s.connected}
             x={square.col * TILE_UNITS}

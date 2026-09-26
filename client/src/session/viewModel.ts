@@ -22,6 +22,8 @@ export interface SyncedState {
   };
   turnSeat?: number;
   phase?: string;
+  /** Seat of the host; 0 until someone has joined. */
+  hostSeat?: number;
   lastInsertion?: string;
   winnerSeat?: number;
   /** Server epoch ms when the current turn's time runs out; 0 = no clock. */
@@ -32,6 +34,7 @@ export interface SyncedState {
 export interface SyncedPlayer {
   seat: number;
   connected: boolean;
+  name?: string;
   row?: number;
   col?: number;
   cards?: number;
@@ -46,6 +49,8 @@ export type Target = TreasureId | "home";
 export interface SeatView {
   seat: number;
   sessionId: string;
+  /** The player's nickname. */
+  name: string;
   connected: boolean;
   isMe: boolean;
   /** The square the pawn stands on. */
@@ -59,13 +64,19 @@ export interface SeatView {
 /** The step of the current turn: first a shift, then a move. */
 export type TurnStep = "shift" | "move";
 
+/** Where the game is: the waiting room before the start, the game itself, or finished. */
+export type GamePhase = "waiting" | "playing" | "finished";
+
 export interface GameView {
   roomId: string;
+  phase: GamePhase;
+  /** Seat of the host, who may start the game from the waiting room; 0 until known. */
+  hostSeat: number;
   board: Board;
   /** Seated players sorted by seat. */
   seats: SeatView[];
   mySeat?: number;
-  /** Seat of the current player; 0 when nobody is seated. */
+  /** Seat of the current player; 0 in the waiting room. */
   turnSeat: number;
   isMyTurn: boolean;
   step: TurnStep;
@@ -118,13 +129,14 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     const found = [...(p.found ?? [])].filter(isTreasure);
     const isMe = sessionId === mySessionId;
     if (isMe) myTarget = readTarget(p.target, found.length, p.cards ?? 0);
-    seats.push({ seat: p.seat, sessionId, connected: p.connected, isMe, square, cards: p.cards ?? 0, found });
+    seats.push({ seat: p.seat, sessionId, name: p.name ?? "", connected: p.connected, isMe, square, cards: p.cards ?? 0, found });
   });
   seats.sort((a, b) => a.seat - b.seat);
   const mySeat = seats.find((s) => s.isMe)?.seat;
   const turnSeat = state.turnSeat ?? 0;
   const winnerSeat = state.winnerSeat ?? 0;
   const finished = state.phase === "finished";
+  const phase: GamePhase = finished ? "finished" : state.phase === "waiting" ? "waiting" : "playing";
   const isMyTurn = !finished && mySeat !== undefined && mySeat === turnSeat;
   const step: TurnStep = state.phase === "move" ? "move" : "shift";
   const me = seats.find((s) => s.isMe);
@@ -132,6 +144,8 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
   const turnExpired = !finished && (state.turnExpired ?? false);
   return {
     roomId,
+    phase,
+    hostSeat: state.hostSeat ?? 0,
     board,
     seats,
     mySeat,

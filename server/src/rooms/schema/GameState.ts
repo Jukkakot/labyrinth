@@ -12,10 +12,12 @@ export const Player = schema({
   connected: t.boolean().default(true),
   /** 1–4, clockwise from the top-left start corner. */
   seat: t.uint8().default(0),
+  /** The player's nickname (trimmed, 2–16 characters). */
+  name: t.string().default(""),
   /** The square the pawn stands on; starts on the seat's start corner. */
   row: t.uint8().default(0),
   col: t.uint8().default(0),
-  /** Size of the seat's treasure stack (public). */
+  /** Size of the seat's treasure stack (public); 0 until the game starts. */
   cards: t.uint8().default(0),
   /** Treasures collected so far, in order (public: face-up cards). */
   found: t.array("string"),
@@ -30,10 +32,12 @@ export const GameState = schema({
   /** 49 squares, row-major. */
   squares: t.array(TileState),
   spare: t.ref(TileState),
-  /** Seat 1–4 of the current player; 0 when nobody is seated. */
+  /** Seat 1–4 of the current player; 0 in the waiting room. */
   turnSeat: t.uint8().default(0),
-  /** What the current player does next: "shift", then "move"; "finished" once someone has won. */
-  phase: t.string().default("shift"),
+  /** "waiting" before the start; then what the current player does next: "shift", then "move"; "finished" once someone has won. */
+  phase: t.string().default("waiting"),
+  /** Seat of the host, the player who created the game and may start it; 0 until someone joins. */
+  hostSeat: t.uint8().default(0),
   /** Seat of the winner; 0 while the game runs. */
   winnerSeat: t.uint8().default(0),
   /** Insertion id of the previous shift, or "" before the first one. */

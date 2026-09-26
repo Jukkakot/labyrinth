@@ -10,8 +10,8 @@ One OpenSpec change at a time, in this order. Adjust as we learn.
 5. ~~`tile-shift`~~ (done): shift rule, turn order, `shift` command, arrows with preview and confirm
 6. ~~`pawn-movement`~~ (done): pawn squares, shift → move turn, `move` command, reachable highlight, walking pawns
 7. ~~`treasures-and-win`~~ (done): seeded deal, secret target, collect, return home, finished game, target highlight and result
-8. ~~`turn-rules`~~ (done): 60 s turn clock, kick after the time is up, 5 min disconnect hold, last player standing wins. Temporary until `lobby`: the clock runs only with ≥ 2 seated, and "under way" = a shift made with ≥ 2 seated
-9. `lobby`: nickname, game list, private link, waiting room (also verify `room.leave()` through the Render proxy, see add-logging design notes); deal 24/n treasures at the start instead of the temporary four stacks of 6
+8. ~~`turn-rules`~~ (done): 60 s turn clock, kick after the time is up, 5 min disconnect hold, last player standing wins
+9. ~~`lobby`~~ (done): nickname, open games list, private games and invite links, waiting room with host start (24/n cards, random start seat), host leaving closes the room, game cap, local-first leave with a leave button in the game. Adding bots in the waiting room comes with `bot-player`
 10. `bot-player`
 11. `spectators-and-rematch`
 12. `settings`: confirmations, theme, sounds, turn notification

@@ -206,3 +206,21 @@ Autopilot decisions, made without review (revisit freely):
 This is in-memory only. A deploy ends all running games anyway (NFR). Old clients get protocol
 errors on join, and the existing version check covers a stale client. There is no rollback
 complexity: revert the commit.
+
+## Implementation notes (deviations found while building)
+
+- **The lobby is joined with `joinOrCreate("lobby")`**, not `join`: nobody creates the lobby room
+  otherwise, and `join` fails with "no rooms found". Found in the UI check.
+- **The nickname rule is a plain function** (`nicknameIssue()` in `game-codes.ts`); `nicknameSchema`
+  wraps it. The client imports the function, so zod stays out of the client bundle.
+- **`onCreate` also validates the join options**, so an invalid nickname or a full server never
+  creates a room (not only `onAuth`).
+- **`endReason` became `startNotice`** (`kicked | hostLeft | notOpen | serverFull`): it now also
+  carries join failures, which are not end reasons. The generic join error's "Yritä uudelleen"
+  repeats the last attempt (`retry()`), not quick play.
+- **The start seat in room tests** is fixed by replacing `GameRoom.drawDealSeed` with a seed whose
+  `dealGame` start seat is the wanted one, so the real deal code runs.
+- **Four long nicknames** wrap the strip to two rows at 360 px (names capped at 5.5em with an
+  ellipsis); the board still fits without scrolling. One row would leave about 3 characters per name.
+- **The join actions stay disabled while the server wakes** (Play, private game and list rows), for
+  one consistent rule.

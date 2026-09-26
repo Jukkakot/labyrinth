@@ -31,9 +31,9 @@ npm run e2e   # smoke test, when UI or connection code changed
 | Level | Tools | Status |
 |---|---|---|
 | Rules | Vitest; fast-check properties over random boards (`boardArb` in `board.test.ts`); test names follow spec scenarios (`board › Rotation › Rotating a corner`) | Implemented |
-| Server | Vitest + @colyseus/testing (real rooms, SDK clients in-process); `captureLogs()` asserts log lines | Implemented |
+| Server | Vitest + @colyseus/testing (real rooms, SDK clients in-process); `captureLogs()` asserts log lines; `test/support/game.ts`: `waitingRoom(n)`, `startedGame(n, { startSeat })` (nicknamed players, host starts, start seat fixed via `drawDealSeed`) | Implemented |
 | Client | Vitest; jsdom + Testing Library for components (`// @vitest-environment jsdom`) | Implemented |
-| E2E | Playwright, Galaxy S24 profile — **one smoke test** for now (app starts, Play shows the whole board, fits 360×780) | Implemented |
+| E2E | Playwright, Galaxy S24 profile — **one smoke test** for now (two browser contexts: nickname + Play, the waiting room, the host starts, both see the whole board, fits 360×780) | Implemented |
 
 ### E2E smoke
 

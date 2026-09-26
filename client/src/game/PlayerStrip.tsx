@@ -5,7 +5,11 @@ import { Pawn } from "./Pawn.tsx";
 import styles from "./PlayerStrip.module.css";
 import { TREASURE_ICONS } from "./treasureIcons.ts";
 
-/** One chip per seat: pawn shape and colour, treasures found out of cards, a dimmed chip with an icon when disconnected; the viewer's chip also shows their target. */
+/**
+ * One chip per seat: pawn shape and colour, the nickname (shortened with an ellipsis; the full name is
+ * in the accessible text), treasures found out of cards, and a dimmed chip with an icon when
+ * disconnected. The viewer's chip also shows their target.
+ */
 export function PlayerStrip({ view }: { view: Pick<GameView, "seats" | "myTarget"> }) {
   const { t } = useTranslation();
   const { seats, myTarget } = view;
@@ -16,7 +20,7 @@ export function PlayerStrip({ view }: { view: Pick<GameView, "seats" | "myTarget
       {seats.map((s) => {
         const showTarget = s.isMe && TargetIcon && targetName;
         const summary = [
-          t(s.isMe ? "board.pawnMe" : "board.pawn", { seat: s.seat }),
+          t(s.isMe ? "board.pawnMe" : "board.pawn", { name: s.name }),
           t("progress.count", { found: s.found.length, cards: s.cards }),
           showTarget ? t("progress.target", { name: targetName }) : undefined,
           s.connected ? undefined : t("progress.disconnected"),
@@ -30,6 +34,9 @@ export function PlayerStrip({ view }: { view: Pick<GameView, "seats" | "myTarget
             <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
               <Pawn seat={s.seat} isMe={s.isMe} />
             </svg>
+            <span className={styles.name} aria-hidden="true">
+              {s.name}
+            </span>
             <span className={styles.count} aria-hidden="true">
               {s.found.length}/{s.cards}
             </span>

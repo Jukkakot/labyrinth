@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import appConfig from "../src/app.config.js";
-import type { GameState } from "../src/rooms/schema/GameState.js";
+import { waitingRoom } from "./support/game.js";
 
 describe("GameRoom", () => {
   let colyseus: ColyseusTestServer<typeof appConfig>;
@@ -17,10 +17,9 @@ describe("GameRoom", () => {
   });
 
   it("adds a connected player on join and removes them on leave", async () => {
-    const room = await colyseus.createRoom<GameState>("game", {});
-    const client = await colyseus.connectTo(room);
-    // A second player keeps the room from auto-disposing when the first leaves.
-    await colyseus.connectTo(room);
+    // The guest leaves: the host keeps the room open.
+    const { room, clients } = await waitingRoom(colyseus, 2);
+    const client = clients[1]!;
 
     expect(room.state.players.get(client.sessionId)?.connected).toBe(true);
 

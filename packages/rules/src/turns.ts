@@ -29,15 +29,17 @@ export interface KickCheck {
   turnSeat: number;
   /** True once the current turn's time is up. */
   expired: boolean;
+  /** True while the game is still in its waiting room. */
+  waiting: boolean;
   finished: boolean;
 }
 
 /**
  * Why a kick is not allowed, or undefined when it is: only the current player, only by
- * someone else, only after their time is up, and never in a finished game.
+ * someone else, only after their time is up, and never in the waiting room or a finished game.
  */
-export function kickRejection({ kicker, target, turnSeat, expired, finished }: KickCheck): KickRejection | undefined {
-  if (finished) return "WRONG_PHASE";
+export function kickRejection({ kicker, target, turnSeat, expired, waiting, finished }: KickCheck): KickRejection | undefined {
+  if (waiting || finished) return "WRONG_PHASE";
   if (target !== turnSeat || target === kicker) return "NOT_KICKABLE";
   if (!expired) return "TURN_NOT_EXPIRED";
   return undefined;

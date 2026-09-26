@@ -43,13 +43,13 @@ describe("board-view › Pawns on their squares", () => {
       <Board
         board={setupBoard(1)}
         seats={[
-          { seat: 1, sessionId: "a", connected: true, isMe: true, cards: 0, found: [], square: { row: 0, col: 0 } },
-          { seat: 2, sessionId: "b", connected: true, isMe: false, cards: 0, found: [], square: { row: 0, col: 6 } },
+          { seat: 1, sessionId: "a", name: "Maija", connected: true, isMe: true, cards: 0, found: [], square: { row: 0, col: 0 } },
+          { seat: 2, sessionId: "b", name: "Pekka", connected: true, isMe: false, cards: 0, found: [], square: { row: 0, col: 6 } },
         ]}
       />,
     );
-    const mine = screen.getByRole("img", { name: "Pelaaja 1 (sinä)" });
-    const other = screen.getByRole("img", { name: "Pelaaja 2" });
+    const mine = screen.getByRole("img", { name: "Maija (sinä)" });
+    const other = screen.getByRole("img", { name: "Pekka" });
     expect(mine.style.transform).toBe("translate(0px, 0px)");
     expect(other.style.transform).toBe("translate(600px, 0px)");
     expect(mine.querySelector("circle")).not.toBeNull(); // ownership ring
@@ -63,20 +63,20 @@ describe("board-view › Pawns on their squares (shared)", () => {
       <Board
         board={setupBoard(1)}
         seats={[
-          { seat: 1, sessionId: "a", connected: true, isMe: true, cards: 0, found: [], square: { row: 3, col: 2 } },
-          { seat: 2, sessionId: "b", connected: true, isMe: false, cards: 0, found: [], square: { row: 3, col: 2 } },
-          { seat: 3, sessionId: "c", connected: true, isMe: false, cards: 0, found: [], square: { row: 6, col: 6 } },
+          { seat: 1, sessionId: "a", name: "Maija", connected: true, isMe: true, cards: 0, found: [], square: { row: 3, col: 2 } },
+          { seat: 2, sessionId: "b", name: "Pekka", connected: true, isMe: false, cards: 0, found: [], square: { row: 3, col: 2 } },
+          { seat: 3, sessionId: "c", name: "Liisa", connected: true, isMe: false, cards: 0, found: [], square: { row: 6, col: 6 } },
         ]}
       />,
     );
-    const one = screen.getByRole("img", { name: "Pelaaja 1 (sinä)" });
-    const two = screen.getByRole("img", { name: "Pelaaja 2" });
+    const one = screen.getByRole("img", { name: "Maija (sinä)" });
+    const two = screen.getByRole("img", { name: "Pekka" });
     expect(one.style.transform).toBe("translate(200px, 300px)");
     expect(two.style.transform).toBe("translate(200px, 300px)");
     expect(one.getAttribute("data-crowded")).toBe("true");
     expect(two.getAttribute("data-crowded")).toBe("true");
     expect(one.firstElementChild!.getAttribute("transform")).not.toBe(two.firstElementChild!.getAttribute("transform"));
-    expect(screen.getByRole("img", { name: "Pelaaja 3" }).getAttribute("data-crowded")).toBeNull();
+    expect(screen.getByRole("img", { name: "Liisa" }).getAttribute("data-crowded")).toBeNull();
   });
 });
 

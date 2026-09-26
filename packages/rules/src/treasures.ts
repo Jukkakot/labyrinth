@@ -1,6 +1,6 @@
 import { START_CORNERS, tileAt, type Board } from "./board.js";
 import { sameSquare, type Square } from "./geometry.js";
-import { createRng, shuffle } from "./rng.js";
+import { createRng, shuffle, type Rng } from "./rng.js";
 import { FIXED_TILE_COUNT, fixedSquareOf, TILE_SET, TREASURES, treasureOf, type TreasureId } from "./tileSet.js";
 
 export const MIN_SEATS = 2;
@@ -12,12 +12,39 @@ export const MAX_SEATS = 4;
  * first card of a stack is the first target. Deterministic in `seed`.
  */
 export function dealTreasures(seed: number, seatCount: number): TreasureId[][] {
+  return dealFrom(createRng(seed), seatCount);
+}
+
+function dealFrom(rng: Rng, seatCount: number): TreasureId[][] {
   if (!Number.isInteger(seatCount) || seatCount < MIN_SEATS || seatCount > MAX_SEATS) {
     throw new RangeError(`Seat count must be ${MIN_SEATS}…${MAX_SEATS}, got ${seatCount}`);
   }
-  const deck = shuffle(createRng(seed), TREASURES);
+  const deck = shuffle(rng, TREASURES);
   const size = TREASURES.length / seatCount;
   return Array.from({ length: seatCount }, (_, i) => deck.slice(i * size, (i + 1) * size));
+}
+
+export interface GameDeal {
+  /** The stack of each seated seat. */
+  stacks: Map<number, TreasureId[]>;
+  /** The seat that takes the first turn, one of the seated seats. */
+  startSeat: number;
+}
+
+/**
+ * The opening of a game: the treasure stacks for the seated `seats` (handed out in ascending
+ * seat order, as `dealTreasures`) and the start seat, drawn from the same seeded RNG after the
+ * deal. Deterministic in `seed` and the set of seats.
+ */
+export function dealGame(seed: number, seats: Iterable<number>): GameDeal {
+  const ordered = [...new Set(seats)].sort((a, b) => a - b);
+  if (ordered.some((seat) => !Number.isInteger(seat) || seat < 1 || seat > MAX_SEATS)) {
+    throw new RangeError(`Seats must be 1…${MAX_SEATS}, got ${ordered.join(",")}`);
+  }
+  const rng = createRng(seed);
+  const deck = dealFrom(rng, ordered.length);
+  const stacks = new Map(ordered.map((seat, i) => [seat, deck[i]!]));
+  return { stacks, startSeat: ordered[rng.int(0, ordered.length - 1)]! };
 }
 
 /** The start corner of seat 1–4 (clockwise from the top-left). */

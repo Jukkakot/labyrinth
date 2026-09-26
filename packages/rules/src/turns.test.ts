@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { kickRejection, nextSeat, soleSurvivor } from "./turns.js";
 
-const base = { kicker: 2, target: 1, turnSeat: 1, expired: true, finished: false };
+const base = { kicker: 2, target: 1, turnSeat: 1, expired: true, waiting: false, finished: false };
 
 describe("turns › Current player", () => {
   it("Current player leaves", () => {
@@ -49,6 +49,10 @@ describe("turns › Kicking a slow player", () => {
 
   it("rejects any kick in a finished game", () => {
     expect(kickRejection({ ...base, finished: true })).toBe("WRONG_PHASE");
+  });
+
+  it("rejects any kick in the waiting room", () => {
+    expect(kickRejection({ ...base, waiting: true })).toBe("WRONG_PHASE");
   });
 });
 

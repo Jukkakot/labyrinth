@@ -54,8 +54,8 @@
   "board": {
     "label": "Game board",
     "treasure": "Treasure: {{name}}",
-    "pawn": "Player {{seat}}",
-    "pawnMe": "Player {{seat}} (you)",
+    "pawn": "{{name}}",
+    "pawnMe": "{{name}} (you)",
     "spare": "Spare tile",
     "fixed": "fixed tile",
     "targetTreasure": "Your target: {{name}}",
@@ -71,7 +71,22 @@
     "waking": "Waking up the server…",
     "wakingSlow": "The server was asleep. Waking up can take about a minute.",
     "wakeFailed": "The server hasn't answered yet – you can still try.",
-    "kicked": "You were removed from the game because your turn time ran out."
+    "kicked": "You were removed from the game because your turn time ran out.",
+    "nickname": "Nickname",
+    "nicknameLength": "A nickname needs 2–16 characters",
+    "nicknameCharacters": "The nickname has characters that can't be used",
+    "createPrivate": "Create a private game",
+    "openGames": "Open games",
+    "noGames": "No open games right now",
+    "listUnavailable": "The game list isn't available right now – Play still works.",
+    "gameEntry": "{{host}} · {{count}}/4",
+    "gameEntryLabel": "Join the game: {{host}}, {{count}}/4 players",
+    "hostLeft": "The game's creator left, so the game was closed",
+    "notOpen": "That game is no longer open",
+    "serverFull": "The server is full – try again in a moment",
+    "invited": "You have been invited to a game",
+    "joinInvite": "Join the game",
+    "otherGames": "Other games"
   },
   "game": {
     "idLabel": "Game {{id}}. Tap to copy.",
@@ -81,11 +96,11 @@
   },
   "turn": {
     "mine": "Your turn – push a tile",
-    "other": "Player {{seat}} is pushing",
+    "other": "{{name}} is pushing",
     "mineMove": "Your turn – move your pawn",
-    "otherMove": "Player {{seat}} is moving",
+    "otherMove": "{{name}} is moving",
     "timeUp": "Time's up",
-    "disconnected": "Player {{seat}} – connection lost",
+    "disconnected": "{{name}} – connection lost",
     "timeLeft": "Time left {{time}}"
   },
   "shift": {
@@ -109,7 +124,9 @@
     "generic": "That didn't work. Try again.",
     "UNREACHABLE": "Your pawn can't reach that square",
     "NOT_KICKABLE": "That player can't be removed now",
-    "TURN_NOT_EXPIRED": "Their time isn't up yet"
+    "TURN_NOT_EXPIRED": "Their time isn't up yet",
+    "NOT_HOST": "Only the game's creator can start it",
+    "NOT_ENOUGH_PLAYERS": "At least 2 players are needed"
   },
   "move": {
     "hint": "Tap a highlighted square",
@@ -124,18 +141,42 @@
     "home": "home square",
     "collected": "You found: {{name}}",
     "disconnected": "connection lost",
-    "left": "Player {{seat}} left the game"
+    "left": "{{name}} left the game"
   },
   "result": {
     "mine": "You won!",
-    "other": "Player {{seat}} won",
+    "other": "{{name}} won",
     "newGame": "New game"
   },
   "kick": {
-    "timeUp": "Player {{seat}}'s time is up",
-    "button": "Remove player {{seat}}",
-    "confirm": "Remove player {{seat}} from the game?",
+    "timeUp": "{{name}} – time is up",
+    "button": "Remove {{name}}",
+    "confirm": "Remove {{name}} from the game?",
     "yes": "Remove",
+    "cancel": "Cancel"
+  },
+  "waiting": {
+    "title": "Waiting room",
+    "seats": "Players",
+    "you": "you",
+    "host": "host",
+    "freeSeat": "Free seat",
+    "disconnected": "connection lost",
+    "invite": "Invite players",
+    "shareText": "Join my Labyrinth game",
+    "copied": "Link copied",
+    "copyFailed": "Copy the link: {{url}}",
+    "start": "Start the game",
+    "needTwo": "At least 2 players are needed",
+    "waitingFor": "Waiting for {{name}} to start the game",
+    "leave": "Leave",
+    "leaveConfirm": "The game closes for everyone. Leave?",
+    "cancel": "Cancel"
+  },
+  "leave": {
+    "button": "Leave the game",
+    "confirm": "Leave the game? Your pawn and treasures leave the game.",
+    "yes": "Leave",
     "cancel": "Cancel"
   }
 }

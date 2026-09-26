@@ -16,6 +16,13 @@
   min-height: calc(var(--tap-min) + var(--space-2));
 }
 
+/* Each side of the top bar holds one or a few controls in a row. */
+.side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .content {
   flex: 1;
   display: flex;

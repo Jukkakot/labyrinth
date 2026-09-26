@@ -6,7 +6,7 @@ import { MAX_SEED } from "./rng.js";
 import { setupBoard } from "./setup.js";
 import { shiftBoard } from "./shift.js";
 import { TREASURES, treasureOf } from "./tileSet.js";
-import { dealTreasures, homeSquare, homeTileId, settleMove, targetTileId, tileOfTreasure } from "./treasures.js";
+import { dealGame, dealTreasures, homeSquare, homeTileId, settleMove, targetTileId, tileOfTreasure } from "./treasures.js";
 
 const seedArb = fc.integer({ min: 0, max: MAX_SEED });
 const seatCountArb = fc.integer({ min: 2, max: 4 });
@@ -50,6 +50,57 @@ describe("treasures › Treasure cards dealt evenly", () => {
         expect(dealTreasures(seed, seats)).toEqual(stacks);
       }),
     );
+  });
+});
+
+describe("treasures › Treasure cards dealt at the start", () => {
+  const seatsArb = fc.subarray([1, 2, 3, 4], { minLength: 2, maxLength: 4 });
+
+  it("Four stacks of six", () => {
+    const { stacks } = dealGame(7, [1, 2, 3, 4]);
+    expect([...stacks.keys()]).toEqual([1, 2, 3, 4]);
+    expect([...stacks.values()].map((s) => s.length)).toEqual([6, 6, 6, 6]);
+  });
+
+  it("Deal for fewer seats", () => {
+    const two = dealGame(7, [3, 1]);
+    expect([...two.stacks.keys()]).toEqual([1, 3]);
+    expect([...two.stacks.values()].map((s) => s.length)).toEqual([12, 12]);
+    expect([...dealGame(7, [1, 2, 4]).stacks.values()].map((s) => s.length)).toEqual([8, 8, 8]);
+  });
+
+  it("Reproducible deal", () => {
+    expect(dealGame(12345, [1, 3, 4])).toEqual(dealGame(12345, [4, 3, 1]));
+  });
+
+  it("Freed seat", () => {
+    const { stacks, startSeat } = dealGame(9, [1, 3]);
+    expect(stacks.has(2)).toBe(false);
+    expect([1, 3]).toContain(startSeat);
+  });
+
+  it("rejects fewer than 2 seats or a seat outside 1…4", () => {
+    expect(() => dealGame(1, [1])).toThrow(RangeError);
+    expect(() => dealGame(1, [1, 5])).toThrow(RangeError);
+  });
+
+  it("property: every treasure once in equal stacks, the start seat among the seats, deterministic", () => {
+    fc.assert(
+      fc.property(seedArb, seatsArb, (seed, seats) => {
+        const deal = dealGame(seed, seats);
+        expect([...deal.stacks.keys()]).toEqual(seats);
+        const all = [...deal.stacks.values()];
+        all.forEach((s) => expect(s).toHaveLength(TREASURES.length / seats.length));
+        expect(new Set(all.flat()).size).toBe(TREASURES.length);
+        expect(seats).toContain(deal.startSeat);
+        expect(dealGame(seed, seats)).toEqual(deal);
+      }),
+    );
+  });
+
+  it("every seat can start", () => {
+    const starts = new Set(Array.from({ length: 200 }, (_, seed) => dealGame(seed, [1, 2, 3]).startSeat));
+    expect([...starts].sort()).toEqual([1, 2, 3]);
   });
 });
 

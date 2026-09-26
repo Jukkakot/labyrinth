@@ -1,4 +1,4 @@
-import { defineServer, defineRoom, monitor, playground } from "colyseus";
+import { defineServer, defineRoom, LobbyRoom, monitor, playground } from "colyseus";
 import { RULES_VERSION } from "@labyrinth/rules";
 import { readBuiltAt } from "./buildInfo.js";
 import { configureCors } from "./cors.js";
@@ -16,6 +16,8 @@ const server = defineServer({
   logger: frameworkLogger,
 
   rooms: {
+    // The start screen's list of open games: the built-in lobby pushes listing changes.
+    lobby: defineRoom(LobbyRoom),
     // `pool` partitions quick play (E2E isolation, manual testing groups).
     game: defineRoom(GameRoom).filterBy(["pool"]).enableRealtimeListing(),
   },

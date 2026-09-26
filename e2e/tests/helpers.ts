@@ -5,11 +5,12 @@ export const uniquePool = (name: string) => `e2e-${name}-${Date.now()}-${Math.ra
 
 export const board = (page: Page) => page.getByRole("group", { name: "Pelilauta" });
 
-/** Opens the start screen in `pool`, taps Play and waits for the board. */
-export async function quickPlay(page: Page, pool: string) {
+/** Opens the start screen in `pool`, enters `nickname`, taps Play and waits for the waiting room. */
+export async function quickPlay(page: Page, pool: string, nickname: string) {
   await page.goto(`/?pool=${pool}`);
-  await page.getByRole("button", { name: "Pelaa" }).click();
-  await expect(board(page)).toBeVisible();
+  await page.getByRole("textbox", { name: "Nimimerkki" }).fill(nickname);
+  await page.getByRole("button", { name: "Pelaa", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Odotushuone" })).toBeVisible();
 }
 
 /** The game id shown in the top bar. */

@@ -54,8 +54,8 @@
   "board": {
     "label": "Pelilauta",
     "treasure": "Aarre: {{name}}",
-    "pawn": "Pelaaja {{seat}}",
-    "pawnMe": "Pelaaja {{seat}} (sinä)",
+    "pawn": "{{name}}",
+    "pawnMe": "{{name}} (sinä)",
     "spare": "Ylimääräinen laatta",
     "fixed": "kiinteä laatta",
     "targetTreasure": "Kohteesi: {{name}}",
@@ -71,7 +71,22 @@
     "waking": "Herätetään palvelinta…",
     "wakingSlow": "Palvelin on ollut levossa. Herääminen voi kestää noin minuutin.",
     "wakeFailed": "Palvelin ei vastannut vielä – voit silti yrittää.",
-    "kicked": "Sinut poistettiin pelistä, koska vuorosi aika loppui."
+    "kicked": "Sinut poistettiin pelistä, koska vuorosi aika loppui.",
+    "nickname": "Nimimerkki",
+    "nicknameLength": "Nimimerkissä pitää olla 2–16 merkkiä",
+    "nicknameCharacters": "Nimimerkissä on merkkejä, joita ei voi käyttää",
+    "createPrivate": "Luo yksityinen peli",
+    "openGames": "Avoimet pelit",
+    "noGames": "Ei avoimia pelejä juuri nyt",
+    "listUnavailable": "Pelilistaa ei saatu juuri nyt – Pelaa toimii silti.",
+    "gameEntry": "{{host}} · {{count}}/4",
+    "gameEntryLabel": "Liity peliin: {{host}}, {{count}}/4 pelaajaa",
+    "hostLeft": "Pelin luoja poistui, joten peli suljettiin",
+    "notOpen": "Peli ei ole enää avoinna",
+    "serverFull": "Palvelin on täynnä – yritä hetken päästä uudelleen",
+    "invited": "Sinut on kutsuttu peliin",
+    "joinInvite": "Liity peliin",
+    "otherGames": "Muut pelit"
   },
   "game": {
     "idLabel": "Peli {{id}}. Napauta kopioidaksesi.",
@@ -81,11 +96,11 @@
   },
   "turn": {
     "mine": "Sinun vuorosi – työnnä laatta",
-    "other": "Pelaaja {{seat}} työntää",
+    "other": "{{name}} työntää",
     "mineMove": "Sinun vuorosi – siirrä nappulaa",
-    "otherMove": "Pelaaja {{seat}} siirtää",
+    "otherMove": "{{name}} siirtää",
     "timeUp": "Aika loppui",
-    "disconnected": "Pelaaja {{seat}} – yhteys katkennut",
+    "disconnected": "{{name}} – yhteys katkennut",
     "timeLeft": "Aikaa jäljellä {{time}}"
   },
   "shift": {
@@ -109,7 +124,9 @@
     "generic": "Siirto ei onnistunut. Yritä uudelleen.",
     "UNREACHABLE": "Nappulasi ei pääse sinne",
     "NOT_KICKABLE": "Tätä pelaajaa ei voi poistaa nyt",
-    "TURN_NOT_EXPIRED": "Pelaajan aika ei ole vielä loppunut"
+    "TURN_NOT_EXPIRED": "Pelaajan aika ei ole vielä loppunut",
+    "NOT_HOST": "Vain pelin luoja voi aloittaa pelin",
+    "NOT_ENOUGH_PLAYERS": "Tarvitaan vähintään 2 pelaajaa"
   },
   "move": {
     "hint": "Napauta korostettua ruutua",
@@ -124,18 +141,42 @@
     "home": "kotiruutu",
     "collected": "Löysit: {{name}}",
     "disconnected": "yhteys katkennut",
-    "left": "Pelaaja {{seat}} poistui pelistä"
+    "left": "{{name}} poistui pelistä"
   },
   "result": {
     "mine": "Voitit!",
-    "other": "Pelaaja {{seat}} voitti",
+    "other": "{{name}} voitti",
     "newGame": "Uusi peli"
   },
   "kick": {
-    "timeUp": "Pelaajan {{seat}} aika loppui",
-    "button": "Poista pelaaja {{seat}}",
-    "confirm": "Poistetaanko pelaaja {{seat}} pelistä?",
+    "timeUp": "{{name}} – aika loppui",
+    "button": "Poista {{name}}",
+    "confirm": "Poistetaanko {{name}} pelistä?",
     "yes": "Poista",
+    "cancel": "Peru"
+  },
+  "waiting": {
+    "title": "Odotushuone",
+    "seats": "Pelaajat",
+    "you": "sinä",
+    "host": "isäntä",
+    "freeSeat": "Vapaa paikka",
+    "disconnected": "yhteys katkennut",
+    "invite": "Kutsu pelaajia",
+    "shareText": "Liity Labyrintti-peliini",
+    "copied": "Linkki kopioitu",
+    "copyFailed": "Kopioi linkki: {{url}}",
+    "start": "Aloita peli",
+    "needTwo": "Tarvitaan vähintään 2 pelaajaa",
+    "waitingFor": "Odotetaan, että {{name}} aloittaa pelin",
+    "leave": "Poistu",
+    "leaveConfirm": "Peli suljetaan kaikilta. Poistutaanko?",
+    "cancel": "Peru"
+  },
+  "leave": {
+    "button": "Poistu pelistä",
+    "confirm": "Poistutaanko pelistä? Nappulasi ja aarteesi poistuvat pelistä.",
+    "yes": "Poistu",
     "cancel": "Peru"
   }
 }

@@ -4,17 +4,8 @@ import { CLOSE_CODES, type CommandResult, type ShiftPayload } from "@labyrinth/p
 import appConfig from "../src/app.config.js";
 import { configureLogger } from "../src/logging/logger.js";
 import type { GameRoom } from "../src/rooms/GameRoom.js";
-import type { GameState } from "../src/rooms/schema/GameState.js";
 import { captureLogs } from "./support/captureLogs.js";
-
-/** The parts of an SDK room these tests use. */
-interface Client {
-  sessionId: string;
-  request(type: string, payload: unknown): Promise<unknown>;
-  leave(): Promise<unknown>;
-  onLeave(cb: (code: number) => void): unknown;
-  connection: { close(code?: number): void };
-}
+import { startedGame, waitingRoom, type TestClient as Client } from "./support/game.js";
 
 const SHORT_MS = 150;
 const LONG_MS = 60_000;
@@ -38,15 +29,8 @@ describe("turn rules in a room", () => {
     logs = captureLogs();
   });
 
-  async function game(players: number, { turnMs = SHORT_MS, disconnectSeconds = 300 } = {}) {
-    const room = (await colyseus.createRoom<GameState>("game", {})) as unknown as GameRoom;
-    room.turnLimitMs = turnMs;
-    room.disconnectLimitSeconds = disconnectSeconds;
-    const clients: Client[] = [];
-    for (let i = 0; i < players; i++) clients.push((await colyseus.connectTo(room as never)) as unknown as Client);
-    const seatOf = (i: number) => room.state.players.get(clients[i]!.sessionId)?.seat;
-    return { room, clients, seatOf };
-  }
+  const game = (players: number, { turnMs = SHORT_MS, disconnectSeconds = 300 } = {}) =>
+    startedGame(colyseus, players, { turnMs, disconnectSeconds });
 
   /** The current player's whole turn: shift, then stay. */
   async function turn(room: GameRoom, client: Client, insertion: ShiftPayload["insertion"] = "N1") {
@@ -86,26 +70,26 @@ describe("turn rules in a room", () => {
       expect(room.state.turnDeadline).toBeGreaterThan(Date.now());
     });
 
-    it("Alone in the game", async () => {
-      const { room } = await game(1);
+    it("Clock starts with the game", async () => {
+      const { room } = await game(2, { turnMs: LONG_MS });
+      expect(room.state.turnDeadline).toBeGreaterThan(Date.now() + LONG_MS - 5_000);
+      expect(room.state.turnSeat).toBe(1);
+    });
+
+    it("Alone in the game: the waiting room has no clock", async () => {
+      const { room } = await waitingRoom(colyseus, 1, { turnMs: SHORT_MS });
       await new Promise((r) => setTimeout(r, SHORT_MS * 3));
       expect(room.state.turnDeadline).toBe(0);
       expect(room.state.turnExpired).toBe(false);
     });
 
-    it("Second player arrives", async () => {
-      const { room } = await game(1, { turnMs: LONG_MS });
+    it("Second player arrives: no clock and no kick until the start", async () => {
+      const { room, clients } = await waitingRoom(colyseus, 2, { turnMs: SHORT_MS });
+      await new Promise((r) => setTimeout(r, SHORT_MS * 3));
       expect(room.state.turnDeadline).toBe(0);
-      await colyseus.connectTo(room as never);
-      expect(room.state.turnDeadline).toBeGreaterThan(Date.now() + LONG_MS - 5_000);
-      expect(room.state.turnSeat).toBe(1);
-    });
-
-    it("a third player joining does not restart the clock", async () => {
-      const { room } = await game(2, { turnMs: LONG_MS });
-      const deadline = room.state.turnDeadline;
-      await colyseus.connectTo(room as never);
-      expect(room.state.turnDeadline).toBe(deadline);
+      expect(room.state.turnSeat).toBe(0);
+      expect(await kick(clients[1]!, 1)).toEqual({ ok: false, code: "WRONG_PHASE" });
+      expect(room.state.players.size).toBe(2);
     });
   });
 
@@ -122,7 +106,7 @@ describe("turn rules in a room", () => {
       expect(room.state.turnExpired).toBe(false);
       expect(await closed).toBe(CLOSE_CODES.KICKED);
       expect(logs.byEvt("player.removed")).toEqual([expect.objectContaining({ seat: 1, reason: "kicked", by: 2 })]);
-      expect(logs.byEvt("cmd.accepted")).toEqual([expect.objectContaining({ cmd: "kick", payload: { seat: 1 } })]);
+      expect(logs.byEvt("cmd.accepted").filter((l) => l.cmd !== "start")).toEqual([expect.objectContaining({ cmd: "kick", payload: { seat: 1 } })]);
       // The kicked connection's later hooks change nothing more.
       await vi.waitFor(() => expect(logs.byEvt("player.left")).toHaveLength(1));
       expect(logs.byEvt("player.removed")).toHaveLength(1);
@@ -207,10 +191,19 @@ describe("turn rules in a room", () => {
     it("Opponent leaves before anyone shifted", async () => {
       const { room, clients } = await game(2, { turnMs: LONG_MS });
       await clients[1]!.leave();
-      await vi.waitFor(() => expect(room.state.players.size).toBe(1));
-      expect(room.state.phase).toBe("shift");
-      expect(room.state.winnerSeat).toBe(0);
+      await vi.waitFor(() => expect(room.state.phase).toBe("finished"));
+      expect(room.state.winnerSeat).toBe(1);
       expect(room.state.turnDeadline).toBe(0);
+    });
+  });
+
+  describe("Only the current player acts", () => {
+    it("Before the start: a shift or move in the waiting room is WRONG_PHASE", async () => {
+      const { room, clients } = await waitingRoom(colyseus, 2);
+      const before = JSON.stringify(room.state.toJSON());
+      expect(await shift(clients[0]!, { insertion: "N1", rotation: 0 })).toEqual({ ok: false, code: "WRONG_PHASE" });
+      expect(await clients[1]!.request("move", { row: 0, col: 6 })).toEqual({ ok: false, code: "WRONG_PHASE" });
+      expect(JSON.stringify(room.state.toJSON())).toBe(before);
     });
   });
 

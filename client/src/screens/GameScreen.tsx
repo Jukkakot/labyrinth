@@ -5,6 +5,7 @@ import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
 import { GameOverControls } from "../game/GameOverControls.tsx";
 import { KickControl } from "../game/KickControl.tsx";
+import { LeaveButton, LeaveConfirm } from "../game/LeaveControls.tsx";
 import { MoveControls } from "../game/MoveControls.tsx";
 import { PlayerStrip } from "../game/PlayerStrip.tsx";
 import { ShiftControls } from "../game/ShiftControls.tsx";
@@ -28,13 +29,16 @@ export interface GameScreenProps {
  * highlighted square moves there at once; "Jää paikalleen" stays. The viewer's
  * target is marked wherever its tile is; a finished game shows the result and
  * "Uusi peli". Once the current player's time is up, the others get the kick
- * control instead of the (disabled) step controls, and anyone leaving is announced.
+ * control instead of the (disabled) step controls, and anyone leaving is announced by nickname.
+ * The top bar's leave action asks first in a running game (in place of the controls) and leaves a
+ * finished game at once.
  */
 export function GameScreen({ view, session }: GameScreenProps) {
   const { t } = useTranslation();
   const { shift, move, kick, leave, pending, notice } = session;
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
+  const [leaving, setLeaving] = useState(false);
 
   // A new synced board (someone shifted, the turn moved) drops the preview and the local rotation.
   const boardKey = `${view.board.spare.id}|${view.lastInsertion ?? ""}|${view.turnSeat}|${view.step}`;
@@ -89,17 +93,14 @@ export function GameScreen({ view, session }: GameScreenProps) {
     return () => clearTimeout(timer);
   }, [collected]);
   // Announce a player leaving the running game (left, kicked or timed out; the reason is not synced).
-  const seatList = view.seats.map((s) => s.seat).join(",");
-  const [seenSeats, setSeenSeats] = useState({ list: seatList, finished: view.finished });
-  const [departed, setDeparted] = useState<number>();
+  // Their name is gone from the state with them, so the last seen seat → name map is kept.
+  const seatList = view.seats.map((s) => `${s.seat}:${s.name}`).join(",");
+  const [seenSeats, setSeenSeats] = useState({ list: seatList, seats: view.seats, finished: view.finished });
+  const [departed, setDeparted] = useState<string>();
   if (seenSeats.list !== seatList || seenSeats.finished !== view.finished) {
-    const gone = seenSeats.list
-      .split(",")
-      .filter(Boolean)
-      .map(Number)
-      .find((seat) => !view.seats.some((s) => s.seat === seat));
-    if (gone !== undefined && !seenSeats.finished) setDeparted(gone);
-    setSeenSeats({ list: seatList, finished: view.finished });
+    const gone = seenSeats.seats.find((old) => !view.seats.some((s) => s.seat === old.seat));
+    if (gone !== undefined && !seenSeats.finished) setDeparted(gone.name);
+    setSeenSeats({ list: seatList, seats: view.seats, finished: view.finished });
   }
   useEffect(() => {
     if (departed === undefined) return;
@@ -112,11 +113,19 @@ export function GameScreen({ view, session }: GameScreenProps) {
     : collected
       ? t("progress.collected", { name: t(`treasures.${collected}`) })
       : departed !== undefined
-        ? t("progress.left", { seat: departed })
+        ? t("progress.left", { name: departed })
         : undefined;
 
   return (
-    <Screen start={<GameIdBadge roomId={view.roomId} />} end={<LanguageSwitcher />}>
+    <Screen
+      start={<GameIdBadge roomId={view.roomId} />}
+      end={
+        <>
+          <LeaveButton onClick={view.finished ? leave : () => setLeaving(true)} />
+          <LanguageSwitcher />
+        </>
+      }
+    >
       <TurnLine view={view} />
       <PlayerStrip view={view} />
       <Board
@@ -129,8 +138,16 @@ export function GameScreen({ view, session }: GameScreenProps) {
       />
       {view.finished ? (
         <GameOverControls onNewGame={leave} />
+      ) : leaving ? (
+        <LeaveConfirm onLeave={leave} onCancel={() => setLeaving(false)} />
       ) : view.canKick ? (
-        <KickControl key={boardKey} seat={view.turnSeat} pending={pending} onKick={() => void kick(view.turnSeat)} />
+        <KickControl
+          key={boardKey}
+          seat={view.turnSeat}
+          name={view.seats.find((s) => s.seat === view.turnSeat)?.name ?? ""}
+          pending={pending}
+          onKick={() => void kick(view.turnSeat)}
+        />
       ) : view.step === "move" ? (
         <MoveControls
           spare={view.board.spare}

@@ -2,7 +2,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { homeTileId, reachableSquares, setupBoard, tileOfTreasure } from "@labyrinth/rules";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { loadNickname } from "./nickname.ts";
 import { loadToken, saveToken } from "./sessionToken.ts";
+import { CLOSE_CODES } from "@labyrinth/protocol";
 import { useGameSession, type Connector, type GameRoomLike } from "./useGameSession.ts";
 import { toGameView, type SyncedState } from "./viewModel.ts";
 
@@ -31,11 +33,37 @@ function fakeRoom(overrides: Partial<GameRoomLike> = {}): GameRoomLike {
     onReconnect: vi.fn(),
     request: vi.fn(async () => ({ ok: true })),
     leave: vi.fn(async () => 1000),
+    removeAllListeners: vi.fn(),
     ...overrides,
   };
 }
 
-beforeEach(() => sessionStorage.clear());
+function connectorWith(overrides: Partial<Connector>): Connector {
+  return { joinOrCreate: vi.fn(), createPrivate: vi.fn(), joinById: vi.fn(), reconnect: vi.fn(), ...overrides };
+}
+
+/** A room whose onLeave callback the test can fire. */
+function leavableRoom() {
+  let fire: (code: number) => void = () => {};
+  const room = fakeRoom({ onLeave: vi.fn((cb: (code: number) => void) => (fire = cb)) });
+  return { room, fireLeave: (code: number) => fire(code) };
+}
+
+async function playingWith(room: GameRoomLike) {
+  const connector = connectorWith({ joinOrCreate: vi.fn(async () => room) });
+  const hook = renderHook(() => useGameSession(connector));
+  act(() => hook.result.current.play("Maija"));
+  await waitFor(() => expect(hook.result.current.status).toBe("playing"));
+  return hook;
+}
+
+/** An SDK matchmaking error. */
+const matchMakeError = (message: string, code: number) => Object.assign(new Error(message), { code });
+
+beforeEach(() => {
+  sessionStorage.clear();
+  localStorage.clear();
+});
 
 describe("game-session › view model", () => {
   it("rebuilds the real board from ids and rotations and lists seats in order", () => {
@@ -85,11 +113,11 @@ describe("game-session › view model", () => {
 
 describe("game-session › One player per browser tab", () => {
   it("stores the reconnection token on join", async () => {
-    const connector: Connector = { joinOrCreate: vi.fn(async () => fakeRoom()), reconnect: vi.fn() };
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => fakeRoom()), reconnect: vi.fn() });
     const { result } = renderHook(() => useGameSession(connector));
     expect(result.current.status).toBe("idle");
 
-    act(() => result.current.play());
+    act(() => result.current.play("Maija"));
     await waitFor(() => expect(result.current.status).toBe("playing"));
     expect(loadToken()).toBe("brave-otters-sing:token");
     expect(result.current.view?.roomId).toBe("brave-otters-sing");
@@ -97,7 +125,7 @@ describe("game-session › One player per browser tab", () => {
 
   it("Reload keeps the seat: a stored token rejoins without Play", async () => {
     saveToken("old-token");
-    const connector: Connector = { joinOrCreate: vi.fn(), reconnect: vi.fn(async () => fakeRoom()) };
+    const connector = connectorWith({ joinOrCreate: vi.fn(), reconnect: vi.fn(async () => fakeRoom()) });
     const { result } = renderHook(() => useGameSession(connector));
     expect(result.current.status).toBe("connecting");
     await waitFor(() => expect(result.current.status).toBe("playing"));
@@ -107,7 +135,7 @@ describe("game-session › One player per browser tab", () => {
 
   it("a failed rejoin clears the token and shows the start screen", async () => {
     saveToken("stale");
-    const connector: Connector = { joinOrCreate: vi.fn(), reconnect: vi.fn(async () => Promise.reject(new Error("gone"))) };
+    const connector = connectorWith({ joinOrCreate: vi.fn(), reconnect: vi.fn(async () => Promise.reject(new Error("gone"))) });
     const { result } = renderHook(() => useGameSession(connector));
     await waitFor(() => expect(result.current.status).toBe("idle"));
     expect(loadToken()).toBeUndefined();
@@ -116,18 +144,18 @@ describe("game-session › One player per browser tab", () => {
 
 describe("game-session › Quick play", () => {
   it("Join fails: error state", async () => {
-    const connector: Connector = { joinOrCreate: vi.fn(async () => Promise.reject(new Error("offline"))), reconnect: vi.fn() };
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => Promise.reject(new Error("offline"))), reconnect: vi.fn() });
     const { result } = renderHook(() => useGameSession(connector));
-    act(() => result.current.play());
+    act(() => result.current.play("Maija"));
     await waitFor(() => expect(result.current.status).toBe("error"));
   });
 
   it("Slow server: flags a slow connection after 5 s", async () => {
     vi.useFakeTimers();
     try {
-      const connector: Connector = { joinOrCreate: vi.fn(() => new Promise<GameRoomLike>(() => {})), reconnect: vi.fn() };
+      const connector = connectorWith({ joinOrCreate: vi.fn(() => new Promise<GameRoomLike>(() => {})), reconnect: vi.fn() });
       const { result } = renderHook(() => useGameSession(connector));
-      act(() => result.current.play());
+      act(() => result.current.play("Maija"));
       expect(result.current.slow).toBe(false);
       act(() => vi.advanceTimersByTime(5_000));
       expect(result.current.status).toBe("connecting");
@@ -149,9 +177,9 @@ describe("game-session › quick-play pool", () => {
 
 describe("game-session › shift command", () => {
   async function playing(room: GameRoomLike) {
-    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() });
     const hook = renderHook(() => useGameSession(connector));
-    act(() => hook.result.current.play());
+    act(() => hook.result.current.play("Maija"));
     await waitFor(() => expect(hook.result.current.status).toBe("playing"));
     return hook;
   }
@@ -222,9 +250,9 @@ describe("game-session › shift command", () => {
 describe("game-session › move command", () => {
   it("sends the target square; a rejection gives its notice", async () => {
     const room = fakeRoom({ request: vi.fn(async () => ({ ok: false, code: "UNREACHABLE" })) });
-    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() });
     const { result } = renderHook(() => useGameSession(connector));
-    act(() => result.current.play());
+    act(() => result.current.play("Maija"));
     await waitFor(() => expect(result.current.status).toBe("playing"));
 
     await act(async () => {
@@ -273,19 +301,121 @@ describe("game-session › treasures in the view model", () => {
 });
 
 describe("game-session › leave", () => {
-  it("leaves the room; the room's leave callback returns to the start screen", async () => {
-    let onLeave: (code: number) => void = () => {};
-    const room = fakeRoom({ onLeave: vi.fn((cb: (code: number) => void) => (onLeave = cb)) });
-    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
-    const { result } = renderHook(() => useGameSession(connector));
-    act(() => result.current.play());
-    await waitFor(() => expect(result.current.status).toBe("playing"));
+  it("Leaving returns at once: the start screen shows before the server confirms, and the token is gone", async () => {
+    const room = fakeRoom({ leave: vi.fn(() => new Promise<number>(() => {})) });
+    const { result } = await playingWith(room);
 
     act(() => result.current.leave());
     expect(room.leave).toHaveBeenCalledTimes(1);
-    act(() => onLeave(1000));
+    expect(room.removeAllListeners).toHaveBeenCalled();
     expect(result.current.status).toBe("idle");
+    expect(result.current.view).toBeUndefined();
     expect(loadToken()).toBeUndefined();
+  });
+
+  it("a late onLeave after leave() changes nothing", async () => {
+    const { room, fireLeave } = leavableRoom();
+    const { result } = await playingWith(room);
+    act(() => result.current.leave());
+    act(() => fireLeave(CLOSE_CODES.KICKED));
+    expect(result.current).toMatchObject({ status: "idle", startNotice: undefined });
+  });
+
+  it("a failing leave on the server side still leaves locally", async () => {
+    const room = fakeRoom({ leave: vi.fn(async () => Promise.reject(new Error("closed"))) });
+    const { result } = await playingWith(room);
+    await act(async () => result.current.leave());
+    expect(result.current.status).toBe("idle");
+  });
+});
+
+describe("lobby › joining", () => {
+  it("quick play sends the nickname and remembers it after a successful join", async () => {
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => fakeRoom()) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play("Maija"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    expect(connector.joinOrCreate).toHaveBeenCalledWith({ nickname: "Maija" });
+    expect(loadNickname()).toBe("Maija");
+  });
+
+  it("Create a private game", async () => {
+    const connector = connectorWith({ createPrivate: vi.fn(async () => fakeRoom()) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.createPrivate("Maija"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    expect(connector.createPrivate).toHaveBeenCalledWith({ nickname: "Maija" });
+  });
+
+  it("Join by invite link or from the list", async () => {
+    const connector = connectorWith({ joinById: vi.fn(async () => fakeRoom()) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.joinById("brave-otters-sing", "Pekka"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    expect(connector.joinById).toHaveBeenCalledWith("brave-otters-sing", { nickname: "Pekka" });
+  });
+
+  it("Game started meanwhile: a locked or missing game gives the not-open notice on the start screen", async () => {
+    const connector = connectorWith({ joinById: vi.fn(async () => Promise.reject(matchMakeError('room "x" is locked', 522))) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.joinById("x", "Pekka"));
+    await waitFor(() => expect(result.current.startNotice).toBe("notOpen"));
+    expect(result.current.status).toBe("idle");
+    expect(loadNickname()).toBe("");
+  });
+
+  it("Server full: the server-full notice, not the error state", async () => {
+    const connector = connectorWith({ createPrivate: vi.fn(async () => Promise.reject(matchMakeError("SERVER_FULL", 526))) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.createPrivate("Maija"));
+    await waitFor(() => expect(result.current.startNotice).toBe("serverFull"));
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("a network failure is the generic error; retry repeats the same attempt", async () => {
+    const joinById = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce(fakeRoom());
+    const connector = connectorWith({ joinById });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.joinById("brave-otters-sing", "Pekka"));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    expect(joinById).toHaveBeenLastCalledWith("brave-otters-sing", { nickname: "Pekka" });
+  });
+
+  it("Host leaves: close code 4101 returns to the start screen with the host-left notice", async () => {
+    const { room, fireLeave } = leavableRoom();
+    const { result } = await playingWith(room);
+    act(() => fireLeave(CLOSE_CODES.HOST_LEFT));
+    expect(result.current).toMatchObject({ status: "idle", startNotice: "hostLeft" });
+  });
+
+  it("start sends the start command; a rejection gives its notice", async () => {
+    const room = fakeRoom({ request: vi.fn(async () => ({ ok: false, code: "NOT_ENOUGH_PLAYERS" })) });
+    const { result } = await playingWith(room);
+    await act(async () => {
+      await result.current.start();
+    });
+    expect(room.request).toHaveBeenCalledWith("start", {});
+    expect(result.current.notice).toBe("errors.NOT_ENOUGH_PLAYERS");
+  });
+});
+
+describe("lobby › view model", () => {
+  it("the waiting room: phase, host, names, and nobody on turn", () => {
+    const state = syncedState({}, { phase: "waiting", turnSeat: 0, hostSeat: 1 });
+    state.players = new Map([
+      ["me", { seat: 1, connected: true, name: "Maija" }],
+      ["b", { seat: 2, connected: true, name: "Pekka" }],
+    ]);
+    const view = toGameView(state, "r", "b")!;
+    expect(view).toMatchObject({ phase: "waiting", hostSeat: 1, turnSeat: 0, isMyTurn: false, canKick: false, myTarget: undefined });
+    expect(view.seats.map((s) => s.name)).toEqual(["Maija", "Pekka"]);
+  });
+
+  it("a started game is playing; a finished one is finished", () => {
+    expect(toGameView(syncedState({ me: 1, b: 2 }, { phase: "shift" }), "r", "me")!.phase).toBe("playing");
+    expect(toGameView(syncedState({ me: 1, b: 2 }, { phase: "finished" }), "r", "me")!.phase).toBe("finished");
   });
 });
 
@@ -320,9 +450,9 @@ describe("game-session › turn rules in the view model", () => {
 describe("game-session › kick", () => {
   it("sends the seat; a rejection gives its notice", async () => {
     const room = fakeRoom({ request: vi.fn(async () => ({ ok: false, code: "TURN_NOT_EXPIRED" })) });
-    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() });
     const { result } = renderHook(() => useGameSession(connector));
-    act(() => result.current.play());
+    act(() => result.current.play("Maija"));
     await waitFor(() => expect(result.current.status).toBe("playing"));
 
     await act(async () => {
@@ -335,25 +465,25 @@ describe("game-session › kick", () => {
   it("Kicked: close code 4100 returns to the start screen with the reason, cleared by Play", async () => {
     let onLeave: (code: number) => void = () => {};
     const room = fakeRoom({ onLeave: vi.fn((cb: (code: number) => void) => (onLeave = cb)) });
-    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() });
     const { result } = renderHook(() => useGameSession(connector));
-    act(() => result.current.play());
+    act(() => result.current.play("Maija"));
     await waitFor(() => expect(result.current.status).toBe("playing"));
 
     act(() => onLeave(4100));
-    expect(result.current).toMatchObject({ status: "idle", endReason: "kicked" });
-    act(() => result.current.play());
-    expect(result.current.endReason).toBeUndefined();
+    expect(result.current).toMatchObject({ status: "idle", startNotice: "kicked" });
+    act(() => result.current.play("Maija"));
+    expect(result.current.startNotice).toBeUndefined();
   });
 
   it("an ordinary leave has no end reason", async () => {
     let onLeave: (code: number) => void = () => {};
     const room = fakeRoom({ onLeave: vi.fn((cb: (code: number) => void) => (onLeave = cb)) });
-    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() });
     const { result } = renderHook(() => useGameSession(connector));
-    act(() => result.current.play());
+    act(() => result.current.play("Maija"));
     await waitFor(() => expect(result.current.status).toBe("playing"));
     act(() => onLeave(4000));
-    expect(result.current.endReason).toBeUndefined();
+    expect(result.current.startNotice).toBeUndefined();
   });
 });

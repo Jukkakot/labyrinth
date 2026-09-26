@@ -56,6 +56,14 @@
   white-space: nowrap;
 }
 
+/* Four chips with 16-character names must fit 360 px: long names end in an ellipsis. */
+.name {
+  max-width: 5.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .count {
   min-width: 2.2em;
 }

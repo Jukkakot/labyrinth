@@ -43,8 +43,9 @@ export abstract class LoggedRoom<T extends RoomOptions = RoomOptions> extends Ro
     log.info("room.created", this.logCtx(undefined, { name: this.roomName }));
   }
 
-  onJoin(client: Client, _options?: unknown, _auth?: unknown): void | Promise<void> {
-    log.info("player.joined", this.logCtx(client));
+  /** `extra` adds room-specific facts to the `player.joined` line. */
+  onJoin(client: Client, _options?: unknown, _auth?: unknown, extra?: LogFields): void | Promise<void> {
+    log.info("player.joined", this.logCtx(client, extra));
   }
 
   onLeave(client: Client, code?: CloseCode): void | Promise<void> {
