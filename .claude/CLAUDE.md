@@ -32,6 +32,28 @@ initiative whenever they fit; do not wait to be asked. When unsure whether one f
   update the wiki if it affects it).
 - After finishing a step, name the natural next OpenSpec step.
 
+## Autopilot (foundation phase — currently ON)
+
+While we are building roadmap features for the first time ("laying foundations"), the user trusts
+Claude's judgement and does not want to approve every step. This overrides the review stops above:
+
+- Run the loop without asking: propose → apply → verify (checks + UI check where visible) →
+  commit → archive (sync specs, update roadmap and wiki) → commit → propose the next roadmap item
+  → apply → …
+- Make UX and rule decisions yourself, using the rules of the original board game, the memory
+  notes and the existing specs. Record each non-obvious one in the change's `design.md` and list
+  them in the summary so the user can revisit them later.
+- Stop and ask only for: spending money or creating external accounts/services, anything
+  irreversible outside the repo, a decision that would force rework of already built features, or
+  failing checks you cannot fix.
+- At each archived change, give a one-paragraph summary (what was built, decisions made, How to
+  check) and keep going. When the session gets long, finish the current change, then recommend a
+  new session with a handover instead of starting the next one.
+
+Autopilot ends when the user says so, or when the work turns to refining existing features or
+fixing bugs: then the normal review stops apply again, because the user wants to validate that
+everything works and is final.
+
 ## Working agreements
 
 - Work locally: commit, but do not push, wait for CI or deploy. The user pushes and deploys
