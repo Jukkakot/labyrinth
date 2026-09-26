@@ -31,6 +31,19 @@ spec under `openspec/specs/` wins over those files.
 5. Fix it; the failing test stays as a regression test. Report the root cause and which log
    lines showed it.
 
+## Environments
+
+- Client: https://jukkakot.github.io/labyrinth/ (GitHub Pages, "Deploy client" workflow on
+  pushes touching client/rules)
+- Server: https://labyrinth-server-3z1m.onrender.com (`/health`). Render service
+  `srv-darps5navr4c73fmplh0`, workspace `tea-d7vbs7l7vvec73dbddt0`, free plan (sleeps when idle,
+  first request can take ~1 min). Deploys from `render.yaml` after CI passes, only on
+  server/rules changes.
+- Flow: commit → push to main (Claude may push in this repo) → CI → Pages / Render deploy.
+- Config: GitHub variable `VITE_SERVER_URL`; Render env `ALLOWED_ORIGINS`.
+- Debugging: Render MCP `list_logs` (resource = service id, `text` filter, time range);
+  Playwright MCP `playwright` (desktop) and `playwright-mobile` (iPhone 15), both headless.
+
 ## Commands
 
 - `npm run dev`: server (:2567, /monitor, /playground) + client (Vite)

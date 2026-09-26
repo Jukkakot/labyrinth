@@ -10,11 +10,11 @@
 
 ## 2. Deployments
 
-- [ ] 2.1 After the push, verify with `gh run list` that CI and "Deploy client" succeed, and with Playwright MCP that `https://jukkakot.github.io/labyrinth/` shows the Finnish UI at a mobile viewport
-- [ ] 2.2 Ask the user to create the Render service from the Blueprint (dashboard: New → Blueprint → Jukkakot/labyrinth); then with Render MCP select the workspace, find the service, read its URL and confirm the latest deploy is live and `/health` returns `{"status":"ok"}`
-- [ ] 2.3 Set the GitHub variable `VITE_SERVER_URL` to the Render URL (`gh variable set`) and re-run "Deploy client"; verify with Playwright MCP from the Pages origin that `fetch(<server>/health)` succeeds (CORS allowed)
-- [ ] 2.4 Verify with Render MCP `list_logs` that the service's startup lines can be read and filtered by text
+- [x] 2.1 After the push, verify with `gh run list` that CI and "Deploy client" succeed, and with Playwright MCP that `https://jukkakot.github.io/labyrinth/` shows the Finnish UI at a mobile viewport
+- [x] 2.2 Ask the user to create the Render service from the Blueprint (dashboard: New → Blueprint → Jukkakot/labyrinth); then with Render MCP select the workspace, find the service, read its URL and confirm the latest deploy is live and `/health` returns `{"status":"ok"}`
+- [x] 2.3 Set the GitHub variable `VITE_SERVER_URL` to the Render URL (`gh variable set`) and re-run "Deploy client"; verify with Playwright MCP from the Pages origin that `fetch(<server>/health)` succeeds (CORS allowed)
+- [x] 2.4 Verify with Render MCP `list_logs` that the service's startup lines can be read and filtered by text
 
 ## 3. Documentation
 
-- [ ] 3.1 Record the production client URL, server URL, Render service id and the "user pushes, Render deploys after CI" flow in `.claude/CLAUDE.md`; verify the documented URLs respond
+- [x] 3.1 Record the production client URL, server URL, Render service id and the "user pushes, Render deploys after CI" flow in `.claude/CLAUDE.md`; verify the documented URLs respond
