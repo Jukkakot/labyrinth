@@ -99,12 +99,13 @@ export function useGameSession(connector?: Connector): GameSession {
 
   // "Server may be waking up" hint while connecting.
   useEffect(() => {
-    if (status !== "connecting") return setSlow(false);
+    if (status !== "connecting") return;
     const timer = setTimeout(() => setSlow(true), SLOW_CONNECT_MS);
     return () => clearTimeout(timer);
   }, [status]);
 
   const play = useCallback(() => {
+    setSlow(false);
     setStatus("connecting");
     getConnector()
       .joinOrCreate()
@@ -116,5 +117,5 @@ export function useGameSession(connector?: Connector): GameSession {
       });
   }, [attach]);
 
-  return { status, view, slow, play };
+  return { status, view, slow: status === "connecting" && slow, play };
 }
