@@ -50,7 +50,11 @@ Agreed before any capability was specified. Once a capability has a spec under
 - During a game the room's readable id (e.g. `brave-otters-sing`) is shown small in
   the top area. Tapping it copies "game id · local date and time · app version"
   to the clipboard for bug reports.
-- Treasures are drawn from one consistent line icon library (24 distinct icons).
+- Treasures and all UI icons come from Tabler Icons (line style). Board tiles use
+  the corridor style: plain tile, corridor drawn in the accent colour, treasure
+  icon on the corridor. Comparison page: https://claude.ai/artifact/UffuCoPpjAtHTYcBJJgCjz
+- Styling: CSS Modules on shared design tokens; reusable components for
+  everything shown in more than one place (buttons, badges, tiles, pawns).
 - Players are distinguished by colour-blind-safe colour + pawn shape.
 - Per-user settings (browser-local, never affect rules): confirm shift (default
   on), confirm move (default off), language, theme (system/light/dark), sounds,
