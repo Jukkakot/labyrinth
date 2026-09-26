@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../ui/Button.tsx";
 import styles from "./ShiftControls.module.css";
 import { SpareTile } from "./SpareTile.tsx";
+import type { TargetMark } from "./target.ts";
 
 export interface ShiftControlsProps {
   /** The spare with the rotation it would be inserted with. */
@@ -14,19 +15,21 @@ export interface ShiftControlsProps {
   enabled: boolean;
   /** A shift waits for the server. */
   pending: boolean;
+  /** The viewer's target, marked if it is the spare or the tile dropping out. */
+  target?: TargetMark;
   onRotate(): void;
   onConfirm(): void;
   onCancel(): void;
 }
 
 /** Under the board: the spare with its rotate button, and either a hint or the confirm/cancel pair of a preview. */
-export function ShiftControls({ spare, outgoing, enabled, pending, onRotate, onConfirm, onCancel }: ShiftControlsProps) {
+export function ShiftControls({ spare, outgoing, enabled, pending, target, onRotate, onConfirm, onCancel }: ShiftControlsProps) {
   const { t } = useTranslation();
   const previewing = outgoing !== undefined;
   return (
     <div className={styles.controls}>
       <div className={styles.tiles}>
-        <SpareTile tile={spare} />
+        <SpareTile tile={spare} target={target} />
         <Button
           variant="secondary"
           className={styles.icon}
@@ -39,7 +42,7 @@ export function ShiftControls({ spare, outgoing, enabled, pending, onRotate, onC
         </Button>
         {outgoing && (
           <div className={styles.outgoing}>
-            <SpareTile tile={outgoing} caption={t("shift.newSpare")} outgoing />
+            <SpareTile tile={outgoing} caption={t("shift.newSpare")} outgoing target={target} />
           </div>
         )}
       </div>

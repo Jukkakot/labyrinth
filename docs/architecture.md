@@ -51,8 +51,8 @@ builds first.
   - lifecycle log lines and logging of uncaught exceptions in hooks and timers;
   - `this.command(name, zodSchema, handler)` — the **only** way to define a command (below).
 - Room `game` → `GameRoom`: players map with a `connected` flag; unintended disconnects hold the
-  seat 60 s for reconnection (`holdSeat`). Turn model and the `shift` / `move` commands: see
-  [Game flow and commands](#game-flow-and-commands--implemented-shift-and-move-rest-planned).
+  seat 60 s for reconnection (`holdSeat`). Turn model, the `shift` / `move` commands, treasures and winning: see
+  [Game flow and commands](#game-flow-and-commands--implemented-shift-move-collect-win-rest-planned).
 - HTTP: `GET /health` → `{ status, rulesVersion, version, builtAt }` (`version` = short commit from
   `RENDER_GIT_COMMIT` or `"dev"`; `builtAt` = build time, `null` without a build). It is Render's
   health check and the client's wake-up request. `POST /client-logs` (client log batches).
@@ -109,7 +109,8 @@ client/src/
   screens/             StartScreen (idle / connecting / error), GameScreen
   session/             useGameSession (quick play, per-tab rejoin, commands), viewModel (state → GameView)
   game/                Board, TileView, Pawn, PawnLayer (+ pawnMotion), SpareTile, ShiftTargets,
-                       ShiftControls, MoveTargets, MoveControls, TurnLine, GameIdBadge, treasureIcons
+                       ShiftControls, MoveTargets, MoveControls, GameOverControls, TurnLine,
+                       PlayerStrip, GameIdBadge, treasureIcons, target (TargetMark)
   ui/                  tokens.css + shared components: Screen, Message, Button, Badge, Notice,
                        LanguageSwitcher
   logging/ i18n/ config.ts CrashBoundary.tsx
@@ -161,6 +162,22 @@ client/src/
     tile. No path or `prefers-reduced-motion` → jump. A newer change finishes a walk at once.
     The motion is derived during render from the last seen squares; only the remaining walk
     steps run in an effect.
+- **Treasures and result** (`GameView.myTarget`, `targetTileId`, per-seat `cards`/`found`,
+  `winnerSeat`, `finished`):
+  - The viewer's target is marked **by tile id** (`targetTileId()` from rules: the treasure's tile,
+    or the start-corner tile when heading home), so the mark follows the tile through previews,
+    slides and onto the spare / the dropping-out tile. `TileView` draws a solid `--target` ring
+    plus a flag badge (home: house badge), distinct from the dashed move outline and the orange
+    preview outline; the accessible name says "Kohteesi: …" / "Kotiruutusi …".
+  - `PlayerStrip` between the turn line and the board: one chip per seat (pawn, found/cards); the
+    viewer's chip also shows the target icon. A visually hidden summary sentence per chip is the
+    accessible text.
+  - When the viewer's `found` grows, `GameScreen` shows "Löysit: …" in the shared `Notice` (a
+    rejection message wins if both happen).
+  - Finished: `isMyTurn` is false, `TurnLine` shows "Voitit!" / "Pelaaja N voitti" with the
+    winner's pawn, and `GameOverControls` ("Uusi peli") replaces the step controls; it calls
+    `useGameSession().leave()` → `room.leave()` → the normal leave handling (token cleared, start
+    screen).
 - **Quick play:** `joinOrCreate("game", { pool? })`; `?pool=…` in the URL keeps a group of players
   (or an E2E test) in their own games. While connecting the start screen says so, and after 5 s
   adds that the server may be waking up.
@@ -178,24 +195,29 @@ client/src/
   build without a time, "?" when unknown, "Server: herätetään…" / "Server: ei vastannut" while
   waking or after giving up.
 
-## State sync principle — Implemented (board, seats, pawns, turn); rest Planned
+## State sync principle — Implemented (board, seats, pawns, turn, treasures); rest Planned
 
 - Synced today (`server/src/rooms/schema/GameState.ts`):
-  `players: map<sessionId, { connected, seat 1–4, row, col }>` (`row`/`col` = pawn square),
+  `players: map<sessionId, { connected, seat 1–4, row, col, cards, found[], target }>` (`row`/`col` =
+  pawn square; `cards` = stack size and `found` = collected treasures, both public; `target` =
+  current treasure or `""` when heading home, **view-filtered**),
   `squares: array<{ id, rotation }>` (49, row-major), `spare: { id, rotation }`, `turnSeat`
-  (0 = nobody), `phase` (`"shift"` → `"move"`),
+  (0 = nobody), `phase` (`"shift"` → `"move"`, `"finished"` after a win), `winnerSeat` (0 = none),
   `lastInsertion` (`""` or an insertion id). The client rebuilds a rules `Board` from these plus the
   static `TILE_SET` (`client/src/session/viewModel.ts`). The seed is a private room field, logged
   as `game.setup`, never synced.
-- Still to come with their changes: turn deadline, found
-  treasures, result. Tile kinds and treasures are static per tile id, so they are
-  never synced.
+- Still to come with their changes: turn deadline. Tile kinds and treasures are static per tile
+  id, so they are never synced. The treasure stacks and the deal seed stay on the server.
 - The client derives everything else with `@labyrinth/rules` (openings, reachable squares, slide
   animations from tile-id diffs, seat colour/shape).
 - UI-only state (shift preview, spare rotation before sending, settings) never crosses the
   network. The seed stays on the server. Don't optimise beyond this; Colyseus sends only deltas.
-- **Hidden information — Planned (`treasures-and-win`):** a player's current target goes only to that player and spectators
-  (Colyseus StateView).
+- **Hidden information — Implemented:** `Player.target` is a view-tagged field
+  (`t.string().view()`). Each client gets a `StateView` holding only its own `Player`
+  (`GameRoom.showOwnPlayer`, on join and again on reconnect; disposed on leave), so only that
+  client decodes its target; untagged fields stay visible to everyone. A room test decodes the
+  state as another client to prove nothing leaks. Spectators seeing every target: Planned
+  (`spectators-and-rematch`).
 - **Client identity — Implemented:** the Colyseus reconnection token is kept in sessionStorage
   (`labyrinth.session`) — one player per tab; a reload rejoins the same seat, a failed rejoin
   clears the token and shows the start screen.
@@ -263,6 +285,19 @@ Spec: `openspec/specs/board-setup/`. Code: `packages/rules/src/tileSet.ts`, `rng
 - **`boardToText(board)`** (`@labyrinth/rules/testing`): box-drawing text of a board, fixed squares
   in brackets, plus the spare — use it in tests and bug reports.
 
+### Treasures and winning — Implemented
+
+Spec: `openspec/specs/treasures/`. Code: `packages/rules/src/treasures.ts`.
+
+- `dealTreasures(seed, seatCount)` (2–4): seeded `shuffle()` of `TREASURES`, cut into consecutive
+  stacks of 24 / n, seat 1 first. The first card is the first target.
+- `homeSquare(seat)`, `homeTileId(seat)` (start-corner tiles 0, 3, 15, 12), `tileOfTreasure()`,
+  `targetTileId(seat, target | undefined)` (undefined = heading home).
+- `settleMove(board, { seat, square, target })` → `{ collected?, won }`: what the end of a move
+  does. Collect only when the move ends (staying included) on the current target's tile; heading
+  home, ending on the own start corner wins. Passing through, shifts and other players' targets
+  never count.
+
 ### Shifting — Implemented
 
 Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
@@ -279,7 +314,7 @@ Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
 - Properties (fast-check): tile ids preserved, fixed squares unchanged, shift + reverse with the
   pushed-out tile restores board and pawns.
 
-## Game flow and commands — Implemented (shift and move); rest Planned
+## Game flow and commands — Implemented (shift, move, collect, win); rest Planned
 
 - **Turn model — Implemented (temporary start rule):** `turnSeat` is the current player's seat.
   The first player to sit down starts (`lobby` replaces this with a random start). A turn has two
@@ -298,8 +333,19 @@ Spec: `openspec/specs/tile-shift/`. Code: `packages/rules/src/shift.ts`.
 - **`move { row, col }` — Implemented:** only in the `move` step; the own square = stay.
   Rejections `NOT_SEATED`, `NOT_YOUR_TURN`, `WRONG_PHASE`, `UNREACHABLE` (fact `to`, plus the
   state fact `pawn` = the current player's square); a square off the board is
-  `INVALID_COMMAND`. Accepted: the pawn moves and the turn passes.
-- **Planned:** phases `LOBBY → SHIFT → MOVE → (next player) SHIFT … → FINISHED` (`lobby`,
-  `treasures-and-win`); `kick{player}`; creator only: `addBot`, `removeBot`, `start`.
+  `INVALID_COMMAND`. Accepted: the pawn moves, then `settleMove()` decides: a collected treasure
+  is appended to `found` and the next card (or `""`) becomes `target`
+  (`treasure.collected`); a win sets `winnerSeat`, `phase = "finished"` (`phase.changed`,
+  `game.finished`) and locks the room; otherwise the turn passes.
+- **Treasure deal — Implemented (temporary rule):** at room creation the room draws a second seed
+  (`game.dealt { dealSeed }`) and deals **four stacks of 6**, one per seat, because without a
+  waiting room the player count is unknown. Whoever takes a seat plays that seat's stack from the
+  first card; a player who leaves loses their progress. `lobby` replaces this with
+  `dealTreasures(seed, n)` at the start (12 / 8 / 6 cards).
+- **Finished game — Implemented:** `requireTurn` rejects every shift/move with `WRONG_PHASE` once
+  `phase` is `finished` (before the turn check, so everyone gets the same code); leaving starts no
+  turn; the explicitly locked room stays locked when someone leaves, so quick play never joins it.
+- **Planned:** a `LOBBY` phase before the first shift (`lobby`); `kick{player}`; creator only:
+  `addBot`, `removeBot`, `start`.
 - **Bots** (`bot-player`): an ordinary seat; the decision is a pure function in rules, submitted
   through the same command wrapper as humans.

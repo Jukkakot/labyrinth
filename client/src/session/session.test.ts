@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { reachableSquares, setupBoard } from "@labyrinth/rules";
+import { homeTileId, reachableSquares, setupBoard, tileOfTreasure } from "@labyrinth/rules";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadToken, saveToken } from "./sessionToken.ts";
 import { useGameSession, type Connector, type GameRoomLike } from "./useGameSession.ts";
@@ -30,6 +30,7 @@ function fakeRoom(overrides: Partial<GameRoomLike> = {}): GameRoomLike {
     onDrop: vi.fn(),
     onReconnect: vi.fn(),
     request: vi.fn(async () => ({ ok: true })),
+    leave: vi.fn(async () => 1000),
     ...overrides,
   };
 }
@@ -231,5 +232,59 @@ describe("game-session › move command", () => {
     });
     expect(room.request).toHaveBeenCalledWith("move", { row: 2, col: 4 });
     expect(result.current.notice).toBe("errors.UNREACHABLE");
+  });
+});
+
+describe("game-session › treasures in the view model", () => {
+  const withPlayers = (me: object, other: object = {}, turn: Partial<SyncedState> = {}) => {
+    const state = syncedState({}, turn);
+    state.players = new Map([
+      ["me", { seat: 1, connected: true, cards: 6, found: [], ...me }],
+      ["b", { seat: 2, connected: true, cards: 6, found: [], ...other }],
+    ]);
+    return toGameView(state, "r", "me")!;
+  };
+
+  it("my target and its tile; other players' progress is public", () => {
+    const view = withPlayers({ target: "dragon", found: ["crown"] }, { found: ["key", "gem"] });
+    expect(view.myTarget).toBe("dragon");
+    expect(view.targetTileId).toBe(tileOfTreasure("dragon"));
+    expect(view.seats.map((s) => [s.cards, s.found])).toEqual([
+      [6, ["crown"]],
+      [6, ["key", "gem"]],
+    ]);
+  });
+
+  it("heading home once every card is found: the start corner is the target", () => {
+    const view = withPlayers({ target: "", found: ["crown", "key", "gem", "coins", "sword", "shield"] });
+    expect(view.myTarget).toBe("home");
+    expect(view.targetTileId).toBe(homeTileId(1));
+  });
+
+  it("no target before it has arrived", () => {
+    const view = withPlayers({ target: "" });
+    expect(view).toMatchObject({ myTarget: undefined, targetTileId: undefined });
+  });
+
+  it("finished: winner known, nobody's turn, no target highlight, no move targets", () => {
+    const view = withPlayers({ target: "" , found: ["crown", "key", "gem", "coins", "sword", "shield"] }, {}, { phase: "finished", winnerSeat: 1 });
+    expect(view).toMatchObject({ finished: true, winnerSeat: 1, isMyTurn: false, targetTileId: undefined, reachable: undefined });
+  });
+});
+
+describe("game-session › leave", () => {
+  it("leaves the room; the room's leave callback returns to the start screen", async () => {
+    let onLeave: (code: number) => void = () => {};
+    const room = fakeRoom({ onLeave: vi.fn((cb: (code: number) => void) => (onLeave = cb)) });
+    const connector: Connector = { joinOrCreate: vi.fn(async () => room), reconnect: vi.fn() };
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play());
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+
+    act(() => result.current.leave());
+    expect(room.leave).toHaveBeenCalledTimes(1);
+    act(() => onLeave(1000));
+    expect(result.current.status).toBe("idle");
+    expect(loadToken()).toBeUndefined();
   });
 });

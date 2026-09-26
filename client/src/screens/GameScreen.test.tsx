@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { isReachable, openings, reachableSquares, rotate, setupBoard, shiftBoard, square, squareIndex } from "@labyrinth/rules";
+import { homeTileId, isReachable, openings, reachableSquares, rotate, setupBoard, shiftBoard, square, squareIndex, TILE_SET, TREASURES, type TreasureId } from "@labyrinth/rules";
 import { describe, expect, it, vi } from "vitest";
-import "../i18n";
+import i18n from "../i18n";
+import { SpareTile } from "../game/SpareTile.tsx";
 import type { GameSession } from "../session/useGameSession.ts";
 import { toGameView, type SyncedState } from "../session/viewModel.ts";
 import { GameScreen } from "./GameScreen.tsx";
@@ -15,6 +16,10 @@ interface Turn {
   phase?: string;
   /** My pawn square (default: my start corner). */
   mine?: { row: number; col: number };
+  /** Extra synced fields of my player and of player 2 (cards, found, target). */
+  me?: object;
+  other?: object;
+  winnerSeat?: number;
 }
 
 function view(turn: Turn = {}) {
@@ -22,12 +27,13 @@ function view(turn: Turn = {}) {
     squares: board.squares.map(({ id, rotation }) => ({ id, rotation })),
     spare: { id: board.spare.id, rotation: board.spare.rotation },
     players: new Map([
-      ["me", { seat: 1, connected: true, ...(turn.mine ?? { row: 0, col: 0 }) }],
-      ["other", { seat: 2, connected: true }],
+      ["me", { seat: 1, connected: true, ...(turn.mine ?? { row: 0, col: 0 }), ...turn.me }],
+      ["other", { seat: 2, connected: true, ...turn.other }],
     ]),
     turnSeat: turn.turnSeat ?? 1,
     lastInsertion: turn.lastInsertion ?? "",
     phase: turn.phase ?? "shift",
+    winnerSeat: turn.winnerSeat ?? 0,
   };
   return toGameView(state, "brave-otters-sing", "me")!;
 }
@@ -35,8 +41,9 @@ function view(turn: Turn = {}) {
 function setup(turn?: Turn, session: Partial<GameSession> = {}) {
   const shift = vi.fn<GameSession["shift"]>(async () => ({ ok: true }));
   const move = vi.fn<GameSession["move"]>(async () => ({ ok: true }));
-  const utils = render(<GameScreen view={view(turn)} session={{ shift, move, pending: false, ...session }} />);
-  return { shift, move, ...utils };
+  const leave = vi.fn<GameSession["leave"]>();
+  const utils = render(<GameScreen view={view(turn)} session={{ shift, move, leave, pending: false, ...session }} />);
+  return { shift, move, leave, ...utils };
 }
 
 /** Where the board draws a tile: its translate in board units. */
@@ -145,7 +152,7 @@ describe("board-view › Tiles slide", () => {
       "brave-otters-sing",
       "me",
     )!;
-    rerender(<GameScreen view={synced} session={{ shift, move: vi.fn(), pending: false }} />);
+    rerender(<GameScreen view={synced} session={{ shift, move: vi.fn(), leave: vi.fn(), pending: false }} />);
 
     // The N1 preview is gone; the board is the synced one.
     expect(tilePosition(container, moving.id)).toBe(at(0, 1));
@@ -274,5 +281,92 @@ describe("board-view › Move controls", () => {
     expect(moveTargets(container)).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "Jää paikalleen" })).toBeNull();
     expect(screen.getByText("Pelaaja 2 siirtää")).toBeTruthy();
+  });
+});
+
+const ALL_FOUND = TREASURES.slice(0, 6);
+const tileOnBoard = (id: number) => document.querySelector(`[aria-label="Pelilauta"] [data-tile-id="${id}"]`);
+/** A treasure whose tile is on the test board, and one carried by the spare (the test board's spare may have none). */
+const boardTreasure = TILE_SET.find((t) => t.treasure && t.id !== board.spare.id)!.treasure!;
+
+describe("board-view › Own target highlighted", () => {
+  it("Target on the board: its tile is marked as the target with its name", () => {
+    setup({ me: { cards: 6, found: [], target: boardTreasure } });
+    const tile = tileOnBoard(TILE_SET.find((t) => t.treasure === boardTreasure)!.id)!;
+    expect(tile.getAttribute("data-target")).toBe("treasure");
+    expect(document.querySelectorAll("[data-target='treasure']").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("Target on the spare: the spare tile carrying the target is ringed", () => {
+    const withTreasure = TILE_SET.find((t) => t.treasure && !t.fixed)!;
+    render(<SpareTile tile={{ id: withTreasure.id, kind: withTreasure.kind, rotation: 0 }} target={{ tileId: withTreasure.id, home: false }} />);
+    const spare = screen.getByRole("group", { name: "Ylimääräinen laatta" });
+    expect(spare.querySelector("[data-target='treasure']")).toBeTruthy();
+    expect(screen.getByRole("img", { name: `Kohteesi: ${i18n.t(`treasures.${withTreasure.treasure!}`)}` })).toBeTruthy();
+  });
+
+  it("Heading home: the start corner is marked with the home badge", () => {
+    setup({ me: { cards: 6, found: ALL_FOUND, target: "" } });
+    expect(tileOnBoard(homeTileId(1))!.getAttribute("data-target")).toBe("home");
+    expect(screen.getByRole("img", { name: "Kotiruutusi – palaa tänne voittaaksesi" })).toBeTruthy();
+  });
+
+  it("other players' targets are never marked", () => {
+    setup({ me: { cards: 6, found: [] }, other: { cards: 6, found: [], target: boardTreasure } });
+    expect(document.querySelectorAll("[data-tile-id][data-target]")).toHaveLength(0);
+  });
+});
+
+describe("board-view › Player progress shown", () => {
+  it("Progress strip: seat 1 with 2/6 and the dragon, seat 2 with 0/6 and no target", () => {
+    setup({ me: { cards: 6, found: ["crown", "key"], target: "dragon" }, other: { cards: 6, found: [] } });
+    const strip = screen.getByRole("list", { name: "Pelaajat ja löydetyt aarteet" });
+    const [mine, theirs] = [...strip.querySelectorAll("li")];
+    expect(mine!.textContent).toContain("2/6");
+    expect(mine!.textContent).toContain("kohde: lohikäärme");
+    expect(mine!.querySelector("[data-target='dragon']")).toBeTruthy();
+    expect(theirs!.textContent).toContain("0/6");
+    expect(theirs!.querySelector("[data-target]")).toBeNull();
+  });
+});
+
+describe("board-view › Collected treasure announced", () => {
+  it("Viewer collects: a short message names the treasure and the highlight moves on", () => {
+    const before = { cards: 6, found: [] as TreasureId[], target: "dragon" };
+    const { rerender, leave, shift, move } = setup({ me: before });
+    const next = view({ me: { cards: 6, found: ["dragon"], target: boardTreasure } });
+    rerender(<GameScreen view={next} session={{ shift, move, leave, pending: false }} />);
+    expect(screen.getByText("Löysit: lohikäärme")).toBeTruthy();
+    expect(tileOnBoard(TILE_SET.find((t) => t.treasure === boardTreasure)!.id)!.getAttribute("data-target")).toBe("treasure");
+  });
+
+  it("another player's collection only updates their count", () => {
+    const { rerender, leave, shift, move } = setup({ me: { cards: 6, found: [] }, other: { cards: 6, found: [] } });
+    rerender(<GameScreen view={view({ me: { cards: 6, found: [] }, other: { cards: 6, found: ["cat"] } })} session={{ shift, move, leave, pending: false }} />);
+    expect(screen.queryByText(/Löysit/)).toBeNull();
+    expect(screen.getByRole("list", { name: "Pelaajat ja löydetyt aarteet" }).textContent).toContain("1/6");
+  });
+});
+
+describe("board-view › Game result shown", () => {
+  const finished = (winnerSeat: number) => ({ phase: "finished", winnerSeat, me: { cards: 6, found: ALL_FOUND, target: "" } });
+
+  it("Viewer wins: Voitit!, no controls, Uusi peli", () => {
+    const { container } = setup(finished(1));
+    expect(screen.getByText("Voitit!")).toBeTruthy();
+    expect(container.querySelectorAll("[data-insertion]")).toHaveLength(0);
+    expect(container.querySelectorAll("[data-move-target]")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Käännä laattaa" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Jää paikalleen" })).toBeNull();
+    expect(container.querySelectorAll("[data-tile-id][data-target]")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Uusi peli" })).toBeTruthy();
+  });
+
+  it("Someone else wins: Pelaaja 2 voitti with their pawn, and Uusi peli leaves", () => {
+    const { leave } = setup(finished(2));
+    expect(screen.getByText("Pelaaja 2 voitti")).toBeTruthy();
+    expect(document.querySelector("[data-winner-seat='2']")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Uusi peli" }));
+    expect(leave).toHaveBeenCalledTimes(1);
   });
 });

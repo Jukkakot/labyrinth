@@ -1,3 +1,4 @@
+import { IconFlag, IconHome } from "@tabler/icons-react";
 import { openings, TILE_SET, type Direction, type Tile } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import styles from "./TileView.module.css";
@@ -16,18 +17,27 @@ export interface TileViewProps {
   y?: number;
   /** Outline marking the tile, e.g. the spare inserted in a shift preview. */
   highlight?: boolean;
+  /** This tile is the viewer's target: a treasure to collect, or home. */
+  target?: "treasure" | "home";
 }
 
 /**
  * One tile in the corridor style: plain tile, corridors from the centre to each open side, treasure icon.
  * Positioned with a CSS transform so a tile that moves (same key, new x/y) slides there.
  */
-export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false }: TileViewProps) {
+export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false, target }: TileViewProps) {
   const { t } = useTranslation();
   const treasure = TILE_SET[tile.id]?.treasure;
   const Icon = treasure ? TREASURE_ICONS[treasure] : undefined;
   const open = openings(tile);
-  const label = treasure ? t("board.treasure", { name: t(`treasures.${treasure}`) }) : undefined;
+  const name = treasure ? t(`treasures.${treasure}`) : undefined;
+  const label =
+    target === "home"
+      ? t("board.targetHome")
+      : name
+        ? t(target ? "board.targetTreasure" : "board.treasure", { name })
+        : undefined;
+  const Badge = target === "home" ? IconHome : IconFlag;
 
   return (
     <g
@@ -36,6 +46,7 @@ export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false 
       data-tile-id={tile.id}
       data-openings={open.join("")}
       data-fixed={fixed || undefined}
+      data-target={target}
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
@@ -48,6 +59,13 @@ export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false 
       <circle cx={C} cy={C} r={15} className={styles.hub} />
       {Icon && <Icon x={33} y={33} width={34} height={34} size={34} stroke={2} className={styles.icon} />}
       {highlight && <rect x={6} y={6} width={88} height={88} rx={8} className={styles.highlight} data-highlight />}
+      {target && (
+        <g className={styles.target}>
+          <rect x={9} y={9} width={82} height={82} rx={7} className={styles.targetRing} />
+          <circle cx={80} cy={20} r={15} className={styles.targetBadge} />
+          <Badge x={70} y={10} width={20} height={20} size={20} stroke={2.25} className={styles.targetIcon} />
+        </g>
+      )}
     </g>
   );
 }

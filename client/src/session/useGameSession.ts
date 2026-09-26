@@ -18,6 +18,8 @@ export interface GameRoomLike {
   onReconnect(cb: () => void): unknown;
   /** Sends a command; resolves with the server's `CommandResult`. */
   request(type: string, payload: unknown): Promise<unknown>;
+  /** Leaves the game on purpose; onLeave follows. */
+  leave(): Promise<unknown>;
 }
 
 export interface Connector {
@@ -67,6 +69,8 @@ export interface GameSession {
   shift(insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]): Promise<CommandResult | undefined>;
   /** Sends a move (the own square = stay). Resolves undefined without sending while another command is pending. */
   move(target: MovePayload): Promise<CommandResult | undefined>;
+  /** Leaves the game (e.g. "Uusi peli" after it has finished) and returns to the start screen. */
+  leave(): void;
   /** True while a command waits for the server. */
   pending: boolean;
   /** i18n key of the message for the last rejected command, shown for NOTICE_MS. */
@@ -189,5 +193,19 @@ export function useGameSession(connector?: Connector): GameSession {
   );
   const move = useCallback(({ row, col }: MovePayload) => send("move", { row, col }), [send]);
 
-  return { status, view, slow: status === "connecting" && slow, play, shift, move, pending, notice };
+  const leave = useCallback(() => {
+    const room = roomRef.current;
+    if (!room) return;
+    room.leave().catch((err: unknown) => {
+      // The server is gone anyway: forget the game locally.
+      log.warn("client.warn", { kind: "leave" }, err instanceof Error ? err.message : String(err));
+      roomRef.current = undefined;
+      clearToken();
+      setLogContext({});
+      setView(undefined);
+      setStatus("idle");
+    });
+  }, []);
+
+  return { status, view, slow: status === "connecting" && slow, play, shift, move, leave, pending, notice };
 }

@@ -73,8 +73,11 @@ timestamp. Read them in the Render dashboard (service → Logs) or with Render M
 | `room.created` / `room.disposed` / `room.error` | room lifecycle, uncaught room exceptions |
 | `player.joined` / `left` / `dropped` / `reconnected` | seat changes |
 | `game.setup` | a new game's seed |
+| `game.dealt` | the treasure deal, `{ dealSeed, seats }` (seed never synced) |
+| `treasure.collected` | a player collects their target, `{ seat, treasure, found, cards }` |
+| `game.finished` | someone won, `{ winner }` (seat) |
 | `turn.changed` | every turn change, `{ from, to }` seats (0 = nobody) |
-| `phase.changed` | the step within a turn changes, `{ from, to, turnSeat }` (`shift` → `move`) |
+| `phase.changed` | the step within a turn changes, `{ from, to, turnSeat }` (`shift` → `move`, `move` → `finished`) |
 | `cmd.accepted` / `cmd.rejected` / `cmd.failed` | every room command, exactly once, with code and state facts |
 | `framework.log` | Colyseus's own messages |
 | `server.started` / `server.shutdown`, `process.*` | process lifecycle and fatal errors |

@@ -1,12 +1,15 @@
-import { useMemo, useState } from "react";
-import { reverseOf, rotate, shiftBoard, type InsertionId, type Square } from "@labyrinth/rules";
+import { useEffect, useMemo, useState } from "react";
+import { reverseOf, rotate, shiftBoard, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
+import { GameOverControls } from "../game/GameOverControls.tsx";
 import { MoveControls } from "../game/MoveControls.tsx";
+import { PlayerStrip } from "../game/PlayerStrip.tsx";
 import { ShiftControls } from "../game/ShiftControls.tsx";
+import type { TargetMark } from "../game/target.ts";
 import { TurnLine } from "../game/TurnLine.tsx";
-import type { GameSession } from "../session/useGameSession.ts";
+import { NOTICE_MS, type GameSession } from "../session/useGameSession.ts";
 import type { GameView } from "../session/viewModel.ts";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
 import { Notice } from "../ui/Notice.tsx";
@@ -14,18 +17,20 @@ import { Screen } from "../ui/Screen.tsx";
 
 export interface GameScreenProps {
   view: GameView;
-  session: Pick<GameSession, "shift" | "move" | "pending" | "notice">;
+  session: Pick<GameSession, "shift" | "move" | "leave" | "pending" | "notice">;
 }
 
 /**
  * The game: whose turn it is, the board and the controls of the current step.
  * Shift step: tapping an edge arrow previews the shift (with the same rule the
  * server uses); tapping it again or "Työnnä" sends it. Move step: tapping a
- * highlighted square moves there at once; "Jää paikalleen" stays.
+ * highlighted square moves there at once; "Jää paikalleen" stays. The viewer's
+ * target is marked wherever its tile is; a finished game shows the result and
+ * "Uusi peli".
  */
 export function GameScreen({ view, session }: GameScreenProps) {
   const { t } = useTranslation();
-  const { shift, move, pending, notice } = session;
+  const { shift, move, leave, pending, notice } = session;
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
 
@@ -65,20 +70,42 @@ export function GameScreen({ view, session }: GameScreenProps) {
     if (!pending) void move(target);
   };
   const me = view.seats.find((s) => s.isMe);
+  const target: TargetMark | undefined =
+    view.targetTileId === undefined ? undefined : { tileId: view.targetTileId, home: view.myTarget === "home" };
+
+  // Announce the viewer's own collected treasure (derived from their growing found list).
+  const found = me?.found ?? [];
+  const [seenFound, setSeenFound] = useState(found.length);
+  const [collected, setCollected] = useState<TreasureId>();
+  if (seenFound !== found.length) {
+    setSeenFound(found.length);
+    if (found.length > seenFound) setCollected(found.at(-1));
+  }
+  useEffect(() => {
+    if (!collected) return;
+    const timer = setTimeout(() => setCollected(undefined), NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [collected]);
+  const message = notice ? t(notice) : collected ? t("progress.collected", { name: t(`treasures.${collected}`) }) : undefined;
 
   return (
     <Screen start={<GameIdBadge roomId={view.roomId} />} end={<LanguageSwitcher />}>
       <TurnLine view={view} />
+      <PlayerStrip view={view} />
       <Board
         board={preview?.board ?? view.board}
         seats={seats}
         highlightTileId={preview ? spare.id : undefined}
+        target={target}
         shiftTargets={shifting ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
         moveTargets={view.reachable ? { reachable: view.reachable, busy: pending, onSelect: moveTo } : undefined}
       />
-      {view.step === "move" ? (
+      {view.finished ? (
+        <GameOverControls onNewGame={leave} />
+      ) : view.step === "move" ? (
         <MoveControls
           spare={view.board.spare}
+          target={target}
           enabled={view.isMyTurn}
           pending={pending}
           onStay={() => me && moveTo(me.square)}
@@ -87,6 +114,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
         <ShiftControls
           spare={spare}
           outgoing={preview?.pushedOut}
+          target={target}
           enabled={view.isMyTurn}
           pending={pending}
           onRotate={() => setTurns((n) => n + 1)}
@@ -94,7 +122,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
           onCancel={() => setSelected(undefined)}
         />
       )}
-      <Notice message={notice && t(notice)} />
+      <Notice message={message} />
     </Screen>
   );
 }

@@ -57,7 +57,9 @@
     "pawn": "Player {{seat}}",
     "pawnMe": "Player {{seat}} (you)",
     "spare": "Spare tile",
-    "fixed": "fixed tile"
+    "fixed": "fixed tile",
+    "targetTreasure": "Your target: {{name}}",
+    "targetHome": "Your home square – return here to win"
   },
   "start": {
     "play": "Play",
@@ -108,5 +110,17 @@
     "stay": "Stay",
     "to": "Move to row {{row}}, column {{col}}",
     "stayHere": "Your square – stay"
+  },
+  "progress": {
+    "label": "Players and treasures found",
+    "count": "{{found}}/{{cards}} treasures found",
+    "target": "target: {{name}}",
+    "home": "home square",
+    "collected": "You found: {{name}}"
+  },
+  "result": {
+    "mine": "You won!",
+    "other": "Player {{seat}} won",
+    "newGame": "New game"
   }
 }

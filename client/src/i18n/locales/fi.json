@@ -57,7 +57,9 @@
     "pawn": "Pelaaja {{seat}}",
     "pawnMe": "Pelaaja {{seat}} (sinä)",
     "spare": "Ylimääräinen laatta",
-    "fixed": "kiinteä laatta"
+    "fixed": "kiinteä laatta",
+    "targetTreasure": "Kohteesi: {{name}}",
+    "targetHome": "Kotiruutusi – palaa tänne voittaaksesi"
   },
   "start": {
     "play": "Pelaa",
@@ -108,5 +110,17 @@
     "stay": "Jää paikalleen",
     "to": "Siirry ruutuun: rivi {{row}}, sarake {{col}}",
     "stayHere": "Oma ruutu – jää paikalleen"
+  },
+  "progress": {
+    "label": "Pelaajat ja löydetyt aarteet",
+    "count": "{{found}}/{{cards}} aarretta löydetty",
+    "target": "kohde: {{name}}",
+    "home": "kotiruutu",
+    "collected": "Löysit: {{name}}"
+  },
+  "result": {
+    "mine": "Voitit!",
+    "other": "Pelaaja {{seat}} voitti",
+    "newGame": "Uusi peli"
   }
 }

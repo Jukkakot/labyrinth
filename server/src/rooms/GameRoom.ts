@@ -1,12 +1,15 @@
 import { randomInt } from "node:crypto";
+import { StateView } from "@colyseus/schema";
 import type { Client, CloseCode } from "colyseus";
 import { movePayloadSchema, shiftPayloadSchema, type TurnPhase } from "@labyrinth/protocol";
 import {
   createBoard,
+  dealTreasures,
   isInsertionId,
   isReachable,
   MAX_SEED,
   reverseOf,
+  settleMove,
   setupBoard,
   shiftBoard,
   START_CORNERS,
@@ -15,6 +18,7 @@ import {
   type Rotation,
   type Square,
   type Tile,
+  type TreasureId,
 } from "@labyrinth/rules";
 import { log } from "../logging/logger.js";
 import { CommandRejection } from "./command.js";
@@ -40,6 +44,9 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
 
   /** Server-only: never part of the synced state. */
   private seed = 0;
+  private dealSeed = 0;
+  /** Treasure stack of each seat (index = seat − 1), dealt when the game is created. */
+  private stacks: TreasureId[][] = [];
 
   messages = {
     shift: this.command("shift", shiftPayloadSchema, (client, { insertion, rotation }) => {
@@ -66,7 +73,14 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
         throw new CommandRejection("UNREACHABLE", { to: [target.row, target.col] });
       }
       placePawn(player, target);
-      this.passTurn();
+      const outcome = settleMove(this.board(), {
+        seat: player.seat,
+        square: target,
+        target: (player.target || undefined) as TreasureId | undefined,
+      });
+      if (outcome.collected) this.collect(player, outcome.collected);
+      if (outcome.won) this.finish(player.seat);
+      else this.passTurn();
     }),
   };
 
@@ -80,6 +94,21 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
     };
   }
 
+  /** Adds the treasure to the player's found ones; the next card of the stack (or home) becomes the target. */
+  private collect(player: Player, treasure: TreasureId): void {
+    player.found.push(treasure);
+    player.target = this.stacks[player.seat - 1]![player.found.length] ?? "";
+    log.info("treasure.collected", this.logCtx(undefined, { seat: player.seat, treasure, found: player.found.length, cards: player.cards }));
+  }
+
+  /** The winning move ends the game: no further turn, and quick play no longer joins this room. */
+  private finish(winner: number): void {
+    this.state.winnerSeat = winner;
+    this.setPhase("finished");
+    void this.lock();
+    log.info("game.finished", this.logCtx(undefined, { winner }));
+  }
+
   /** The board as the rules see it, rebuilt from the synced state. */
   private board(): Board {
     return createBoard({ squares: this.state.squares.map(toTile), spare: toTile(this.state.spare) });
@@ -89,6 +118,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
   private requireTurn(client: Client, phase: string): void {
     const player = this.state.players.get(client.sessionId);
     if (!player) throw new CommandRejection("NOT_SEATED");
+    // Nobody acts in a finished game, whoever's turn it was.
+    if (this.state.phase === "finished") throw new CommandRejection("WRONG_PHASE", { expected: phase });
     if (player.seat !== this.state.turnSeat) throw new CommandRejection("NOT_YOUR_TURN", { seat: player.seat });
     if (this.state.phase !== phase) throw new CommandRejection("WRONG_PHASE", { expected: phase });
   }
@@ -130,6 +161,10 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
     this.state.squares.push(...board.squares.map(toTileState));
     this.state.spare = toTileState(board.spare);
     log.info("game.setup", this.logCtx(undefined, { seed: this.seed }));
+    // Until the waiting room exists, every seat gets its own stack of 24 / 4 when the game is created.
+    this.dealSeed = randomInt(0, MAX_SEED + 1);
+    this.stacks = dealTreasures(this.dealSeed, MAX_SEATS);
+    log.info("game.dealt", this.logCtx(undefined, { dealSeed: this.dealSeed, seats: MAX_SEATS }));
   }
 
   /** The lowest seat 1–4 nobody holds (dropped players keep theirs). */
@@ -143,7 +178,10 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
     super.onJoin(client);
     const seat = this.freeSeat();
     const corner = START_CORNERS[seat - 1]!;
-    this.state.players.set(client.sessionId, new Player({ seat, row: corner.row, col: corner.col }));
+    const stack = this.stacks[seat - 1]!;
+    const player = new Player({ seat, row: corner.row, col: corner.col, cards: stack.length, target: stack[0] ?? "" });
+    this.state.players.set(client.sessionId, player);
+    this.showOwnPlayer(client, player);
     // Until the waiting room exists, the first player to sit down starts.
     if (this.state.turnSeat === 0) this.setTurn(seat);
   }
@@ -152,6 +190,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
     super.onLeave(client, code);
     const seat = this.state.players.get(client.sessionId)?.seat;
     this.state.players.delete(client.sessionId);
+    client.view?.dispose();
+    if (this.state.phase === "finished") return;
     if (seat !== undefined && seat === this.state.turnSeat) this.passTurn();
   }
 
@@ -168,6 +208,15 @@ export class GameRoom extends LoggedRoom<{ state: GameState }> {
   onReconnect(client: Client) {
     super.onReconnect(client);
     const player = this.state.players.get(client.sessionId);
-    if (player) player.connected = true;
+    if (player) {
+      player.connected = true;
+      this.showOwnPlayer(client, player);
+    }
+  }
+
+  /** The client's view holds its own player only, so it alone receives that player's secret target. */
+  private showOwnPlayer(client: Client, player: Player): void {
+    client.view ??= new StateView();
+    client.view.add(player);
   }
 }

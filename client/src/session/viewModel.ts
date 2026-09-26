@@ -1,16 +1,44 @@
-import { createBoard, isInsertionId, reachableSquares, START_CORNERS, TILE_SET, type Board, type InsertionId, type Rotation, type Square } from "@labyrinth/rules";
+import {
+  createBoard,
+  isInsertionId,
+  reachableSquares,
+  START_CORNERS,
+  targetTileId,
+  TILE_SET,
+  TREASURES,
+  type Board,
+  type InsertionId,
+  type Rotation,
+  type Square,
+  type TreasureId,
+} from "@labyrinth/rules";
 
 /** The synced state as the client receives it (Colyseus schema instances satisfy this shape). */
 export interface SyncedState {
   squares?: Iterable<{ id: number; rotation: number }>;
   spare?: { id: number; rotation: number };
   players?: {
-    forEach(cb: (player: { seat: number; connected: boolean; row?: number; col?: number }, sessionId: string) => void): void;
+    forEach(cb: (player: SyncedPlayer, sessionId: string) => void): void;
   };
   turnSeat?: number;
   phase?: string;
   lastInsertion?: string;
+  winnerSeat?: number;
 }
+
+export interface SyncedPlayer {
+  seat: number;
+  connected: boolean;
+  row?: number;
+  col?: number;
+  cards?: number;
+  found?: Iterable<string>;
+  /** Only present for the viewer's own player; "" = heading home. */
+  target?: string;
+}
+
+/** The viewer's current target: a treasure, or their start corner once every card is found. */
+export type Target = TreasureId | "home";
 
 export interface SeatView {
   seat: number;
@@ -19,6 +47,10 @@ export interface SeatView {
   isMe: boolean;
   /** The square the pawn stands on. */
   square: Square;
+  /** Size of the seat's treasure stack. */
+  cards: number;
+  /** Treasures found so far, in order. */
+  found: TreasureId[];
 }
 
 /** The step of the current turn: first a shift, then a move. */
@@ -38,7 +70,16 @@ export interface GameView {
   reachable?: Square[];
   /** The previous shift, whose reverse is forbidden. */
   lastInsertion?: InsertionId;
+  /** The viewer's own current target; undefined without a seat or before it has arrived. */
+  myTarget?: Target;
+  /** Id of the tile the viewer is heading for (their target's tile or their start corner); only while the game runs. */
+  targetTileId?: number;
+  /** Seat of the winner; 0 while the game runs. */
+  winnerSeat: number;
+  finished: boolean;
 }
+
+const isTreasure = (value: unknown): value is TreasureId => (TREASURES as readonly unknown[]).includes(value);
 
 const toTile = ({ id, rotation }: { id: number; rotation: number }) => ({
   id,
@@ -58,16 +99,22 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
 
   const board = createBoard({ squares: squares.map(toTile), spare: toTile(state.spare) });
   const seats: SeatView[] = [];
+  let myTarget: Target | undefined;
   state.players?.forEach((p, sessionId) => {
     if (p.seat <= 0) return;
     const corner = START_CORNERS[p.seat - 1]!;
     const square = { row: p.row ?? corner.row, col: p.col ?? corner.col };
-    seats.push({ seat: p.seat, sessionId, connected: p.connected, isMe: sessionId === mySessionId, square });
+    const found = [...(p.found ?? [])].filter(isTreasure);
+    const isMe = sessionId === mySessionId;
+    if (isMe) myTarget = readTarget(p.target, found.length, p.cards ?? 0);
+    seats.push({ seat: p.seat, sessionId, connected: p.connected, isMe, square, cards: p.cards ?? 0, found });
   });
   seats.sort((a, b) => a.seat - b.seat);
   const mySeat = seats.find((s) => s.isMe)?.seat;
   const turnSeat = state.turnSeat ?? 0;
-  const isMyTurn = mySeat !== undefined && mySeat === turnSeat;
+  const winnerSeat = state.winnerSeat ?? 0;
+  const finished = state.phase === "finished";
+  const isMyTurn = !finished && mySeat !== undefined && mySeat === turnSeat;
   const step: TurnStep = state.phase === "move" ? "move" : "shift";
   const me = seats.find((s) => s.isMe);
   return {
@@ -80,5 +127,18 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     step,
     reachable: isMyTurn && step === "move" && me ? reachableSquares(board, me.square) : undefined,
     lastInsertion: isInsertionId(state.lastInsertion) ? state.lastInsertion : undefined,
+    myTarget,
+    targetTileId:
+      !finished && mySeat !== undefined && myTarget !== undefined
+        ? targetTileId(mySeat, myTarget === "home" ? undefined : myTarget)
+        : undefined,
+    winnerSeat,
+    finished,
   };
+}
+
+/** "" means heading home only once every card is found; before that it just has not arrived yet. */
+function readTarget(target: string | undefined, found: number, cards: number): Target | undefined {
+  if (isTreasure(target)) return target;
+  return target === "" && cards > 0 && found >= cards ? "home" : undefined;
 }

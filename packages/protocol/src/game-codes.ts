@@ -13,8 +13,8 @@ export const ROTATION_VALUES = [0, 90, 180, 270] as const;
 export const GAME_ERROR_CODES = ["NOT_SEATED", "NOT_YOUR_TURN", "WRONG_PHASE", "REVERSE_PUSH_FORBIDDEN", "UNREACHABLE"] as const;
 export type GameErrorCode = (typeof GAME_ERROR_CODES)[number];
 
-/** Turn steps: first the current player shifts, then moves (or stays). */
-export const TURN_PHASES = ["shift", "move"] as const;
+/** Turn steps: first the current player shifts, then moves (or stays); "finished" once someone has won. */
+export const TURN_PHASES = ["shift", "move", "finished"] as const;
 export type TurnPhase = (typeof TURN_PHASES)[number];
 
 export interface ShiftPayload {

@@ -6,6 +6,7 @@ import styles from "./Board.module.css";
 import { MoveTargets, type MoveTargetsProps } from "./MoveTargets.tsx";
 import { PawnLayer } from "./PawnLayer.tsx";
 import { ShiftTargets, type ShiftTargetsProps } from "./ShiftTargets.tsx";
+import { targetOf, type TargetMark } from "./target.ts";
 import { TILE_UNITS, TileView } from "./TileView.tsx";
 
 const SIZE = BOARD_SIZE * TILE_UNITS;
@@ -19,10 +20,12 @@ export interface BoardProps {
   moveTargets?: MoveTargetsProps;
   /** Id of a tile to outline (the inserted spare in a preview). */
   highlightTileId?: number;
+  /** The viewer's target, marked wherever its tile is. */
+  target?: TargetMark;
 }
 
 /** The 7×7 board as one scalable SVG, with the pawns on their squares and the controls of the current step. */
-export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId }: BoardProps) {
+export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target }: BoardProps) {
   const { t } = useTranslation();
   const clipId = useId();
   return (
@@ -43,6 +46,7 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
               x={col * TILE_UNITS}
               y={row * TILE_UNITS}
               highlight={tile.id === highlightTileId}
+              target={targetOf(tile.id, target)}
             />
           );
         })}

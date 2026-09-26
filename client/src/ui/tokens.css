@@ -21,6 +21,9 @@
   --corridor-icon: #fffaf0;
   /* Preview marks (inserted tile, selected arrow) */
   --highlight: #d55e00;
+  /* The viewer's own target: solid ring + badge (move targets are dashed, previews orange) */
+  --target: #7b2cbf;
+  --target-contrast: #fffaf0;
 
   /* Seats: Okabe–Ito, colour-blind safe; always paired with a pawn shape */
   --seat-1: #0072b2;
@@ -67,6 +70,8 @@
     --corridor: #8fc9a8;
     --corridor-icon: #141a17;
     --highlight: #f0a060;
+    --target: #c79bff;
+    --target-contrast: #141a17;
     --pawn-outline: #141a17;
   }
 }
