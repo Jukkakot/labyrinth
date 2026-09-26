@@ -10,12 +10,23 @@ Make every server and client event traceable from a single production log stream
 Every log entry, from the server or the client, SHALL be written to the server's standard output as exactly one line containing one JSON object. Each object MUST contain `level` (`debug`, `info`, `warn` or `error`), `evt`, `src` (`server` or `client`) and `ver` (the build version of the side that produced the event). It MUST contain `room` and `player` whenever the event concerns a room or a player. `level` MUST be the first key and `evt` the second. Multi-line content such as stack traces MUST be encoded inside a field and never span several output lines.
 
 #### Scenario: Server event
-- **WHEN** the server logs a player joining room `R7kq`
-- **THEN** exactly one output line is written and it parses as a JSON object with `level`, `evt`, `src` = `server`, `ver`, `room` = `R7kq` and `player`, and `level` and `evt` are its first two keys
+- **WHEN** the server logs a player joining room `brave-otters-sing`
+- **THEN** exactly one output line is written and it parses as a JSON object with `level`, `evt`, `src` = `server`, `ver`, `room` = `brave-otters-sing` and `player`, and `level` and `evt` are its first two keys
 
 #### Scenario: Error with stack trace
 - **WHEN** an error with a multi-line stack trace is logged
 - **THEN** exactly one output line is written and the stack trace is contained in a field of that line
+
+### Requirement: Readable game identifier
+Every room SHALL get, when it is created, a human-readable identifier made of lowercase English words joined by hyphens, at most 32 characters long (for example `brave-otters-sing`). The identifier MUST be unique among the rooms running at the same time. It MUST be the value of `room` in every log line about that room, so the identifier a player reports matches the logs directly.
+
+#### Scenario: Room creation
+- **WHEN** a new room is created
+- **THEN** its identifier consists of lowercase English words joined by hyphens, and the `room.created` line carries that same identifier in `room`
+
+#### Scenario: Collision
+- **WHEN** the generated identifier is already used by a running room
+- **THEN** a different identifier is generated and the new room never shares an identifier with a running room
 
 ### Requirement: Event catalogue
 Every `evt` value SHALL come from a fixed, documented catalogue with dotted names (for example `room.created`, `player.joined`, `cmd.accepted`, `cmd.rejected`, `http.request`, `client.error`). A new event name MUST be added to the catalogue before it is used.

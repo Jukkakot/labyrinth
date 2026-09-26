@@ -44,6 +44,9 @@ Agreed before any capability was specified. Once a capability has a spec under
 - Shift: tap an edge arrow → ghost preview → tap again / Confirm. Move: reachable
   tiles are highlighted, tapping one moves immediately; "Stay" is a button.
 - The player's own target tile is always highlighted on the board.
+- During a game the room's readable id (e.g. `brave-otters-sing`) is shown small in
+  the top area. Tapping it copies "game id · local date and time · app version"
+  to the clipboard for bug reports.
 - Treasures are drawn from one consistent line icon library (24 distinct icons).
 - Players are distinguished by colour-blind-safe colour + pawn shape.
 - Per-user settings (browser-local, never affect rules): confirm shift (default

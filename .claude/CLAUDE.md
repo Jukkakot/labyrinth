@@ -18,6 +18,19 @@ Project context and decisions: `openspec/config.yaml` points to `openspec/contex
 (product, architecture, nfr, roadmap). Read the relevant one before planning. An existing
 spec under `openspec/specs/` wins over those files.
 
+## Investigating a reported bug ("around 14:30 in game brave-otters-sing, X happened")
+
+1. Convert the reported local time (Europe/Helsinki) to UTC.
+2. Fetch production logs with Render MCP (`list_logs`) for the server service. Filter by
+   text `"room":"<game id>"` and a window of about ±15 min; widen the window if needed. Locally,
+   read `logs/dev.log` instead.
+3. Follow the room's timeline: `player.*`, `cmd.accepted`/`cmd.rejected`/`cmd.failed`,
+   `client.error` (`src:"client"`), `framework.log`. Check `ver` on both sides.
+4. Reproduce the bug as a failing test (rules unit test, or room test with @colyseus/testing).
+   For UI bugs, reproduce it with Playwright MCP using two tabs.
+5. Fix it; the failing test stays as a regression test. Report the root cause and which log
+   lines showed it.
+
 ## Commands
 
 - `npm run dev`: server (:2567, /monitor, /playground) + client (Vite)

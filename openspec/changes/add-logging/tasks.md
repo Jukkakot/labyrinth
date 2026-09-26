@@ -8,7 +8,8 @@
 ## 2. Room lifecycle and uncaught errors
 
 - [ ] 2.1 Add `LoggedRoom` base class logging `room.created`, `room.disposed`, `player.joined/left/dropped/reconnected` and implementing `onUncaughtException`; make `GameRoom` extend it; verify with @colyseus/testing that join, leave, and drop + reconnect each produce the expected lines
-- [ ] 2.2 Pass a Colyseus `logger` adapter (`framework.log`) in `defineServer`, add process `uncaughtException`/`unhandledRejection` handlers and a `server.shutdown` log in `onBeforeShutdown`; verify with a test room whose clock timer throws that one `error` line with room id and stack is written and the server keeps serving
+- [ ] 2.2 Add human-id and set a readable room id in `LoggedRoom.onCreate` (lowercase words joined by hyphens, ≤32 chars, regenerate on collision with a running room); verify by test that a created room's id matches the pattern and equals `room` in its `room.created` line, and that a forced collision yields a different id
+- [ ] 2.3 Pass a Colyseus `logger` adapter (`framework.log`) in `defineServer`, add process `uncaughtException`/`unhandledRejection` handlers and a `server.shutdown` log in `onBeforeShutdown`; verify with a test room whose clock timer throws that one `error` line with room id and stack is written and the server keeps serving
 
 ## 3. Command wrapper and rejection contract
 
@@ -41,3 +42,4 @@
 
 - [ ] 9.1 Run `npm run dev`, join a room from the Colyseus playground and open the client with `?debug=1` and a forced error; verify `logs/dev.log` contains server `player.joined`, an `http.request`, and a `src:"client"` `client.error` line, and the terminal shows them pretty-printed
 - [ ] 9.2 Update `openspec/context/nfr.md` key-order wording to match the spec (`level`, `evt` first; no server timestamp in production); verify lint, typecheck, test, build and size all pass
+- [ ] 9.3 Once the Render service exists, check Render's log retention on the free tier and that Render MCP can filter logs by text (`"room":"<id>"`) and time range; record retention in `openspec/context/nfr.md` and adjust the bug runbook in `.claude/CLAUDE.md` if the query shape differs
