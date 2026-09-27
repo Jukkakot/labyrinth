@@ -1,23 +1,27 @@
 import { formatDateTime } from "../i18n/formatDateTime.ts";
 
 /**
- * The daily puzzle's attempt on this device: which date, which saved game and, once solved, the
- * result. One attempt per date; a record of an earlier date is simply replaced by today's.
+ * The daily puzzle on this device: which date, the current attempt's saved game, the puzzle's par
+ * and the day's best solve over all attempts. A record of an earlier date is replaced by today's.
  */
 const KEY = "labyrinth.daily";
 
 export interface DailyResult {
   /** Turns taken, the home turn included. */
   turns: number;
-  /** One character per turn: "t" a treasure found, "h" home, "-" nothing. */
+  /** One character per turn: "t" the destination found, "-" nothing. */
   marks: string;
 }
 
 export interface DailyRecord {
   /** The puzzle's date, `YYYY-MM-DD` (local). */
   date: string;
+  /** The current attempt's game. */
   roomId: string;
-  result?: DailyResult;
+  /** The fewest turns possible. */
+  par: number;
+  /** The day's best solve (fewest turns). */
+  best?: DailyResult;
 }
 
 function storage(): Storage | undefined {
@@ -40,7 +44,8 @@ export function loadDailyRecord(date = todayString(), store = storage()): DailyR
     const raw = store?.getItem(KEY);
     if (!raw) return undefined;
     const record = JSON.parse(raw) as DailyRecord;
-    return record.date === date && typeof record.roomId === "string" ? record : undefined;
+    // Records of the first puzzle format (no par) are ignored.
+    return record.date === date && typeof record.roomId === "string" && typeof record.par === "number" ? record : undefined;
   } catch {
     return undefined;
   }
@@ -65,20 +70,15 @@ export function saveDailyRecord(record: DailyRecord, store = storage()): void {
   }
 }
 
-/** Stores the result of the puzzle in `roomId`, if that is the recorded attempt. */
+/** Stores a solve of the puzzle in `roomId` (the recorded attempt) as the day's best if it beats it. */
 export function saveDailyResult(roomId: string, result: DailyResult, store = storage()): void {
-  try {
-    const raw = store?.getItem(KEY);
-    const record = raw ? (JSON.parse(raw) as DailyRecord) : undefined;
-    if (record?.roomId === roomId) saveDailyRecord({ ...record, result }, store);
-  } catch {
-    // ignore
-  }
+  const record = dailyRecordOf(roomId, store);
+  if (record && (!record.best || result.turns < record.best.turns)) saveDailyRecord({ ...record, best: result }, store);
 }
 
-const EMOJI: Record<string, string> = { t: "💎", h: "🏠" };
+const EMOJI: Record<string, string> = { t: "💎" };
 
-/** The marks row of a result: 💎 a treasure found, 🏠 home, ⬜ any other turn. */
+/** The marks row of a result: 💎 the turn the destination was found, ⬜ any other turn. */
 export function marksRow(marks: string): string {
   return [...marks].map((m) => EMOJI[m] ?? "⬜").join("");
 }

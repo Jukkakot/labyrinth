@@ -1,52 +1,95 @@
 import { describe, expect, it } from "vitest";
-import { DAILY_SEAT, DAILY_TREASURES, dailySeed, startDailyPuzzle } from "./daily.js";
-import { applyMove, applyShift, type GameState } from "./game.js";
+import { tileAt, type Board } from "./board.js";
+import { DAILY_PAR, DAILY_SEAT, applyPuzzleMove, dailySeed, startDailyPuzzle } from "./daily.js";
+import { fewestTurns } from "./dailySolver.js";
+import { applyShift, targetOf, type GameState } from "./game.js";
+import type { Square } from "./geometry.js";
+import { reachableSquares } from "./move.js";
+import { setupBoard } from "./setup.js";
+import { INSERTIONS, reverseOf, shiftBoard, type InsertionId } from "./shift.js";
+import { ROTATIONS } from "./tile.js";
+import { treasureOf, type TreasureId } from "./tileSet.js";
 import { homeSquare } from "./treasures.js";
-import { uniformBoard } from "./testing.js";
+
+/** Treasures one turn reaches, by plain enumeration (the reference for the solver). */
+function oneTurnTreasures(board: Board, start: Square, last?: InsertionId): Set<TreasureId> {
+  const found = new Set<TreasureId>();
+  for (const insertion of INSERTIONS) {
+    if (last && insertion === reverseOf(last)) continue;
+    for (const rotation of ROTATIONS) {
+      const { board: b, pawns } = shiftBoard(board, insertion, rotation, [start]);
+      for (const sq of reachableSquares(b, pawns[0]!)) {
+        const t = treasureOf(tileAt(b, sq).id);
+        if (t) found.add(t);
+      }
+    }
+  }
+  return found;
+}
+
+describe("daily-puzzle › Best possible result (solver)", () => {
+  const board = setupBoard(42);
+  const home = homeSquare(DAILY_SEAT);
+
+  it("1 turn exactly for the treasures one shift and move can reach, in under a second for 2 turns", () => {
+    const started = Date.now();
+    const best = fewestTurns(board, home, 2);
+    expect(Date.now() - started).toBeLessThan(1000);
+    const one = oneTurnTreasures(board, home);
+    for (const [t, turns] of best) expect(turns === 1).toBe(one.has(t));
+    expect([...one].every((t) => best.get(t) === 1)).toBe(true);
+  });
+
+  it("the forbidden reverse push is not searched", () => {
+    const last: InsertionId = "S1";
+    const best = fewestTurns(board, home, 1, last);
+    expect(new Set(best.keys())).toEqual(oneTurnTreasures(board, home, last));
+  });
+});
 
 describe("daily-puzzle › Same puzzle for everyone on a day", () => {
-  it("Two players, same day: the same board, spare and treasures", () => {
-    expect(startDailyPuzzle("2026-09-27", "Aino")).toEqual({ ...startDailyPuzzle("2026-09-27", "Aino") });
+  it("Two players, same day: the same board, spare and destination", () => {
+    expect(startDailyPuzzle("2026-09-27", "Aino")).toEqual(startDailyPuzzle("2026-09-27", "Aino"));
     expect(dailySeed("2026-09-27")).toBe(dailySeed("2026-09-27"));
   });
 
   it("Next day: another puzzle", () => {
-    const today = startDailyPuzzle("2026-09-27", "Aino");
-    const tomorrow = startDailyPuzzle("2026-09-28", "Aino");
-    expect(tomorrow.seed).not.toBe(today.seed);
+    const today = startDailyPuzzle("2026-09-27", "Aino").game;
+    const tomorrow = startDailyPuzzle("2026-09-28", "Aino").game;
     expect(tomorrow.board).not.toEqual(today.board);
+  });
+
+  it("one seat on turn at home with one destination whose best is the puzzle's par (2)", () => {
+    for (const date of ["2026-09-27", "2026-09-28", "2026-10-01"]) {
+      const { game, par } = startDailyPuzzle(date, "Aino");
+      expect(game.seats).toHaveLength(1);
+      const [seat] = game.seats;
+      expect(seat!.stack).toHaveLength(1);
+      expect(par).toBe(DAILY_PAR);
+      expect(fewestTurns(game.board, homeSquare(DAILY_SEAT), 2).get(targetOf(seat!)!)).toBe(par);
+    }
   });
 });
 
 describe("daily-puzzle › Goal and score", () => {
-  it("one seat on turn with a stack of 3 treasures", () => {
-    const game = startDailyPuzzle("2026-09-27", "Aino");
-    expect(game.seats).toHaveLength(1);
-    expect(game.seats[0]!.stack).toHaveLength(DAILY_TREASURES);
-    expect(game.turnSeat).toBe(DAILY_SEAT);
-    expect(game.turn).toBe(1);
-  });
-
-  it("each solo turn passes back to the player and counts up; reaching home keeps the winning turn", () => {
-    const start = startDailyPuzzle("2026-09-27", "Aino");
-    const home = homeSquare(DAILY_SEAT);
-    // Straight corridors N–S: the home column is one open line.
-    const board = uniformBoard("I0");
-    let game: GameState = { ...start, board, seats: start.seats.map((s) => ({ ...s, pawn: { row: 3, col: home.col } })) };
-
-    const shifted = applyShift(game, DAILY_SEAT, "N3", 0);
-    expect(shifted.ok).toBe(true);
-    if (!shifted.ok) return;
-    const stay = applyMove(shifted.state, DAILY_SEAT, shifted.state.seats[0]!.pawn);
-    expect(stay.ok && stay.state.turnSeat).toBe(DAILY_SEAT);
+  it("Solved: finding the destination ends the puzzle in that turn; other moves pass the turn back", () => {
+    const { game } = startDailyPuzzle("2026-09-27", "Aino");
+    const target = targetOf(game.seats[0]!)!;
+    // Staying put passes the turn back to the player.
+    const shifted = applyShift(game, DAILY_SEAT, "N1", 0);
+    if (!shifted.ok) throw new Error(shifted.code);
+    const stay = applyPuzzleMove(shifted.state, DAILY_SEAT, shifted.state.seats[0]!.pawn);
+    expect(stay.ok && stay.state.step).toBe("shift");
     expect(stay.ok && stay.state.turn).toBe(2);
-    if (!stay.ok) return;
 
-    game = { ...stay.state, seats: stay.state.seats.map((s) => ({ ...s, found: [...s.stack] })) };
-    const again = applyShift(game, DAILY_SEAT, "N5", 0);
-    if (!again.ok) throw new Error(again.code);
-    const won = applyMove(again.state, DAILY_SEAT, home);
-    expect(won.ok && won.state.step).toBe("finished");
-    expect(won.ok && won.state.turn).toBe(2);
+    // Put the pawn on the target's tile square as if walked there: the move onto it solves.
+    const at = shifted.state.board.squares.findIndex((t) => treasureOf(t.id) === target);
+    const onBoard: GameState =
+      at === -1 ? shifted.state : { ...shifted.state, seats: shifted.state.seats.map((s) => ({ ...s, pawn: { row: Math.floor(at / 7), col: at % 7 } })) };
+    if (at === -1) return;
+    const solved = applyPuzzleMove(onBoard, DAILY_SEAT, onBoard.seats[0]!.pawn);
+    expect(solved.ok && solved.state.step).toBe("finished");
+    expect(solved.ok && solved.state.winnerSeat).toBe(DAILY_SEAT);
+    expect(solved.ok && solved.state.turn).toBe(1);
   });
 });

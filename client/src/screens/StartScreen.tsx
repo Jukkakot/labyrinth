@@ -16,6 +16,7 @@ import { BuildInfo } from "./BuildInfo.tsx";
 import styles from "./StartScreen.module.css";
 import { DailyShare } from "../game/DailyShare.tsx";
 import { loadDailyRecord } from "../session/dailyRecord.ts";
+import { loadLocalGame } from "../session/localGameStore.ts";
 
 export interface StartScreenProps {
   session: Pick<
@@ -73,6 +74,7 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
   const nickname = checkNickname(input);
   // Today's puzzle attempt, read when the screen opens (after a game it opens anew).
   const [daily] = useState(() => loadDailyRecord());
+  const [dailyUnfinished] = useState(() => daily !== undefined && loadLocalGame(daily.roomId)?.game.step !== undefined && loadLocalGame(daily.roomId)?.game.step !== "finished");
   const waited = useSecondsWaited(wake.state === "waking" && status !== "connecting" && status !== "error");
 
   let content;
@@ -198,12 +200,12 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
                     {t("daily.title")}
                   </p>
                   <p className={styles.dailyBody}>
-                    {daily?.result ? t("daily.today", { count: daily.result.turns }) : t("daily.explain")}
+                    {daily?.best ? t("daily.today", { count: daily.best.turns, par: daily.par }) : t("daily.explain")}
                   </p>
-                  <Button variant="secondary" disabled={!nickname.ok || daily?.result !== undefined} onClick={() => playDaily(name)}>
-                    {t(daily?.result ? "daily.solved" : daily ? "daily.continue" : "daily.play")}
+                  <Button variant="secondary" disabled={!nickname.ok} onClick={() => playDaily(name)}>
+                    {t(dailyUnfinished ? "daily.continue" : daily?.best ? "daily.again" : "daily.play")}
                   </Button>
-                  {daily?.result && <DailyShare date={daily.date} result={daily.result} />}
+                  {daily?.best && <DailyShare date={daily.date} result={daily.best} par={daily.par} />}
                 </div>
                 <div className={styles.bots} role="group" aria-labelledby="watch-bots">
                   <p id="watch-bots" className={styles.botsTitle}>

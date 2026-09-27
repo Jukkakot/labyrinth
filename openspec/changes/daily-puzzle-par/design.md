@@ -40,8 +40,10 @@ score, puzzles needing 3+ turns (the search would be too slow on a phone), stati
 7. **Turn line** in the puzzle: "Vuoro N · paras mahdollinen P" instead of "Sinun vuorosi – …";
    the controls below already say what to do. End: "Ratkaisit pulman N vuorossa (paras P)" or,
    when N = P, "… – paras mahdollinen! ⭐".
-8. **Controls.** "Peru" is an icon button (undo arrow) next to the rotate/hint buttons in both
-   steps. The end row: Alkuun, Uudelleen, Jaa tulos (primary).
+8. **Controls.** "Peru siirto" is an icon button (undo arrow) next to the rotate/hint buttons in
+   both steps (disabled during a shift preview and with nothing to undo). The end: Alkuun and
+   Uudelleen in a row, "Jaa tulos" (primary) full width under them: three in one row squeezed
+   the share label onto two lines on a phone.
 9. **Share text:** `… päivän pulma 27.9.2026`, `3 vuoroa (paras 2)` or `2 vuoroa (paras 2) ⭐`,
    marks row (⬜ per turn, 💎 on the solving turn), link.
 

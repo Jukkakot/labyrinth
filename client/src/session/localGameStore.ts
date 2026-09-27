@@ -30,8 +30,12 @@ export interface SavedLocalGame {
   botTo?: Square;
   /** The next game's id once "Pelaa uudelleen" was tapped. */
   rematchRoomId?: string;
-  /** Daily puzzle: what each finished turn did ("t" a treasure found, "h" home, "-" nothing). */
+  /** Daily puzzle: what each finished turn did ("t" the destination found, "-" nothing). */
   marks?: string;
+  /** Daily puzzle: the fewest turns possible. */
+  par?: number;
+  /** Daily puzzle: the states before each shift, for undo (the last is undone first). */
+  history?: { game: GameState; marks: string }[];
 }
 
 function storage(): Storage | undefined {
@@ -63,7 +67,8 @@ export function loadLocalGame(roomId: string, store = storage()): SavedLocalGame
     const saved = JSON.parse(raw) as SavedLocalGame;
     if (saved.roomId !== roomId) return undefined;
     // Validates the board and brings back plain tiles.
-    return { ...saved, game: { ...saved.game, board: createBoard(saved.game.board) } };
+    const revive = (game: GameState): GameState => ({ ...game, board: createBoard(game.board) });
+    return { ...saved, game: revive(saved.game), history: saved.history?.map((h) => ({ ...h, game: revive(h.game) })) };
   } catch {
     clearLocalGame(roomId, store, true);
     return undefined;

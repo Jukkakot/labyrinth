@@ -28,7 +28,9 @@ export interface GameScreenProps {
   session: Pick<
     GameSession,
     "shift" | "move" | "kick" | "leave" | "pending" | "notice" | "setSpeed" | "rematch" | "rematching" | "watchBots" | "nickname"
-  >;
+  > &
+    // Only the daily puzzle uses these.
+    Partial<Pick<GameSession, "playDaily" | "undo">>;
 }
 
 /**
@@ -47,7 +49,7 @@ export interface GameScreenProps {
  */
 export function GameScreen({ view, session }: GameScreenProps) {
   const { t } = useTranslation();
-  const { shift, move, kick, leave, pending, notice, setSpeed, rematch, rematching, watchBots, nickname } = session;
+  const { shift, move, kick, leave, pending, notice, setSpeed, rematch, rematching, watchBots, nickname, playDaily, undo } = session;
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
   const [leaving, setLeaving] = useState(false);
@@ -206,7 +208,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
             }
           />
         ) : view.daily ? (
-          <DailyOver roomId={view.roomId} onHome={leave} />
+          <DailyOver roomId={view.roomId} onHome={leave} onRetry={() => playDaily?.(nickname())} />
         ) : (
           <GameOverControls onHome={leave} onRematch={rematch} rematching={rematching} />
         )
@@ -229,7 +231,9 @@ export function GameScreen({ view, session }: GameScreenProps) {
           enabled={view.isMyTurn}
           pending={pending}
           onStay={() => me && moveTo(me.square)}
-          onHint={view.daily ? undefined : showHint}
+          onHint={showHint}
+          onUndo={view.daily ? () => void undo?.() : undefined}
+          canUndo={view.undoable}
         />
       ) : (
         <ShiftControls
@@ -239,7 +243,9 @@ export function GameScreen({ view, session }: GameScreenProps) {
           enabled={view.isMyTurn}
           pending={pending}
           onRotate={() => setTurns((n) => n + 1)}
-          onHint={view.daily ? undefined : showHint}
+          onHint={showHint}
+          onUndo={view.daily ? () => void undo?.() : undefined}
+          canUndo={view.undoable && !preview}
           onConfirm={() => selected && void confirm(selected)}
           onCancel={() => setSelected(undefined)}
         />

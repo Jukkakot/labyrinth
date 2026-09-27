@@ -37,6 +37,8 @@ function gameScreen(roomId: string, state: Parameters<typeof toGameView>[0]) {
     shift: vi.fn<GameSession["shift"]>(async () => ({ ok: true })),
     move: vi.fn<GameSession["move"]>(async () => ({ ok: true })),
     kick: vi.fn<GameSession["kick"]>(async () => ({ ok: true })),
+    undo: vi.fn<GameSession["undo"]>(async () => ({ ok: true })),
+    playDaily: vi.fn(),
     leave: vi.fn(),
     pending: false,
     setSpeed: vi.fn(),
@@ -55,7 +57,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("daily-puzzle › One attempt per day (start screen)", () => {
+describe("daily-puzzle › Start screen puzzle entry", () => {
   it("no attempt today: the puzzle button starts it under the nickname", () => {
     const playDaily = startScreen();
     fireEvent.click(screen.getByRole("button", { name: "Pelaa päivän pulma" }));
@@ -63,26 +65,36 @@ describe("daily-puzzle › One attempt per day (start screen)", () => {
   });
 
   it("an unfinished attempt is continued", () => {
-    saveDailyRecord({ date: todayString(), roomId: "local-daily-x" });
+    LocalRoom.createDaily("Maija", todayString(), quiet);
     startScreen();
     expect(screen.getByRole("button", { name: "Jatka päivän pulmaa" })).toBeTruthy();
   });
 
-  it("Already solved: the button is disabled, today's result and share are shown", () => {
-    saveDailyRecord({ date: todayString(), roomId: "local-daily-x", result: { turns: 6, marks: "-tt-th" } });
-    startScreen();
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Päivän pulma ratkaistu" }).disabled).toBe(true);
-    expect(screen.getByText("Tänään 6 vuoroa. Uusi pulma huomenna.")).toBeTruthy();
+  it("Solved today: best against par, share, and the button plays again", () => {
+    saveDailyRecord({ date: todayString(), roomId: "local-daily-x", par: 2, best: { turns: 3, marks: "--t" } });
+    const playDaily = startScreen();
+    expect(screen.getByText("Paras tuloksesi tänään: 3 vuoroa (paras mahdollinen 2)")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Jaa tulos" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Pelaa uudelleen" }));
+    expect(playDaily).toHaveBeenCalledWith("Maija");
   });
 });
 
-describe("daily-puzzle › Puzzle game screen", () => {
-  it("During the puzzle: the turn number shows and there is no hint", () => {
+describe("daily-puzzle › Puzzle game screen with par", () => {
+  it("During the puzzle: turn and best shown, hint on, Peru disabled with nothing to undo", () => {
     const room = LocalRoom.createDaily("Maija", "2026-09-27", quiet);
     gameScreen(room.roomId, room.state);
-    expect(screen.getByText(/^Vuoro 1 · Sinun vuorosi/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Vihje" })).toBeNull();
+    expect(screen.getByText(`Vuoro 1 · paras mahdollinen ${room.state.par}`)).toBeTruthy();
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Vihje" }).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Peru siirto" }).disabled).toBe(true);
+  });
+
+  it("Peru takes back the last shift", async () => {
+    const room = LocalRoom.createDaily("Maija", "2026-09-27", quiet);
+    await room.request("shift", { insertion: "N1", rotation: 0 });
+    const { undo } = gameScreen(room.roomId, room.state);
+    fireEvent.click(screen.getByRole("button", { name: "Peru siirto" }));
+    expect(undo).toHaveBeenCalled();
   });
 
   it("Leaving midway needs no confirmation", () => {
@@ -92,32 +104,49 @@ describe("daily-puzzle › Puzzle game screen", () => {
     expect(leave).toHaveBeenCalled();
   });
 
-  it("Puzzle end: solved in N turns, share and home, no rematch", () => {
+  it("Puzzle end: turns against the best, share, Uudelleen and home, no rematch", () => {
     const room = LocalRoom.createDaily("Maija", "2026-09-27", quiet);
-    saveDailyRecord({ date: "2026-09-27", roomId: room.roomId, result: { turns: 6, marks: "-tt-th" } });
-    gameScreen(room.roomId, { ...room.state, phase: "finished", winnerSeat: 1, turn: 6 });
-    expect(screen.getByText("Ratkaisit päivän pulman 6 vuorossa!")).toBeTruthy();
+    saveDailyRecord({ date: "2026-09-27", roomId: room.roomId, par: 2, best: { turns: 3, marks: "--t" } });
+    const { playDaily } = gameScreen(room.roomId, { ...room.state, phase: "finished", winnerSeat: 1, turn: 3, par: 2 });
+    expect(screen.getByText("Ratkaisit pulman 3 vuorossa (paras 2)")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Jaa tulos" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Alkuun" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Pelaa uudelleen" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Uudelleen" }));
+    expect(playDaily).toHaveBeenCalledWith("Maija");
+  });
+
+  it("Best reached: the end says so", () => {
+    const room = LocalRoom.createDaily("Maija", "2026-09-27", quiet);
+    gameScreen(room.roomId, { ...room.state, phase: "finished", winnerSeat: 1, turn: 2, par: 2 });
+    expect(screen.getByText("Ratkaisit pulman 2 vuorossa – paras mahdollinen! ⭐")).toBeTruthy();
   });
 });
 
 describe("daily-puzzle › Shareable result", () => {
   it("No share sheet: the text is copied and the copy confirmed", async () => {
-    saveDailyRecord({ date: "2026-09-27", roomId: "local-daily-x", result: { turns: 6, marks: "-tt-th" } });
+    saveDailyRecord({ date: "2026-09-27", roomId: "local-daily-x", par: 2, best: { turns: 3, marks: "--t" } });
     const copy = vi.fn(async (_text: string) => {});
-    render(<DailyOver roomId="local-daily-x" onHome={vi.fn()} sharer={{ copy }} />);
+    render(<DailyOver roomId="local-daily-x" onHome={vi.fn()} onRetry={vi.fn()} sharer={{ copy }} />);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Jaa tulos" }));
     });
-    const text = copy.mock.calls[0]![0];
-    expect(text.split("\n")).toEqual([
+    expect(copy.mock.calls[0]![0].split("\n")).toEqual([
       "Muuttuva labyrintti – päivän pulma 27.9.2026",
-      "6 vuoroa",
-      "⬜💎💎⬜💎🏠",
+      "3 vuoroa (paras 2)",
+      "⬜⬜💎",
       `${location.origin}${location.pathname}`,
     ]);
     expect(screen.getByRole("status").textContent).toBe("Tulos kopioitu leikepöydälle");
+  });
+
+  it("Result text: a star when the best was reached", async () => {
+    saveDailyRecord({ date: "2026-09-27", roomId: "local-daily-x", par: 2, best: { turns: 2, marks: "-t" } });
+    const copy = vi.fn(async (_text: string) => {});
+    render(<DailyOver roomId="local-daily-x" onHome={vi.fn()} onRetry={vi.fn()} sharer={{ copy }} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Jaa tulos" }));
+    });
+    expect(copy.mock.calls[0]![0].split("\n")[1]).toBe("2 vuoroa (paras 2) ⭐");
   });
 });

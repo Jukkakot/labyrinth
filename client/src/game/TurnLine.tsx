@@ -5,7 +5,7 @@ import styles from "./TurnLine.module.css";
 import { TurnTimer } from "./TurnTimer.tsx";
 
 type TurnLineView = Pick<GameView, "turnSeat" | "isMyTurn" | "step" | "seats"> &
-  Partial<Pick<GameView, "finished" | "winnerSeat" | "mySeat" | "turnDeadline" | "turnExpired" | "turnDisconnected" | "daily" | "turn">>;
+  Partial<Pick<GameView, "finished" | "winnerSeat" | "mySeat" | "turnDeadline" | "turnExpired" | "turnDisconnected" | "daily" | "turn" | "par">>;
 
 /**
  * Whose turn it is and which step, with the current player's pawn shape and colour; on your own turn, what to do.
@@ -13,7 +13,7 @@ type TurnLineView = Pick<GameView, "turnSeat" | "isMyTurn" | "step" | "seats"> &
  */
 export function TurnLine({ view }: { view: TurnLineView }) {
   const { t } = useTranslation();
-  const { turnSeat, isMyTurn, step, finished = false, winnerSeat = 0, mySeat, daily = false, turn = 0 } = view;
+  const { turnSeat, isMyTurn, step, finished = false, winnerSeat = 0, mySeat, daily = false, turn = 0, par = 0 } = view;
   const { turnDeadline = 0, turnExpired = false, turnDisconnected = false } = view;
   const moving = step === "move";
   const nameOf = (seat: number) => view.seats.find((s) => s.seat === seat)?.name ?? "";
@@ -24,7 +24,13 @@ export function TurnLine({ view }: { view: TurnLineView }) {
         <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
           <Pawn seat={winnerSeat} isMe={iWon} />
         </svg>
-        <span>{daily ? t("daily.won", { count: turn }) : iWon ? t("result.mine") : t("result.other", { name: nameOf(winnerSeat) })}</span>
+        <span>
+          {daily
+            ? t(turn <= par ? "daily.wonPar" : "daily.won", { count: turn, par })
+            : iWon
+              ? t("result.mine")
+              : t("result.other", { name: nameOf(winnerSeat) })}
+        </span>
       </p>
     );
   }
@@ -33,8 +39,8 @@ export function TurnLine({ view }: { view: TurnLineView }) {
   if (isMyTurn) text = t(moving ? "turn.mineMove" : "turn.mine");
   else if (turnDisconnected) text = t("turn.disconnected", { name: nameOf(turnSeat) });
   else text = t(moving ? "turn.otherMove" : "turn.other", { name: nameOf(turnSeat) });
-  // The puzzle's score is its turn count, so it is always in sight.
-  if (daily) text = `${t("daily.turn", { turn })} · ${text}`;
+  // The puzzle is always the player's turn; its score (turns against the best possible) stays in sight instead.
+  if (daily) text = t("daily.turn", { turn, par });
   return (
     <p className={isMyTurn ? `${styles.line} ${styles.mine}` : styles.line} data-turn-seat={turnSeat}>
       <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">

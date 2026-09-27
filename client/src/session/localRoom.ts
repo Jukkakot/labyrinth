@@ -9,6 +9,7 @@ import {
   isInsertionId,
   MAX_SEED,
   ROTATIONS,
+  applyPuzzleMove,
   startDailyPuzzle,
   startGame,
   targetOf,
@@ -19,7 +20,7 @@ import {
   type Square,
 } from "@labyrinth/rules";
 import { log } from "../logging/logger.ts";
-import { saveDailyRecord, saveDailyResult } from "./dailyRecord.ts";
+import { loadDailyRecord, saveDailyRecord, saveDailyResult } from "./dailyRecord.ts";
 import {
   clearLocalGame,
   DAILY_ROOM_PREFIX,
@@ -108,13 +109,13 @@ export class LocalRoom implements GameRoomLike {
     return new LocalRoom(newGame(nickname, bots, all), all);
   }
 
-  /** Starts the daily puzzle of `date` (a solo game in its own save slot) and records the attempt. */
+  /** Starts an attempt at the daily puzzle of `date` (a solo game in its own save slot); the day's best stays. */
   static createDaily(name: string, date: string, deps: Partial<LocalRoomDeps> = {}): LocalRoom {
     const roomId = newLocalRoomId(Math.random, DAILY_ROOM_PREFIX);
-    const game = startDailyPuzzle(date, name);
-    saveDailyRecord({ date, roomId });
-    log.info("client.daily.started", { room: roomId, date, dealSeed: game.seed });
-    return new LocalRoom({ roomId, game, marks: "" }, { ...defaultDeps(), ...deps });
+    const { game, par } = startDailyPuzzle(date, name);
+    saveDailyRecord({ date, roomId, par, best: loadDailyRecord(date)?.best });
+    log.info("client.daily.started", { room: roomId, date, dealSeed: game.seed, par });
+    return new LocalRoom({ roomId, game, marks: "", par, history: [] }, { ...defaultDeps(), ...deps });
   }
 
   /** The saved game `roomId`, continued where it was; undefined when it is gone. */
@@ -163,6 +164,7 @@ export class LocalRoom implements GameRoomLike {
       botSpeed: 1,
       rematchRoomId: rematchRoomId ?? "",
       turn: game.turn,
+      ...(this.daily && { par: this.saved.par ?? 0, undoable: (this.saved.history?.length ?? 0) > 0 }),
     };
   }
 
@@ -216,13 +218,20 @@ export class LocalRoom implements GameRoomLike {
       case "shift": {
         const { insertion, rotation } = (payload ?? {}) as { insertion?: unknown; rotation?: unknown };
         if (!isInsertionId(insertion) || !ROTATIONS.includes(rotation as Rotation)) return { ok: false, code: "INVALID_COMMAND" };
-        return this.apply(applyShift(this.game, seat, insertion, rotation as Rotation));
+        const result = applyShift(this.game, seat, insertion, rotation as Rotation);
+        // The puzzle remembers the state before each shift, to undo it.
+        if (result.ok && this.daily) {
+          this.saved = { ...this.saved, history: [...(this.saved.history ?? []), { game: this.game, marks: this.saved.marks ?? "" }] };
+        }
+        return this.apply(result);
       }
       case "move": {
         const { row, col } = (payload ?? {}) as { row?: unknown; col?: unknown };
         if (!isIndex(row) || !isIndex(col)) return { ok: false, code: "INVALID_COMMAND" };
-        return this.apply(applyMove(this.game, seat, { row, col }));
+        return this.apply((this.daily ? applyPuzzleMove : applyMove)(this.game, seat, { row, col }));
       }
+      case "undo":
+        return this.undo();
       case "rematch":
         return this.rematch();
       case "setSpeed":
@@ -240,10 +249,19 @@ export class LocalRoom implements GameRoomLike {
     // The result is stored before the finished state is published, so the end screen can show it.
     if (finishing && this.daily) {
       saveDailyResult(this.roomId, { turns: result.state.turn, marks: marks ?? "" });
-      log.info("client.daily.finished", { room: this.roomId, turns: result.state.turn });
+      log.info("client.daily.finished", { room: this.roomId, turns: result.state.turn, par: this.saved.par });
     }
     this.update({ ...this.saved, game: result.state, marks });
     if (finishing && !this.daily) this.logFinished(result.state.winnerSeat);
+    return { ok: true };
+  }
+
+  /** Daily puzzle: back to the state before the last shift (this turn's, or the previous turn's). */
+  private undo(): CommandResult {
+    const history = this.saved.history ?? [];
+    const last = history.at(-1);
+    if (!this.daily || !last || this.game.step === "finished") return { ok: false, code: "WRONG_PHASE" };
+    this.update({ ...this.saved, game: last.game, marks: last.marks, history: history.slice(0, -1) });
     return { ok: true };
   }
 
@@ -326,9 +344,8 @@ export class LocalRoom implements GameRoomLike {
   }
 }
 
-/** What a finished turn did, for the daily puzzle's result: "h" home, "t" a treasure found, "-" nothing. */
+/** What a finished turn did, for the daily puzzle's result: "t" the destination found, "-" nothing. */
 function turnMark(before: GameState, after: GameState): string {
-  if (after.step === "finished") return "h";
   const found = (state: GameState) => state.seats.reduce((n, s) => n + s.found.length, 0);
   return found(after) > found(before) ? "t" : "-";
 }

@@ -61,7 +61,7 @@ export interface Connector {
   /** A new game of 2–4 bots only, watched by the caller. */
   createBotWatch(options: JoinRequest & { bots: number; speed: BotSpeed }): Promise<GameRoomLike>;
   reconnect(token: string): Promise<GameRoomLike>;
-  /** The daily puzzle of `date` on the device: today's attempt continued, else a new one. */
+  /** The daily puzzle of `date` on the device: an unfinished attempt continued, else a new attempt. */
   playDaily(options: JoinRequest & { date: string }): Promise<GameRoomLike>;
 }
 
@@ -118,8 +118,8 @@ export function createConnector(): Connector {
       isLocalToken(token) ? restoreLocal(roomIdOfToken(token)) : (sdkClient().reconnect(token) as unknown as Promise<GameRoomLike>),
     playDaily: async ({ nickname, date }) => {
       const record = loadDailyRecord(date);
-      if (record?.result) return restoreLocal(record.roomId);
-      return (record && LocalRoom.restore(record.roomId)) ?? LocalRoom.createDaily(nickname, date);
+      const current = record && LocalRoom.restore(record.roomId);
+      return current && current.game.step !== "finished" ? current : LocalRoom.createDaily(nickname, date);
     },
   };
 }
@@ -175,7 +175,7 @@ export function noticeKey(code: string): NoticeKey {
   return (GAME_ERROR_CODES as readonly string[]).includes(code) ? `errors.${code as GameErrorCode}` : "errors.generic";
 }
 
-type Command = "start" | "addBot" | "removeBot" | "shift" | "move" | "kick" | "setSpeed" | "rematch";
+type Command = "start" | "addBot" | "removeBot" | "shift" | "move" | "kick" | "setSpeed" | "rematch" | "undo";
 
 export interface GameSession {
   status: SessionStatus;
@@ -190,8 +190,10 @@ export interface GameSession {
   joinById(roomId: string, nickname: string): void;
   /** A quick game against 1–3 bots, straight into the game. */
   playBots(nickname: string, bots: number): void;
-  /** Today's daily puzzle: continued where it was left, else started. */
+  /** Today's daily puzzle: continued where it was left, else a new attempt (also after a solve). */
   playDaily(nickname: string): void;
+  /** Daily puzzle: takes back the last shift. */
+  undo(): Promise<CommandResult | undefined>;
   /** Joins an invited game; if it has already started, watches it instead. */
   joinInvite(roomId: string, nickname: string): void;
   /** Watches a running game. */
@@ -488,6 +490,7 @@ export function useGameSession(connector?: Connector): GameSession {
   const move = useCallback(({ row, col }: MovePayload) => send("move", { row, col }), [send]);
   const kick = useCallback((seat: number) => send("kick", { seat }), [send]);
   const setSpeed = useCallback((speed: BotSpeed) => send("setSpeed", { speed }), [send]);
+  const undo = useCallback(() => send("undo", {}), [send]);
 
   /**
    * Moves to the rematch game once its id is synced: asks for it first if nobody has, then waits for
@@ -549,6 +552,7 @@ export function useGameSession(connector?: Connector): GameSession {
     joinById,
     playBots,
     playDaily,
+    undo,
     joinInvite,
     watch,
     watchBots,

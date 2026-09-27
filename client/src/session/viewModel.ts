@@ -38,6 +38,10 @@ export interface SyncedState {
   rematchRoomId?: string;
   /** Turns started so far; only games on the device report it. */
   turn?: number;
+  /** Daily puzzle: the fewest turns possible. */
+  par?: number;
+  /** Daily puzzle: there is a shift to take back. */
+  undoable?: boolean;
 }
 
 export interface SyncedPlayer {
@@ -134,6 +138,10 @@ export interface GameView {
   daily: boolean;
   /** Turns started so far (the winning turn once finished); 0 when not known. */
   turn: number;
+  /** Daily puzzle: the fewest turns possible; 0 elsewhere. */
+  par: number;
+  /** Daily puzzle: "Peru" can take back a shift. */
+  undoable: boolean;
 }
 
 const isTreasure = (value: unknown): value is TreasureId => (TREASURES as readonly unknown[]).includes(value);
@@ -214,6 +222,8 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     canKick: turnExpired && mySeat !== undefined && current !== undefined && mySeat !== turnSeat,
     daily: isDailyRoomId(roomId),
     turn: state.turn ?? 0,
+    par: state.par ?? 0,
+    undoable: state.undoable ?? false,
   };
 }
 

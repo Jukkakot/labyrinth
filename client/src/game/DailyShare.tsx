@@ -13,19 +13,21 @@ const appUrl = () => `${globalThis.location.origin}${globalThis.location.pathnam
 export interface DailyShareProps {
   date: string;
   result: DailyResult;
+  par: number;
   variant?: "primary" | "secondary";
   sharer?: Sharer;
 }
 
 /** "Jaa tulos": the share sheet where there is one, else the clipboard with a confirmation. */
-export function DailyShare({ date, result, variant = "secondary", sharer = browserSharer() }: DailyShareProps) {
+export function DailyShare({ date, result, par, variant = "secondary", sharer = browserSharer() }: DailyShareProps) {
   const { t, i18n } = useTranslation();
   const [note, setNote] = useState<string>();
   const share = async () => {
-    // The shared result: title with the date, the turn count, one mark per turn, and the link.
+    // The shared result: title with the date, turns against the best possible, one mark per turn, and the link.
+    const star = result.turns <= par ? " ⭐" : "";
     const text = [
       t("daily.shareTitle", { date: displayDate(date, i18n.language) }),
-      t("daily.turns", { count: result.turns }),
+      t("daily.turnsPar", { count: result.turns, par }) + star,
       marksRow(result.marks),
       appUrl(),
     ].join("\n");
@@ -46,8 +48,16 @@ export function DailyShare({ date, result, variant = "secondary", sharer = brows
   );
 }
 
-/** Under the board once the daily puzzle is solved: share the result (the main action) and back to the start. */
-export function DailyOver({ roomId, onHome, sharer }: { roomId: string; onHome(): void; sharer?: Sharer }) {
+export interface DailyOverProps {
+  roomId: string;
+  onHome(): void;
+  /** "Uudelleen": the same puzzle from the start. */
+  onRetry(): void;
+  sharer?: Sharer;
+}
+
+/** Under the board once the daily puzzle is solved: back to the start, try again, and share the day's best (the main action). */
+export function DailyOver({ roomId, onHome, onRetry, sharer }: DailyOverProps) {
   const { t } = useTranslation();
   const record = dailyRecordOf(roomId);
   return (
@@ -56,8 +66,12 @@ export function DailyOver({ roomId, onHome, sharer }: { roomId: string; onHome()
         <Button variant="secondary" onClick={onHome}>
           {t("result.home")}
         </Button>
-        {record?.result && <DailyShare date={record.date} result={record.result} variant="primary" sharer={sharer} />}
+        <Button variant="secondary" onClick={onRetry}>
+          {t("daily.retry")}
+        </Button>
       </div>
+      {/* Full width on its own row: three buttons in one row would squeeze the label on a phone. */}
+      {record?.best && <DailyShare date={record.date} result={record.best} par={record.par} variant="primary" sharer={sharer} />}
     </div>
   );
 }
