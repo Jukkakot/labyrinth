@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { homeTileId, isReachable, openings, reachableSquares, rotate, setupBoard, shiftBoard, square, squareIndex, TILE_SET, TREASURES, type Board, type TreasureId } from "@labyrinth/rules";
+import { hintTurn, homeTileId, insertionLine, isReachable, openings, reachableSquares, rotate, setupBoard, shiftBoard, square, squareIndex, TILE_SET, TREASURES, type Board, type TreasureId } from "@labyrinth/rules";
 import { describe, expect, it, vi } from "vitest";
 import i18n from "../i18n";
+import { botViewOf } from "../game/hint.ts";
 import { SpareTile } from "../game/SpareTile.tsx";
 import type { GameSession } from "../session/useGameSession.ts";
 import { toGameView, type SyncedState } from "../session/viewModel.ts";
@@ -596,5 +597,31 @@ describe("board-view › Last turn shown (game screen)", () => {
     fireEvent.click(arrow("Työnnä vasemmalta riviin 2"));
     expect(container.querySelector("[data-route]")).toBeNull();
     expect(container.querySelector("[data-pushed-by]")).toBeNull();
+  });
+});
+
+describe("board-view › Hint", () => {
+  const mine = { me: { cards: 12, target: TREASURES[0] } };
+  const hintButton = () => screen.getByRole<HTMLButtonElement>("button", { name: "Vihje" });
+
+  it("Hint for the shift: previews the hinted shift, rings the square, sends nothing; another arrow drops the ring", () => {
+    const { container, shift } = setup(mine);
+    const turn = hintTurn(botViewOf(view(mine))!);
+    fireEvent.click(hintButton());
+
+    const entry = insertionLine(turn.insertion)[0]!;
+    expect(tilePosition(container, board.spare.id)).toBe(at(entry.row, entry.col));
+    expect(container.querySelector("[data-hint]")?.getAttribute("data-hint")).toBe(`${turn.to.row},${turn.to.col}`);
+    expect(screen.getByRole("img", { name: `Vihje: kävele ruutuun rivi ${turn.to.row + 1}, sarake ${turn.to.col + 1}` })).toBeTruthy();
+    expect(shift).not.toHaveBeenCalled();
+
+    const other = [...container.querySelectorAll<HTMLElement>('[aria-label="Pelilauta"] [aria-pressed="false"]')].find((el) => el.getAttribute("aria-disabled") !== "true")!;
+    fireEvent.click(other);
+    expect(container.querySelector("[data-hint]")).toBeNull();
+  });
+
+  it("Not your turn: Vihje is shown disabled", () => {
+    setup({ ...mine, turnSeat: 2 });
+    expect(hintButton().disabled).toBe(true);
   });
 });

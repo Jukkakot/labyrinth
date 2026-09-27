@@ -8,7 +8,7 @@ import { PawnLayer } from "./PawnLayer.tsx";
 import { ShiftTargets, type ShiftTargetsProps } from "./ShiftTargets.tsx";
 import { targetOf, type TargetMark } from "./target.ts";
 import { TILE_UNITS, TileView } from "./TileView.tsx";
-import { ReachMarks, RouteTrace } from "./TurnMarks.tsx";
+import { HintMark, ReachMarks, RouteTrace } from "./TurnMarks.tsx";
 import type { TurnTrace } from "./turnTrace.ts";
 
 const SIZE = BOARD_SIZE * TILE_UNITS;
@@ -28,10 +28,12 @@ export interface BoardProps {
   trace?: TurnTrace;
   /** Squares the viewer could reach after the previewed shift. */
   reach?: readonly Square[];
+  /** The hinted square to walk to. */
+  hint?: Square;
 }
 
 /** The 7×7 board as one scalable SVG, with the pawns on their squares and the controls of the current step. */
-export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target, trace, reach }: BoardProps) {
+export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target, trace, reach, hint }: BoardProps) {
   const { t } = useTranslation();
   const clipId = useId();
   return (
@@ -61,6 +63,7 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
       {trace?.route && trace.seat !== undefined && <RouteTrace route={trace.route} seat={trace.seat} />}
       {reach && <ReachMarks squares={reach} />}
       {moveTargets && <MoveTargets {...moveTargets} />}
+      {hint && <HintMark square={hint} />}
       {/* Pawns never catch taps: a move target under a pawn must stay tappable. */}
       <g className={styles.pawns}>
         <PawnLayer seats={seats} board={board} />

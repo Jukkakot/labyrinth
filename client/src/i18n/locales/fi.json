@@ -150,6 +150,11 @@
     "to": "Siirry ruutuun: rivi {{row}}, sarake {{col}}",
     "stayHere": "Oma ruutu – jää paikalleen"
   },
+  "hint": {
+    "button": "Vihje",
+    "title": "Näytä, mitä botti tekisi sinun vuorollasi",
+    "square": "Vihje: kävele ruutuun rivi {{row}}, sarake {{col}}"
+  },
   "progress": {
     "label": "Pelaajat ja löydetyt aarteet",
     "count": "{{found}}/{{cards}} aarretta löydetty",

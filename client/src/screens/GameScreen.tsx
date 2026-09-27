@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BotSpeed } from "@labyrinth/protocol";
-import { reachableSquares, reverseOf, rotate, shiftBoard, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
+import { reachableSquares, reverseOf, rotate, shiftBoard, type BotTurn, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
 import { GameOverControls } from "../game/GameOverControls.tsx";
+import { moveHint, quarterTurns, shiftHint } from "../game/hint.ts";
 import { KickControl } from "../game/KickControl.tsx";
 import { LeaveButton, LeaveConfirm } from "../game/LeaveControls.tsx";
 import { MoveControls } from "../game/MoveControls.tsx";
@@ -37,6 +38,8 @@ export interface GameScreenProps {
  * "Pelaa uudelleen" and "Alkuun". A spectator gets no step controls: "Katsot peliä", the bots'
  * speed while only bots play, every player's target, and "Uusi bottipeli" after a bot-only game. Once the current player's time is up, the others get the kick
  * control instead of the (disabled) step controls, and anyone leaving is announced by nickname.
+ * "Vihje" previews the bots' shift for the viewer and rings the square to walk to (move step: just
+ * the square); nothing is sent, and it stays on until the viewer's turn ends.
  * The top bar's leave action asks first in a running game (in place of the controls) and leaves a
  * finished game at once.
  */
@@ -76,6 +79,39 @@ export function GameScreen({ view, session }: GameScreenProps) {
   const forbidden = view.lastInsertion ? reverseOf(view.lastInsertion) : undefined;
   const shifting = view.isMyTurn && view.step === "shift";
   const canAct = shifting && !pending;
+
+  // Hint: once asked for, it stays on for the rest of the viewer's turn (the move step follows by itself).
+  const [hinted, setHinted] = useState(false);
+  const [shiftHinted, setShiftHinted] = useState<BotTurn>();
+  const [moveHinted, setMoveHinted] = useState<{ key: string; to?: Square }>();
+  if (!view.isMyTurn && (hinted || shiftHinted || moveHinted)) {
+    setHinted(false);
+    setShiftHinted(undefined);
+    setMoveHinted(undefined);
+  }
+  if (hinted && view.isMyTurn && view.step === "move" && moveHinted?.key !== boardKey) {
+    setMoveHinted({ key: boardKey, to: moveHint(view, shiftHinted) });
+  }
+  const showHint = () => {
+    if (!view.isMyTurn || pending) return;
+    setHinted(true);
+    if (view.step !== "shift") return;
+    const turn = shiftHint(view);
+    if (!turn) return;
+    setShiftHinted(turn);
+    setSelected(turn.insertion);
+    setTurns(quarterTurns(view.board.spare.rotation, turn.rotation));
+  };
+  // The ring shows where to walk: after the hinted shift while it is previewed, or on the move step.
+  const hintSquare = pending
+    ? undefined
+    : shifting
+      ? shiftHinted && selected === shiftHinted.insertion && spare.rotation === shiftHinted.rotation
+        ? shiftHinted.to
+        : undefined
+      : moveHinted?.key === boardKey
+        ? moveHinted.to
+        : undefined;
 
   const confirm = async (insertion: InsertionId) => {
     const result = await shift(insertion, spare.rotation);
@@ -153,6 +189,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
         target={target}
         trace={preview ? undefined : nextTraced}
         reach={reach}
+        hint={hintSquare}
         shiftTargets={shifting ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
         moveTargets={view.reachable ? { reachable: view.reachable, busy: pending, onSelect: moveTo } : undefined}
       />
@@ -188,6 +225,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
           enabled={view.isMyTurn}
           pending={pending}
           onStay={() => me && moveTo(me.square)}
+          onHint={showHint}
         />
       ) : (
         <ShiftControls
@@ -197,6 +235,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
           enabled={view.isMyTurn}
           pending={pending}
           onRotate={() => setTurns((n) => n + 1)}
+          onHint={showHint}
           onConfirm={() => selected && void confirm(selected)}
           onCancel={() => setSelected(undefined)}
         />

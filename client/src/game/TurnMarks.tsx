@@ -24,6 +24,19 @@ export function RouteTrace({ route, seat }: { route: readonly Square[]; seat: nu
   );
 }
 
+/** The hinted square to walk to: a thick ring on a light halo, bigger than the reach rings; not tappable. */
+export function HintMark({ square: sq }: { square: Square }) {
+  const { t } = useTranslation();
+  const cx = sq.col * TILE_UNITS + TILE_UNITS / 2;
+  const cy = sq.row * TILE_UNITS + TILE_UNITS / 2;
+  return (
+    <g className={styles.marks} role="img" aria-label={t("hint.square", { row: sq.row + 1, col: sq.col + 1 })} data-hint={`${sq.row},${sq.col}`}>
+      <circle cx={cx} cy={cy} r={33} className={styles.hintHalo} />
+      <circle cx={cx} cy={cy} r={33} className={styles.hint} />
+    </g>
+  );
+}
+
 /** Squares the viewer could reach after the previewed shift: hollow rings on the hubs, not tappable. */
 export function ReachMarks({ squares }: { squares: readonly Square[] }) {
   const { t } = useTranslation();

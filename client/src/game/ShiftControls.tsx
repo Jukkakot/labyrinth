@@ -2,6 +2,7 @@ import { IconRotateClockwise } from "@tabler/icons-react";
 import type { Tile } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { Button } from "../ui/Button.tsx";
+import { HintButton } from "./HintButton.tsx";
 import styles from "./ShiftControls.module.css";
 import { SpareTile } from "./SpareTile.tsx";
 import type { TargetMark } from "./target.ts";
@@ -18,12 +19,14 @@ export interface ShiftControlsProps {
   /** The viewer's target, marked if it is the spare or the tile dropping out. */
   target?: TargetMark;
   onRotate(): void;
+  /** Shows the hinted shift and square. */
+  onHint(): void;
   onConfirm(): void;
   onCancel(): void;
 }
 
 /** Under the board: the spare with its rotate button, and either a hint or the confirm/cancel pair of a preview. */
-export function ShiftControls({ spare, outgoing, enabled, pending, target, onRotate, onConfirm, onCancel }: ShiftControlsProps) {
+export function ShiftControls({ spare, outgoing, enabled, pending, target, onRotate, onHint, onConfirm, onCancel }: ShiftControlsProps) {
   const { t } = useTranslation();
   const previewing = outgoing !== undefined;
   return (
@@ -40,6 +43,7 @@ export function ShiftControls({ spare, outgoing, enabled, pending, target, onRot
         >
           <IconRotateClockwise size={22} aria-hidden="true" />
         </Button>
+        <HintButton disabled={!enabled || pending} onHint={onHint} />
         {outgoing && (
           <div className={styles.outgoing}>
             <SpareTile tile={outgoing} caption={t("shift.newSpare")} outgoing target={target} />
