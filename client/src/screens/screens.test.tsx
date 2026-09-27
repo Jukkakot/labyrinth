@@ -18,6 +18,7 @@ function sessionOf(overrides: Partial<StartScreenProps["session"]> = {}): StartS
     play: vi.fn(),
     createPrivate: vi.fn(),
     joinById: vi.fn(),
+    playBots: vi.fn(),
     retry: vi.fn(),
     ...overrides,
   };
@@ -203,6 +204,16 @@ describe("lobby › Nickname", () => {
     expect(button("Liity peliin: Liisa, 1/4 pelaajaa").disabled).toBe(true);
     expect(screen.getByText("Nimimerkissä pitää olla 2–16 merkkiä")).toBeTruthy();
     expect(field().getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("Quick game against bots: 1v1–1v3 disabled like Play, and tapping 1v2 starts a game against two bots", () => {
+    const session = sessionOf();
+    render(<StartScreen session={session} wake={ready} />);
+    fireEvent.change(field(), { target: { value: "M" } });
+    for (const n of [1, 2, 3]) expect(screen.getByRole("button", { name: new RegExp(`sinä ja ${n} bott`) }).hasAttribute("disabled")).toBe(true);
+    fireEvent.change(field(), { target: { value: "Maija" } });
+    fireEvent.click(button("Pikapeli: sinä ja 2 bottia"));
+    expect(session.playBots).toHaveBeenCalledWith("Maija", 2);
   });
 
   it("control characters get their own hint", () => {

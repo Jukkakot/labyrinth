@@ -45,6 +45,8 @@ export interface Connector {
   joinOrCreate(options: JoinRequest): Promise<GameRoomLike>;
   /** A new private game, with the caller as its host. */
   createPrivate(options: JoinRequest): Promise<GameRoomLike>;
+  /** A quick game against `bots` bots: never listed, started as soon as the caller is seated. */
+  createBotGame(options: JoinRequest & { bots: number }): Promise<GameRoomLike>;
   /** One particular game, from the list or an invite link. */
   joinById(roomId: string, options: JoinRequest): Promise<GameRoomLike>;
   reconnect(token: string): Promise<GameRoomLike>;
@@ -73,6 +75,8 @@ export function createConnector(): Connector {
     joinOrCreate: (options) => sdkClient().joinOrCreate("game", withPool(options)) as unknown as Promise<GameRoomLike>,
     createPrivate: (options) =>
       sdkClient().create("game", { ...withPool(options), private: true }) as unknown as Promise<GameRoomLike>,
+    createBotGame: ({ bots, ...options }) =>
+      sdkClient().create("game", { ...withPool(options), bots, private: true }) as unknown as Promise<GameRoomLike>,
     joinById: (roomId, options) => sdkClient().joinById(roomId, withPool(options)) as unknown as Promise<GameRoomLike>,
     reconnect: (token) => sdkClient().reconnect(token) as unknown as Promise<GameRoomLike>,
   };
@@ -123,6 +127,8 @@ export interface GameSession {
   createPrivate(nickname: string): void;
   /** Joins one particular game (from the list or an invite link). */
   joinById(roomId: string, nickname: string): void;
+  /** A quick game against 1–3 bots, straight into the game. */
+  playBots(nickname: string, bots: number): void;
   /** Repeats the last join attempt after the generic join error. */
   retry(): void;
   /** The host starts the game from the waiting room. Resolves undefined without sending while another command is pending. */
@@ -254,6 +260,10 @@ export function useGameSession(connector?: Connector): GameSession {
     (nickname: string) => connect(() => getConnector().createPrivate({ nickname }), nickname),
     [connect],
   );
+  const playBots = useCallback(
+    (nickname: string, bots: number) => connect(() => getConnector().createBotGame({ nickname, bots }), nickname),
+    [connect],
+  );
   const joinById = useCallback(
     (roomId: string, nickname: string) => connect(() => getConnector().joinById(roomId, { nickname }), nickname),
     [connect],
@@ -327,6 +337,7 @@ export function useGameSession(connector?: Connector): GameSession {
     play,
     createPrivate,
     joinById,
+    playBots,
     retry,
     start,
     addBot,

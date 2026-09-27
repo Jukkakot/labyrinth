@@ -79,10 +79,12 @@ export interface JoinOptions {
   pool?: string;
   /** Create a private game: never listed and never picked by quick play. */
   private?: boolean;
+  /** Quick game against 1–3 bots: the room is created private and starts as soon as its creator joins. */
+  bots?: number;
 }
 
 /** Codes the server refuses a join or a room creation with (as the join error's message). */
-export const JOIN_ERROR_CODES = ["INVALID_NICKNAME", "SERVER_FULL"] as const;
+export const JOIN_ERROR_CODES = ["INVALID_NICKNAME", "INVALID_OPTIONS", "SERVER_FULL"] as const;
 export type JoinErrorCode = (typeof JOIN_ERROR_CODES)[number];
 
 /** Seat to kick: only the current player, once their turn time is up. */

@@ -86,7 +86,10 @@
     "serverFull": "The server is full – try again in a moment",
     "invited": "You have been invited to a game",
     "joinInvite": "Join the game",
-    "otherGames": "Other games"
+    "otherGames": "Other games",
+    "botGames": "Quick game against bots",
+    "botGameLabel_one": "Quick game: you and {{count}} bot",
+    "botGameLabel_other": "Quick game: you and {{count}} bots"
   },
   "game": {
     "idLabel": "Game {{id}}. Tap to copy.",

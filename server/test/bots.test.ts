@@ -214,6 +214,46 @@ describe("bots in a room", () => {
     });
   });
 
+  describe("Quick game against bots", () => {
+    async function quick(bots: unknown) {
+      const r = (await colyseus.createRoom("game", { nickname: "Maija", bots })) as unknown as GameRoom;
+      r.botShiftDelayMs = 60_000;
+      const client = await join(colyseus, r, "Maija");
+      return { room: r, client };
+    }
+
+    it("One against one: started at once with Maija and Robo, 12 cards each, private and locked", async () => {
+      const { room: r } = await quick(1);
+      expect(r.state.phase).not.toBe("waiting");
+      expect([...r.state.players.values()].map((p) => [p.seat, p.name, p.bot, p.cards])).toEqual([
+        [1, "Maija", false, 12],
+        [2, "Robo", true, 12],
+      ]);
+      expect([1, 2]).toContain(r.state.turnSeat);
+      expect(logs.byEvt("game.started")).toEqual([expect.objectContaining({ quick: true, seats: [1, 2] })]);
+      const entry = await listing(r.roomId);
+      expect(entry?.private).toBe(true);
+      expect(entry?.locked).toBe(true);
+    });
+
+    it("One against three: Maija, Robo, Pixel and Byte with 6 cards each", async () => {
+      const { room: r } = await quick(3);
+      expect([...r.state.players.values()].map((p) => [p.name, p.cards])).toEqual([
+        ["Maija", 6],
+        ["Robo", 6],
+        ["Pixel", 6],
+        ["Byte", 6],
+      ]);
+      expect(logs.byEvt("bot.added")).toHaveLength(3);
+    });
+
+    it("Too many bots: no game is created", async () => {
+      await expect(colyseus.sdk.create("game", { nickname: "Maija", bots: 4 })).rejects.toThrow("INVALID_OPTIONS");
+      expect(logs.byEvt("room.created")).toHaveLength(0);
+      expect(logs.byEvt("room.refused")).toEqual([expect.objectContaining({ reason: "options" })]);
+    });
+  });
+
   describe("Game ends without people", () => {
     it("Solo player leaves a bot game: it ends without a winner and nothing more happens", async () => {
       const { room: r, clients } = await room(1);

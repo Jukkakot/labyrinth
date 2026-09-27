@@ -76,9 +76,9 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
  (nickname)     host = 1st joiner   └─ 60 s turn clock ─┘   win: home or last player standing
 ```
 
-- **Joining:** join options `{ nickname, pool?, private? }` are validated in `onCreate` (no room is
+- **Joining:** join options `{ nickname, pool?, private?, bots? }` are validated in `onCreate` (no room is
   created) and `onAuth` (before a seat); refusals are a `ServerError` whose message is the code
-  (`INVALID_NICKNAME`, `SERVER_FULL`). Seats: lowest free 1–4 → start corner clockwise from
+  (`INVALID_NICKNAME`, `INVALID_OPTIONS` for any other bad option, `SERVER_FULL`). Seats: lowest free 1–4 → start corner clockwise from
   top-left, taken only in the waiting room. `MAX_OPEN_GAMES` caps the rooms (static counter).
 - **Waiting room:** `phase = "waiting"`, no turn, no cards, no clock. The first joiner is the host
   (`hostSeat`). A guest leaving frees the seat; the host leaving (or a dropped host's hold running
@@ -105,6 +105,9 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   the deal seed and seat) and sends the shift; 1 s later the move. A rejected choice logs
   `bot.fallback` and the bot makes an allowed shift and stays. One `botTimer` per room, cleared
   on every turn change, finish and dispose.
+- **Quick bot game:** creating a room with `bots: 1–3` makes it private; when the creator joins,
+  `onJoin` seats the bots in the next seats and calls the same `startGame()` as the host's `start`
+  (`game.started { quick: true }`), so the client lands straight on the board.
 - **No people left:** when the last person is removed from a started game it finishes with
   `winnerSeat = 0` (reason `noPeople`); bots never play on alone.
 

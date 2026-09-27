@@ -13,7 +13,7 @@ import { BuildInfo } from "./BuildInfo.tsx";
 import styles from "./StartScreen.module.css";
 
 export interface StartScreenProps {
-  session: Pick<GameSession, "status" | "slow" | "play" | "createPrivate" | "joinById" | "retry" | "startNotice">;
+  session: Pick<GameSession, "status" | "slow" | "play" | "createPrivate" | "joinById" | "playBots" | "retry" | "startNotice">;
   /** The early server wake-up: the join actions stay disabled until it is over. */
   wake: ServerWake;
   /** The live list of open public games. */
@@ -26,13 +26,17 @@ export interface StartScreenProps {
 
 const NO_GAMES: OpenGames = { status: "off", games: [] };
 
+/** Quick games against bots: the player against 1, 2 or 3 bots. */
+const BOT_COUNTS = [1, 2, 3] as const;
+
 /**
- * Before a game: the nickname field and the ways in (quick play, a private game, the open games
- * list, or the invite in invite mode), then the connecting and join-error states.
+ * Before a game: the nickname field and the ways in (quick play, a private game, a quick game
+ * against bots, the open games list, or the invite in invite mode), then the connecting and
+ * join-error states.
  */
 export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInviteDone }: StartScreenProps) {
   const { t } = useTranslation();
-  const { status, slow, play, createPrivate, joinById, retry, startNotice } = session;
+  const { status, slow, play, createPrivate, joinById, playBots, retry, startNotice } = session;
   const [input, setInput] = useState(loadNickname);
   const [touched, setTouched] = useState(false);
   const nickname = checkNickname(input);
@@ -112,6 +116,22 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
                 <Button variant="secondary" disabled={disabled} onClick={() => createPrivate(name)}>
                   {t("start.createPrivate")}
                 </Button>
+                <div className={styles.bots} role="group" aria-labelledby="bot-games">
+                  <p id="bot-games" className={styles.botsTitle}>
+                    {t("start.botGames")}
+                  </p>
+                  {BOT_COUNTS.map((bots) => (
+                    <Button
+                      key={bots}
+                      variant="secondary"
+                      disabled={disabled}
+                      onClick={() => playBots(name, bots)}
+                      aria-label={t("start.botGameLabel", { count: bots })}
+                    >
+                      1v{bots}
+                    </Button>
+                  ))}
+                </div>
               </>
             )}
           </div>

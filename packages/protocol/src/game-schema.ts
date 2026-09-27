@@ -46,4 +46,5 @@ export const joinOptionsSchema = z.object({
   nickname: nicknameSchema,
   pool: z.string().max(64).optional(),
   private: z.boolean().optional(),
+  bots: z.int().min(1).max(3).optional(),
 }) satisfies z.ZodType<JoinOptions, unknown>;

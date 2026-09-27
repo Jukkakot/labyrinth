@@ -39,7 +39,7 @@ function fakeRoom(overrides: Partial<GameRoomLike> = {}): GameRoomLike {
 }
 
 function connectorWith(overrides: Partial<Connector>): Connector {
-  return { joinOrCreate: vi.fn(), createPrivate: vi.fn(), joinById: vi.fn(), reconnect: vi.fn(), ...overrides };
+  return { joinOrCreate: vi.fn(), createPrivate: vi.fn(), createBotGame: vi.fn(), joinById: vi.fn(), reconnect: vi.fn(), ...overrides };
 }
 
 /** A room whose onLeave callback the test can fire. */
@@ -410,6 +410,17 @@ describe("lobby › joining", () => {
     act(() => result.current.retry());
     await waitFor(() => expect(result.current.status).toBe("playing"));
     expect(joinById).toHaveBeenLastCalledWith("brave-otters-sing", { nickname: "Pekka" });
+  });
+
+  it("quick game against bots: creates a bot game with the count; retry repeats it", async () => {
+    const createBotGame = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce(fakeRoom());
+    const { result } = renderHook(() => useGameSession(connectorWith({ createBotGame })));
+    act(() => result.current.playBots("Maija", 3));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    expect(createBotGame).toHaveBeenCalledTimes(2);
+    expect(createBotGame).toHaveBeenLastCalledWith({ nickname: "Maija", bots: 3 });
   });
 
   it("Host leaves: close code 4101 returns to the start screen with the host-left notice", async () => {

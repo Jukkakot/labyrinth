@@ -13,9 +13,7 @@ One OpenSpec change at a time, in this order. Adjust as we learn.
 8. ~~`turn-rules`~~ (done): 60 s turn clock, kick after the time is up, 5 min disconnect hold, last player standing wins
 9. ~~`lobby`~~ (done): nickname, open games list, private games and invite links, waiting room with host start (24/n cards, random start seat), host leaving closes the room, game cap, local-first leave with a leave button in the game
 10. ~~`bot-player`~~ (done): host adds/removes bots in the waiting room, greedy bots behind a replaceable `BotStrategy`, bot turns through the normal command path, game ends when no person is left
-11. `quick-play-vs-bots`: start screen quick games against bots, "Pikapeli 1v1", "1v2", "1v3"
-    (the player alone against 1–3 bots, straight into the game). Requested 2026-09-27 to follow
-    `bot-player` directly
+11. ~~`quick-play-vs-bots`~~ (done): start screen "Pikapeli botteja vastaan" 1v1/1v2/1v3, a private game started at once against 1–3 bots
 12. `spectators-and-rematch`
 13. `settings`: confirmations, theme, sounds, turn notification
 

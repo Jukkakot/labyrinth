@@ -108,6 +108,12 @@ describe("joinOptionsSchema", () => {
     expect(joinOptionsSchema.safeParse({}).success).toBe(false);
     expect(joinOptionsSchema.safeParse({ nickname: "Pekka", private: "yes" }).success).toBe(false);
   });
+
+  it("accepts 1–3 bots for a quick bot game, nothing else", () => {
+    expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots: 1 }).success).toBe(true);
+    expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots: 3 }).success).toBe(true);
+    for (const bots of [0, 4, 1.5, "2"]) expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots }).success).toBe(false);
+  });
 });
 
 describe("startPayloadSchema", () => {

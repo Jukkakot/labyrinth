@@ -45,6 +45,7 @@ import {
   type Tile,
   type TreasureId,
 } from "@labyrinth/rules";
+import type { z } from "zod";
 import { log } from "../logging/logger.js";
 import { CommandRejection, type Actor } from "./command.js";
 import { LoggedRoom } from "./LoggedRoom.js";
@@ -91,6 +92,10 @@ const squareOf = (player: Player): Square => ({ row: player.row, col: player.col
 const refuse = (code: JoinErrorCode) =>
   new ServerError(code === "INVALID_NICKNAME" ? ErrorCode.AUTH_FAILED : ErrorCode.APPLICATION_ERROR, code);
 
+/** Why join options were refused: the nickname, or any other field (`bots`, `pool` …). */
+const refusalOf = (error: z.ZodError): "nickname" | "options" =>
+  error.issues.some((issue) => issue.path[0] === "nickname") ? "nickname" : "options";
+
 const placePawn = (player: Player, sq: Square) => {
   player.row = sq.row;
   player.col = sq.col;
@@ -129,6 +134,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   private stacks = new Map<number, TreasureId[]>();
   /** True while the room is being closed for everyone: dropped connections hold no seat. */
   private closing = false;
+  /** Bots of a quick bot game (0 = an ordinary game): seated and started when the creator joins. */
+  private quickBots = 0;
   /** True once this room counts towards `openGames`. */
   private counted = false;
   private turnTimer?: { clear(): void };
@@ -146,33 +153,14 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       if (player.seat !== this.state.hostSeat) throw new CommandRejection("NOT_HOST", { seat: player.seat });
       if (this.state.phase !== "waiting") throw new CommandRejection("WRONG_PHASE", { expected: "waiting" });
       if (this.state.players.size < MIN_SEATS) throw new CommandRejection("NOT_ENOUGH_PLAYERS", { seated: this.state.players.size });
-
-      const seats = this.seats();
-      const dealSeed = this.drawDealSeed();
-      const { stacks, startSeat } = dealGame(dealSeed, seats);
-      this.stacks = stacks;
-      this.botRngs = new Map(this.bots().map((p) => [p.seat, createRng(botSeed(dealSeed, p.seat))]));
-      for (const p of this.state.players.values()) {
-        const stack = stacks.get(p.seat)!;
-        p.cards = stack.length;
-        p.target = stack[0]!;
-      }
-      void this.lock();
-      void this.setMetadata({ ...this.metadata, open: false });
-      log.info("game.started", this.logCtx(undefined, { dealSeed, seats, startSeat }));
-      this.setTurn(startSeat);
+      this.startGame();
     }),
 
     addBot: this.command("addBot", botSeatPayloadSchema, (client, { seat }) => {
       this.requireHostInWaitingRoom(client);
       if (this.seatHolder(seat) || this.pendingSeats().includes(seat)) throw new CommandRejection("SEAT_TAKEN", { seat });
 
-      const used = new Set(this.bots().map((p) => p.name));
-      const name = BOT_NAMES.find((n) => !used.has(n))!; // four names for at most three bots
-      const corner = START_CORNERS[seat - 1]!;
-      this.state.players.set(botKey(seat), new Player({ seat, name, bot: true, row: corner.row, col: corner.col }));
-      log.info("bot.added", this.logCtx(undefined, { seat, name }));
-      this.syncSeats();
+      this.seatBot(seat);
     }),
 
     removeBot: this.command("removeBot", botSeatPayloadSchema, (client, { seat }) => {
@@ -244,6 +232,37 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       }
     }),
   };
+
+  /**
+   * Deals the cards to the seated players (bots included), locks the room and gives the first turn
+   * to a seat drawn from the deal seed. The one way a game starts (host's start, quick bot game).
+   */
+  private startGame(): void {
+    const seats = this.seats();
+    const dealSeed = this.drawDealSeed();
+    const { stacks, startSeat } = dealGame(dealSeed, seats);
+    this.stacks = stacks;
+    this.botRngs = new Map(this.bots().map((p) => [p.seat, createRng(botSeed(dealSeed, p.seat))]));
+    for (const p of this.state.players.values()) {
+      const stack = stacks.get(p.seat)!;
+      p.cards = stack.length;
+      p.target = stack[0]!;
+    }
+    void this.lock();
+    void this.setMetadata({ ...this.metadata, open: false });
+    log.info("game.started", this.logCtx(undefined, { dealSeed, seats, startSeat, ...(this.quickBots > 0 && { quick: true }) }));
+    this.setTurn(startSeat);
+  }
+
+  /** Seats a bot with the first free bot name on its seat's start corner. */
+  private seatBot(seat: number): void {
+    const used = new Set(this.bots().map((p) => p.name));
+    const name = BOT_NAMES.find((n) => !used.has(n))!; // four names for at most three bots
+    const corner = START_CORNERS[seat - 1]!;
+    this.state.players.set(botKey(seat), new Player({ seat, name, bot: true, row: corner.row, col: corner.col }));
+    log.info("bot.added", this.logCtx(undefined, { seat, name }));
+    this.syncSeats();
+  }
 
   /** Rejects unless `actor` is the seated host and the game is still in its waiting room. Changes nothing. */
   private requireHostInWaitingRoom(actor: Actor): void {
@@ -480,8 +499,9 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     // Refuse before anything exists: the creator's own join would be refused anyway.
     const parsed = joinOptionsSchema.safeParse(options);
     if (!parsed.success) {
-      log.info("room.refused", { reason: "nickname" });
-      throw refuse("INVALID_NICKNAME");
+      const reason = refusalOf(parsed.error);
+      log.info("room.refused", { reason });
+      throw refuse(reason === "nickname" ? "INVALID_NICKNAME" : "INVALID_OPTIONS");
     }
     if (GameRoom.openGames >= GameRoom.maxOpenGames) {
       log.warn("room.refused", { reason: "cap", open: GameRoom.openGames });
@@ -491,7 +511,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     this.counted = true;
 
     await super.onCreate(options);
-    if (parsed.data.private) await this.setPrivate(true);
+    this.quickBots = parsed.data.bots ?? 0;
+    if (parsed.data.private || this.quickBots > 0) await this.setPrivate(true);
     await this.setMetadata({ host: "", open: true, pool: parsed.data.pool ?? "", seated: 0 });
     this.seed = randomInt(0, MAX_SEED + 1);
     const board = setupBoard(this.seed);
@@ -500,12 +521,13 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     log.info("game.setup", this.logCtx(undefined, { seed: this.seed, private: parsed.data.private ?? false }));
   }
 
-  /** Checks the join options before a seat is taken: a player needs a valid nickname. */
+  /** Checks the join options before a seat is taken: a player needs a valid nickname (and valid options). */
   onAuth(_client: Client, options: unknown): JoinOptions {
     const parsed = joinOptionsSchema.safeParse(options);
     if (!parsed.success) {
-      log.info("room.refused", this.logCtx(undefined, { reason: "nickname" }));
-      throw refuse("INVALID_NICKNAME");
+      const reason = refusalOf(parsed.error);
+      log.info("room.refused", this.logCtx(undefined, { reason }));
+      throw refuse(reason === "nickname" ? "INVALID_NICKNAME" : "INVALID_OPTIONS");
     }
     return parsed.data;
   }
@@ -531,6 +553,10 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       void this.setMetadata({ ...this.metadata, host: name });
     }
     this.syncSeats();
+    if (this.quickBots > 0 && this.state.phase === "waiting") {
+      for (let bot = 1; bot <= this.quickBots; bot++) this.seatBot(seat + bot);
+      this.startGame();
+    }
   }
 
   /** Consented leave, or a dropped player's hold ran out (a kicked player is already gone). */
