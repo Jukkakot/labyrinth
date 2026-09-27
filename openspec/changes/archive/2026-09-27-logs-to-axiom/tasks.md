@@ -9,4 +9,4 @@
 
 - [x] 2.1 `render.yaml`: `AXIOM_DATASET=labyrinth`, `AXIOM_TOKEN` with `sync: false`. `docs/operations.md`: Logs section (Axiom as the main store, Render as fallback), configuration table, ready APL queries, bug runbook starting from Axiom MCP, the one-time setup steps. Verify by reading against the code
 - [x] 2.2 Run the check chain once and commit. Verify it is green
-- [ ] 2.3 After the user's setup and a deploy: query Axiom for the lines of a new production game. Verify one query returns the game's server and client lines in order
+- [x] 2.3 After the user's setup and a deploy: query Axiom for the lines of a new production game. Verify one query returns the game's server and client lines in order

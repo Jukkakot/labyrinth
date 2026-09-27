@@ -76,10 +76,19 @@ lines, never slows a game.
 ['labyrinth'] | where evt == "game.started" | summarize count() by quick = tostring(quick), bin(_time, 1d)
 ```
 
-**One-time setup** (done by the user in the web UIs): Axiom → new dataset `labyrinth`; Axiom → API
-token with ingest permission for `labyrinth` only; Render → `labyrinth-server` → Environment →
-`AXIOM_TOKEN`. Recommended: Axiom monitor on `['labyrinth'] | where level == "error"` (count > 0
-per 5 min → email).
+**Dashboard for people:** Axiom → Dashboards → **"Labyrintti – lokit"** (uid
+`944f69f1-0eb1-46b1-b88c-5c0635b8aed6`). Filter bar: source (server/client), type (audit = commands,
+game flow, connections, HTTP, errors and warnings), game id, people/bots, version. Panels: games
+started, errors, rejected commands, bot fallbacks, lines by level, finished games by reason, the
+log table (newest first) and rejections by code. Built by `tools/axiom/dashboard.py`; change it there
+and upload with `tools/axiom/axiom.ps1` (see the script header), not by hand in the UI.
+
+**Setup (done 2026-09-27):** dataset `labyrinth` (EU region, plan retention 30 days), ingest-only
+token "labyrinth ingest (Render server)" in Render's `AXIOM_TOKEN`. Claude administers Axiom
+(datasets, tokens, dashboards, monitors) through its REST API with the user's personal token
+`AXIOM_PAT` + `AXIOM_ORG_ID` from the Windows user environment (`tools/axiom/axiom.ps1` reads them
+there, as a running VS Code may not have inherited them). Not set up yet: an error alert (monitor)
+— it needs a notifier, e.g. the user's email.
 
 **Format:** one JSON object per line, keys in this order:
 

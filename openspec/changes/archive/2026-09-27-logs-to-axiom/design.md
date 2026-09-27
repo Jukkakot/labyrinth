@@ -27,6 +27,10 @@ Shipped lines carry `time` (ISO), which the transport maps to Axiom's `_time`. S
 field then (one duplicate timestamp in Render's view; harmless). Without shipping, production stays
 as today.
 
+### 2b. EU edge domain (found in production)
+The dataset lives in Axiom's EU region; Axiom refuses ingest through `api.axiom.co` there. The
+transport gets `edge` from `AXIOM_EDGE` (`eu-central-1.aws.edge.axiom.co`, in `render.yaml`).
+
 ### 3. Production only, one dataset
 Development never ships, even with the variables set, so the dataset holds only real games. The
 dataset is `labyrinth` (`AXIOM_DATASET` in `render.yaml`); the token is a dashboard secret
