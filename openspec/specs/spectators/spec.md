@@ -8,31 +8,6 @@ are watched.
 
 ## Requirements
 
-### Requirement: Running games to watch
-The start screen SHALL list, under "Käynnissä olevat pelit", the public games that have started and
-not finished. Each entry MUST show the host's nickname and the number of seated players (for
-example "Maija · 3 pelaajaa"). The list MUST update by itself like the open games list, and a game
-MUST disappear from it when it finishes or closes. With no running games the section MUST NOT be
-shown. Tapping an entry MUST join that game as a spectator, needs a valid nickname like every join,
-and MUST be disabled whenever Play is. If the game can no longer be watched, the player MUST stay
-on the start screen and see "Peli ei ole enää avoinna". Private games MUST NOT be listed.
-
-#### Scenario: A started game is listed
-- **WHEN** the host of a public game with 3 players starts it while the viewer is on the start screen
-- **THEN** the game moves from the open games list to "Käynnissä olevat pelit" as "Maija · 3 pelaajaa"
-
-#### Scenario: Watch from the list
-- **WHEN** the viewer taps that entry
-- **THEN** the viewer sees the game's board as a spectator, and no seat is taken
-
-#### Scenario: Finished game disappears
-- **WHEN** a listed game finishes
-- **THEN** it is no longer in "Käynnissä olevat pelit"
-
-#### Scenario: Private games are not listed
-- **WHEN** a private game or a quick bot game is running
-- **THEN** it is not in "Käynnissä olevat pelit"
-
 ### Requirement: Watching by invite link
 When "Liity peliin" of an invite link fails because the game has already started, the player SHALL
 join that game as a spectator instead, and MUST be told once, briefly, that the game had already
@@ -49,28 +24,40 @@ start screen.
 - **THEN** they see "Peli ei ole enää avoinna" on the start screen
 
 ### Requirement: Watching a game of bots
-The start screen SHALL offer, under the heading "Katso bottien peliä", the buttons "2", "3" and "4".
-Tapping one MUST create a new game that is never listed and that nobody can join as a player, seat
-that many bots in seats 1 upwards, start it at once and show it to the player as its spectator. The
-buttons MUST be disabled whenever Play is, and connecting and a failed attempt MUST look as for
-Play. The server MUST refuse a request for fewer than 2 or more than 4 bots in such a game. The
-game is an ordinary game of bots: they play by the normal rules until one wins.
+With the start screen's "Pelaan itse" switch off, the quick bot section SHALL offer "2 bottia",
+"3 bottia" and "4 bottia". Tapping one MUST start a new game of that many bots only on the player's
+own device, without contacting the server, and show it to the player as its spectator: the bots in
+seats 1 upwards with the usual bot names, the treasure cards dealt and a bot chosen at random on
+turn first. The player MUST go straight to the board without a connecting state. The buttons MUST
+be disabled only for an invalid nickname; they MUST NOT wait for the server to wake up, and they
+MUST work without a network connection. The game is an ordinary game of bots with the same rules,
+bot behaviour and bot pacing as on the server: they play until one wins. It has no turn clock,
+nobody else can see, join or watch it, and it is not kept: leaving or reloading the page ends it.
+Like starting any other game, it replaces the game "Jatka peliä" would continue.
 
 #### Scenario: Watch three bots
-- **WHEN** the player taps "3" under "Katso bottien peliä"
+- **WHEN** the player turns "Pelaan itse" off and taps "3 bottia"
 - **THEN** they see a started game of Robo, Pixel and Byte, each with 8 treasure cards, and the bots play by themselves
 
 #### Scenario: Bots play to the end
 - **WHEN** the spectator keeps watching
 - **THEN** one of the bots eventually wins and the result is shown
 
+#### Scenario: No waiting for the server
+- **WHEN** the server is still being woken up and the player taps "2 bottia"
+- **THEN** they see the board at once
+
 #### Scenario: Not a game to join
 - **WHEN** another player looks at the start screen while the bot game runs
 - **THEN** the game is in neither list
 
 #### Scenario: One bot is not a game
-- **WHEN** a request to watch a game of 1 bot reaches the server
-- **THEN** no game is created
+- **WHEN** the player turns "Pelaan itse" off
+- **THEN** the smallest game offered is "2 bottia"
+
+#### Scenario: Reload ends it
+- **WHEN** the spectator reloads the page while watching
+- **THEN** they are on the start screen and the watched game is gone
 
 ### Requirement: What a spectator sees
 A spectator SHALL see the same game screen as the players: the board, whose turn it is and the
@@ -149,9 +136,39 @@ watching MUST see the same speed. A speed change MUST be rejected, without chang
 
 ### Requirement: New bot game after watching
 When a watched game with no person seated has finished, its spectators SHALL be offered "Uusi
-bottipeli", which starts a new game of the same number of bots at the same speed with the viewer as
-its spectator, and "Alkuun", which returns to the start screen.
+bottipeli", which starts a new game of the same number of bots at the same speed on the viewer's
+own device with the viewer as its spectator, and "Alkuun", which returns to the start screen.
 
 #### Scenario: Watch another
 - **WHEN** a game of 3 bots watched at 2× finishes and the spectator taps "Uusi bottipeli"
-- **THEN** they watch a new game of 3 bots at 2×
+- **THEN** they watch a new game of 3 bots at 2× on their device
+
+#### Scenario: After a game on the server
+- **WHEN** a spectator of a game on the server whose people all left watches its 2 bots finish and taps "Uusi bottipeli"
+- **THEN** they watch a new game of 2 bots on their device
+
+### Requirement: Started games to watch
+The start screen SHALL list, under "Käynnissä olevat pelit", the games on the server that have
+started and not finished. Each entry MUST show the host's nickname and the number of seated players
+(for example "Maija · 3 pelaajaa"). The list MUST update by itself like the open games list, and a
+game MUST disappear from it when it finishes or closes. With no running games the section MUST NOT
+be shown. Tapping an entry MUST join that game as a spectator, needs a valid nickname like every
+join, and MUST be disabled whenever Play is. If the game can no longer be watched, the player MUST
+stay on the start screen and see "Peli ei ole enää avoinna". Games on a player's own device (quick
+bot games, games of bots to watch, the daily puzzle) MUST NOT be listed.
+
+#### Scenario: A started game is listed
+- **WHEN** the host of a game with 3 players starts it while the viewer is on the start screen
+- **THEN** the game moves from the open games list to "Käynnissä olevat pelit" as "Maija · 3 pelaajaa"
+
+#### Scenario: Watch from the list
+- **WHEN** the viewer taps that entry
+- **THEN** the viewer sees the game's board as a spectator, and no seat is taken
+
+#### Scenario: Finished game disappears
+- **WHEN** a listed game finishes
+- **THEN** it is no longer in "Käynnissä olevat pelit"
+
+#### Scenario: Device games are not listed
+- **WHEN** a quick bot game or a game of bots to watch is running on someone's phone
+- **THEN** it is not in "Käynnissä olevat pelit"

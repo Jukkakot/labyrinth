@@ -24,11 +24,19 @@ Each square SHALL show its tile's corridors, from the tile's centre toward exact
 - **THEN** the 16 fixed tiles can be told apart from the movable ones
 
 ### Requirement: Treasures shown as icons
-A tile carrying a treasure SHALL show that treasure's icon on its corridor. The same treasure MUST always use the same icon, and the 24 treasures MUST use 24 different icons. Each treasure MUST have a localized name for assistive technology.
+A tile carrying a treasure SHALL show that treasure's icon on its corridor while the treasure is still in play. Once any player has collected a treasure, its tile MUST be shown as a plain tile: no icon and no treasure name for assistive technology, on the board and in a shift preview. The tile carrying the viewer's current target MUST always show its treasure. The same treasure MUST always use the same icon, and the 24 treasures MUST use 24 different icons. Each treasure MUST have a localized name for assistive technology.
 
 #### Scenario: Treasure tile
 - **WHEN** the tile carrying the dragon is shown
 - **THEN** it shows the dragon icon, and its accessible name includes the localized treasure name ("lohikäärme" / "dragon")
+
+#### Scenario: Collected treasure hidden
+- **WHEN** another player has collected the dragon
+- **THEN** the dragon's tile is shown with its corridors but without the dragon icon or name, for players and spectators alike
+
+#### Scenario: Own target always shown
+- **WHEN** the tile carrying the viewer's current target is shown
+- **THEN** it shows its treasure icon and the target highlight
 
 ### Requirement: Pawns on their squares
 Each seated player's pawn SHALL be shown on the square where it currently stands; a new player's pawn stands on their start corner. Players are distinguished by their pawn (see pawn-looks): a colour-blind-safe colour always paired with a shape (circle, square, triangle, diamond). Everything that shows a player's pawn or colour (board, player strip, turn line, result, waiting room, last-move marks) uses that player's pawn. The viewer's own pawn MUST be identifiable as theirs. When several pawns share a square, all of them MUST stay visible, drawn smaller side by side. In a shift preview, pawns on the previewed line MUST be shown where the shift would carry them.
@@ -50,27 +58,15 @@ Each seated player's pawn SHALL be shown on the square where it currently stands
 - **THEN** the pawn is shown on (3,3) in the preview
 
 ### Requirement: Spare tile shown
-The spare tile SHALL be shown next to the board in the same style as the board's tiles, including its treasure if it has one.
+The spare tile SHALL be shown next to the board in the same style as the board's tiles, including its treasure if it has one that is still in play; a collected treasure is left out as on the board.
 
 #### Scenario: Spare with treasure
 - **WHEN** the spare tile carries a treasure
 - **THEN** the spare is shown with its corridors and treasure icon
 
-### Requirement: Game identifier badge
-During a game, the game's readable identifier SHALL be shown small in the top area. A game played on the device MUST show a short label instead of its identifier: "Päivän pulma" / "Daily puzzle" for the daily puzzle and "Oma peli" / "Own game" for any other game on the device. Tapping it MUST copy a line with the full identifier (also for games on the device), the local date and time, and the app version (for example `Peli brave-otters-sing · 26.9.2026 14.32 · v a1b2c3d`) and briefly confirm that it was copied. If copying is not possible, the text MUST be shown selectable instead. The badge MUST be at least 44 px tall to tap and its text MUST stay on one line on a phone in portrait.
-
-#### Scenario: Copy for a bug report
-- **WHEN** the player taps the game identifier
-- **THEN** the identifier, local date and time and version are copied to the clipboard and a short "Kopioitu" / "Copied" confirmation appears
-
-#### Scenario: Daily puzzle label
-- **WHEN** the player is in the daily puzzle
-- **THEN** the badge reads "Päivän pulma" instead of the `local-daily-…` identifier
-- **AND** tapping it copies a line with the full `local-daily-…` identifier
-
-#### Scenario: Other game on the device
-- **WHEN** the player is in a quick game against bots on the device
-- **THEN** the badge reads "Oma peli" instead of the `local-…` identifier
+#### Scenario: Spare with a collected treasure
+- **WHEN** the spare tile carries a treasure that has already been collected
+- **THEN** the spare is shown with its corridors but without the treasure icon
 
 ### Requirement: Whose turn is shown
 The game screen SHALL always show whose turn it is and which step it is in. On your own turn it MUST say what to do: push a tile ("Sinun vuorosi – työnnä laatta") or move your pawn ("Sinun vuorosi – siirrä nappulaa"). On someone else's turn it MUST name that player by their nickname, show their pawn shape and colour, and say whether they are pushing or moving ("Maija työntää" / "Maija siirtää"). While the turn clock runs, the turn line MUST show the time left as minutes and seconds (for example `0:42`), emphasised during the last 10 seconds without relying on colour alone, and "Aika loppui" once the time is up. When the current player's connection has dropped, the turn line MUST say so.
@@ -333,3 +329,30 @@ gentle pulse that stays still when the viewer prefers reduced motion.
 #### Scenario: Reduced motion
 - **WHEN** the viewer prefers reduced motion and the hint ring is shown
 - **THEN** the ring does not pulse
+
+### Requirement: Game link badge
+In the waiting room and during a game, the game's readable identifier SHALL be shown small in the top area. Tapping the identifier of a server game MUST hand out the game's link (the invite link that contains the game id): through the device's share sheet where there is one, otherwise by copying the link and briefly confirming "Linkki kopioitu" / "Link copied". In the waiting room the shared text MUST invite the friend to join ("Liity Labyrintti-peliini"); once the game runs it MUST invite them to watch ("Katso Labyrintti-peliäni"). The link is the same in both cases: an invite link seats a friend in the waiting room or, once the game has started, lets them watch it. If neither sharing nor copying is possible, the link MUST be shown selectable instead. A game played on the device has no link: it MUST show a short label instead of its identifier, "Päivän pulma" / "Daily puzzle" for the daily puzzle and "Oma peli" / "Own game" for any other game on the device, and the label MUST NOT react to a tap. The badge MUST be at least 44 px tall to tap and its text MUST stay on one line on a phone in portrait.
+
+#### Scenario: Share a running game
+- **WHEN** Maija taps the game identifier `brave-otters-sing` during a game on a phone with a share sheet
+- **THEN** the share sheet opens with the text "Katso Labyrintti-peliäni" and the game's link, which contains `game=brave-otters-sing`
+
+#### Scenario: Share from the waiting room
+- **WHEN** the host taps the game identifier in the waiting room
+- **THEN** the shared text is "Liity Labyrintti-peliini" with the same game link
+
+#### Scenario: No share sheet
+- **WHEN** the player taps the game identifier on a device without a share sheet
+- **THEN** the game's link is copied to the clipboard and "Linkki kopioitu" appears briefly
+
+#### Scenario: Neither share nor copy works
+- **WHEN** sharing is not available and copying fails
+- **THEN** the link is shown in a selectable field
+
+#### Scenario: Daily puzzle label
+- **WHEN** the player is in the daily puzzle
+- **THEN** the badge reads "Päivän pulma" instead of the `local-daily-…` identifier and tapping it does nothing
+
+#### Scenario: Other game on the device
+- **WHEN** the player is in a quick game against bots on the device
+- **THEN** the badge reads "Oma peli" instead of the `local-…` identifier

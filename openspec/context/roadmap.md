@@ -68,7 +68,7 @@ pictures from the start screen and the settings (also during a game).
 Foundations are done; the user trims and clarifies. Autopilot is on (switched back on 2026-09-27): changes run without review stops.
 In this order:
 
-1. `simpler-start-screen`: fewer choices on the start screen.
+1. ~~`simpler-start-screen`~~ (done): no private games, "Pelaan itse" switch (off = 2–4 bots to watch on the device), no daily share. Originally: fewer choices on the start screen.
    - Remove "Luo yksityinen peli". Friends still join through the waiting room's invite link;
      private games (hidden from the lobby) are no longer created from the UI.
    - Remove "Katso bottien peliä". Instead the bot quick play gets a "Pelaan itse" toggle (default
@@ -77,13 +77,13 @@ In this order:
      on the server as today.
    - Remove "Jaa tulos" from the daily puzzle.
    Prune the specs, i18n keys, code and wiki of what is removed (no dead paths left).
-2. `hide-found-treasures`: treasures already collected (by anyone) are no longer drawn on the
+2. ~~`hide-found-treasures`~~ (done): collected treasures hidden on board and spare tiles, the own target always shown. Originally: treasures already collected (by anyone) are no longer drawn on the
    board tiles, so the board shows only what is still in play. Hint and bots already skip them.
 3. `clearer-board-marks`: a first-time player must understand every mark on the board (target,
    reachable squares, hint ring, last push/route, shift preview reach). Start by listing each mark
    with a screenshot and asking the user which ones confuse; options: fewer/distinct marks, a
    short label or legend, tie them to the first-game tips.
-4. `game-link-badge`: the game id in the top-left corner becomes an easy way to link the game to
+4. ~~`game-link-badge`~~ (done): the id badge shares the game link (join/watch text), device games show a plain label, the bug-report line moved to Settings → "Vianilmoitus". Originally: the game id in the top-left corner becomes an easy way to link the game to
    someone: tapping it shares/copies an http URL — a join link while the game is in the waiting
    room, a watch link once it is running (invite links already open both). To decide in the
    proposal: where the bug-report line (id · time · version) goes, and what device games (no URL)

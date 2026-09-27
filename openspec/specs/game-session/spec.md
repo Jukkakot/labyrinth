@@ -143,45 +143,6 @@ A player who is kicked SHALL be returned to the start screen, which MUST say cal
 - **WHEN** the viewer is kicked from the game
 - **THEN** they see the start screen with the removal message and can tap Play to start again
 
-### Requirement: Rematch
-In a finished game every seated person SHALL be offered "Pelaa uudelleen". The first tap of any
-player MUST create one new game with the same settings as the finished one: public or private, the
-same matchmaking pool, and a bot in every seat that held a bot when the finished game started, with
-the same bot names. That player MUST be taken to the new game's waiting room as its host; every
-other player who taps "Pelaa uudelleen" later MUST join the same new game's waiting room, in the
-lowest free seat. A player who does not tap it stays with the finished game until they leave. If
-the new game can no longer be joined (it started, filled up or closed), the player MUST be returned
-to the start screen with "Peli ei ole enää avoinna". The rematch of a quick game against bots MUST
-start at once with the same number of bots, like the original. A rematch MUST be rejected, without
-creating a game, when:
-- the sender has no seat (a spectator, or a player who already left): `NOT_SEATED`;
-- the game has not finished: `WRONG_PHASE`;
-- the server's game limit is reached: `SERVER_FULL`, shown as the server-full message.
-
-#### Scenario: First player asks for a rematch
-- **WHEN** Maija and Pekka have finished a public game with Robo in seat 3, and Maija taps "Pelaa uudelleen"
-- **THEN** Maija is the host of a new public waiting room with Robo in seat 3
-
-#### Scenario: Second player follows
-- **WHEN** Pekka then taps "Pelaa uudelleen" in the finished game
-- **THEN** Pekka joins Maija's new waiting room, and the finished game creates no second new game
-
-#### Scenario: Private stays private
-- **WHEN** the players of a finished private game ask for a rematch
-- **THEN** the new game is private and not listed
-
-#### Scenario: Quick bot game again
-- **WHEN** Maija taps "Pelaa uudelleen" after her 1v2 game against bots
-- **THEN** a new game against two bots starts at once and she sees its board
-
-#### Scenario: Rematch already started
-- **WHEN** Pekka taps "Pelaa uudelleen" after Maija has already started the new game
-- **THEN** Pekka sees "Peli ei ole enää avoinna" on the start screen
-
-#### Scenario: Rematch of a running game
-- **WHEN** a player sends a rematch while the game is still running
-- **THEN** it is rejected with `WRONG_PHASE` and no game is created
-
 ### Requirement: Resume after closing the app
 When the app is opened again after it was closed during a game (in the waiting room or running), the start screen SHALL offer "Jatka peliä" as its most prominent action. For a game on the server the offer MUST last as long as the player's seat can still be held (the player was last connected less than 5 minutes ago); for a quick game against bots on the device it MUST last until that game is finished, left or replaced, with no time limit. Tapping it MUST return the player to the same game and seat with everything they had; a game on the device MUST continue exactly where it was, whoever's turn it was. If the seat is gone by then (removed after 5 minutes, kicked, or the game closed), the player MUST see a calm notice that the game can no longer be continued, and the offer MUST disappear. The offer MUST NOT be shown for a game the player left on purpose, was kicked from, watched as a spectator, or that had finished. Starting or joining any other game MUST forget the offered game. While the server is still waking up, "Jatka peliä" for a game on the server MUST be shown disabled like the other join actions; for a game on the device it MUST be enabled, also without a network connection. Reloading the page during a game on the device MUST continue it without going through the start screen.
 
@@ -223,3 +184,38 @@ While the start screen waits for a sleeping server to wake up, it SHALL show how
 #### Scenario: Reduced motion
 - **WHEN** a player who prefers reduced motion opens the start screen while the server sleeps
 - **THEN** the waiting time still counts up, and the loading indicator does not move
+
+### Requirement: Rematch with the same seats
+In a finished game every seated person SHALL be offered "Pelaa uudelleen". The first tap of any
+player MUST create one new game with the same settings as the finished one: the same matchmaking
+pool, and a bot in every seat that held a bot when the finished game started, with the same bot
+names. That player MUST be taken to the new game's waiting room as its host; every other player who
+taps "Pelaa uudelleen" later MUST join the same new game's waiting room, in the lowest free seat. A
+player who does not tap it stays with the finished game until they leave. If the new game can no
+longer be joined (it started, filled up or closed), the player MUST be returned to the start screen
+with "Peli ei ole enää avoinna". The rematch of a quick game against bots MUST start at once with
+the same number of bots, like the original. A rematch MUST be rejected, without creating a game,
+when:
+- the sender has no seat (a spectator, or a player who already left): `NOT_SEATED`;
+- the game has not finished: `WRONG_PHASE`;
+- the server's game limit is reached: `SERVER_FULL`, shown as the server-full message.
+
+#### Scenario: First player asks for a rematch
+- **WHEN** Maija and Pekka have finished a game with Robo in seat 3, and Maija taps "Pelaa uudelleen"
+- **THEN** Maija is the host of a new listed waiting room with Robo in seat 3
+
+#### Scenario: Second player follows
+- **WHEN** Pekka then taps "Pelaa uudelleen" in the finished game
+- **THEN** Pekka joins Maija's new waiting room, and the finished game creates no second new game
+
+#### Scenario: Quick bot game again
+- **WHEN** Maija taps "Pelaa uudelleen" after her 1v2 game against bots
+- **THEN** a new game against two bots starts at once and she sees its board
+
+#### Scenario: Rematch already started
+- **WHEN** Pekka taps "Pelaa uudelleen" after Maija has already started the new game
+- **THEN** Pekka sees "Peli ei ole enää avoinna" on the start screen
+
+#### Scenario: Rematch of a running game
+- **WHEN** a player sends a rematch while the game is still running
+- **THEN** it is rejected with `WRONG_PHASE` and no game is created

@@ -9,7 +9,7 @@ waiting room where the creator starts the game once enough players are in.
 ### Requirement: Nickname
 Every player SHALL have a nickname before joining or creating a game. The start screen MUST have a
 nickname field ("Nimimerkki"). A nickname is valid when, after trimming, it is 2–16 characters long
-and contains no control characters. Play, "Luo yksityinen peli", joining from the list and
+and contains no control characters. Play, the quick bot games, joining from the list and
 "Liity peliin" MUST be disabled while the nickname is invalid, and a short hint MUST say what is
 wrong. The browser MUST remember the last nickname used and prefill the field with it; the
 nickname MUST NOT be stored anywhere else in the browser. When no nickname is remembered, the field
@@ -47,63 +47,6 @@ told apart by pawn shape and colour.
 #### Scenario: Same nickname twice
 - **WHEN** two players both call themselves "Maija"
 - **THEN** both are seated, told apart by their pawns
-
-### Requirement: Open games list
-The start screen SHALL list the public games that are still in their waiting room and have a free
-seat. Each entry MUST show the host's nickname and how many of the 4 seats are taken, bots included
-(for example "Maija · 2/4"). The list MUST update by itself while the start screen is open: new
-games appear, and games that fill up (with people or bots), start or close disappear. Tapping an
-entry MUST join that game's waiting room. If the game can no longer be joined, the player MUST stay
-on the start screen and see a calm message that the game is no longer open ("Peli ei ole enää
-avoinna"). With no open games, the list MUST say so briefly. Private games and started games MUST
-NOT be listed.
-
-#### Scenario: A game appears
-- **WHEN** another player creates a public game while the viewer is on the start screen
-- **THEN** it appears in the viewer's list with the host's nickname and 1/4, without reloading
-
-#### Scenario: Bots count as taken seats
-- **WHEN** the host of a listed game adds a bot
-- **THEN** its entry changes from 1/4 to 2/4, and after the host fills every free seat with bots it disappears from the list
-
-#### Scenario: Join from the list
-- **WHEN** the viewer taps "Maija · 2/4"
-- **THEN** the viewer is seated in Maija's waiting room
-
-#### Scenario: Game started meanwhile
-- **WHEN** the viewer taps an entry just after that game started
-- **THEN** the viewer stays on the start screen and sees "Peli ei ole enää avoinna"
-
-#### Scenario: Started and private games hidden
-- **WHEN** a public game starts, and another player creates a private game
-- **THEN** neither is in the list
-
-### Requirement: Private game and invite link
-The start screen SHALL offer "Luo yksityinen peli", which creates a new private game with the
-player as its host and takes them to its waiting room. A private game MUST NOT appear in the list
-and quick play MUST NOT place anyone in it. Every game, public or private, has an invite link
-that contains its game id. Opening an invite link MUST show the start screen in invite mode: it
-says the player has been invited to a game, shows the nickname field and a "Liity peliin" action,
-and offers a way back to the normal start screen. "Liity peliin" MUST seat the player in that game's
-waiting room. If the game does not exist any more, is full or has started, the player MUST see
-"Peli ei ole enää avoinna" and the normal start screen. After the invite link has been used, a
-reload MUST NOT use the link again.
-
-#### Scenario: Create a private game
-- **WHEN** a player taps "Luo yksityinen peli"
-- **THEN** they are the host of a new game's waiting room, and the game is not in anyone's list
-
-#### Scenario: Join by invite link
-- **WHEN** a friend opens the invite link of that private game, enters a nickname and taps "Liity peliin"
-- **THEN** they are seated in the same waiting room
-
-#### Scenario: Stale invite link
-- **WHEN** someone opens an invite link after that game has started
-- **THEN** they see "Peli ei ole enää avoinna" and the normal start screen
-
-#### Scenario: Quick play skips private games
-- **WHEN** the only game with a free seat is private and a player taps Play
-- **THEN** a new public game is created for them
 
 ### Requirement: Waiting room
 A new game SHALL start in its waiting room. The player who created the game is its host. The
@@ -197,5 +140,61 @@ player MUST see a calm message that the server is full and to try again later ("
 yritä hetken päästä uudelleen"). Joining an existing game MUST still work.
 
 #### Scenario: Server full
-- **WHEN** the game limit is reached and a player taps "Luo yksityinen peli"
+- **WHEN** the game limit is reached and a player taps Play while no game has a free seat
 - **THEN** no game is created and the player sees the server-full message
+
+### Requirement: Open games to join
+The start screen SHALL list the games on the server that are still in their waiting room and have a
+free seat. Each entry MUST show the host's nickname and how many of the 4 seats are taken, bots
+included (for example "Maija · 2/4"). The list MUST update by itself while the start screen is
+open: new games appear, and games that fill up (with people or bots), start or close disappear.
+Tapping an entry MUST join that game's waiting room. If the game can no longer be joined, the
+player MUST stay on the start screen and see a calm message that the game is no longer open ("Peli
+ei ole enää avoinna"). With no open games, the list MUST say so briefly. Started games MUST NOT be
+listed.
+
+#### Scenario: A game appears
+- **WHEN** another player creates a game while the viewer is on the start screen
+- **THEN** it appears in the viewer's list with the host's nickname and 1/4, without reloading
+
+#### Scenario: Bots count as taken seats
+- **WHEN** the host of a listed game adds a bot
+- **THEN** its entry changes from 1/4 to 2/4, and after the host fills every free seat with bots it disappears from the list
+
+#### Scenario: Join from the list
+- **WHEN** the viewer taps "Maija · 2/4"
+- **THEN** the viewer is seated in Maija's waiting room
+
+#### Scenario: Game started meanwhile
+- **WHEN** the viewer taps an entry just after that game started
+- **THEN** the viewer stays on the start screen and sees "Peli ei ole enää avoinna"
+
+#### Scenario: Started games hidden
+- **WHEN** a listed game starts
+- **THEN** it is no longer in the list
+
+### Requirement: Invite link
+Every game on the server SHALL have an invite link that contains its game id; the waiting room's
+"Kutsu pelaajia" shares it. The start screen MUST NOT offer a way to create a private game, and the
+server MUST NOT create a game that is hidden from the list or from quick play. Opening an invite
+link MUST show the start screen in invite mode: it says the player has been invited to a game,
+shows the nickname field and a "Liity peliin" action, and offers a way back to the normal start
+screen. "Liity peliin" MUST seat the player in that game's waiting room. If the game does not exist
+any more, is full or has started, the player MUST see "Peli ei ole enää avoinna" and the normal
+start screen. After the invite link has been used, a reload MUST NOT use the link again.
+
+#### Scenario: No private game to create
+- **WHEN** a player looks at the start screen
+- **THEN** there is no "Luo yksityinen peli" action
+
+#### Scenario: Join by invite link
+- **WHEN** a friend opens the invite link of Maija's game, enters a nickname and taps "Liity peliin"
+- **THEN** they are seated in the same waiting room
+
+#### Scenario: Stale invite link
+- **WHEN** someone opens an invite link after that game has started
+- **THEN** they see "Peli ei ole enää avoinna" and the normal start screen
+
+#### Scenario: Quick play finds every open game
+- **WHEN** Maija's game is in its waiting room with a free seat and another player taps Play
+- **THEN** the player is seated in Maija's game
