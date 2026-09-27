@@ -153,10 +153,15 @@ function simulate(seed: number, seats: number[], strategy: BotStrategy, turnCap 
   return undefined;
 }
 
+/** Whole games per player count: a quick 5 by default, 20 with `BOT_SIM=full` (run it when a strategy changes). */
+// The rules package has no Node types; the test runner is Node all the same.
+const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+const SIM_SEEDS = env.BOT_SIM === "full" ? 20 : 5;
+
 describe("bots › Bots finish a game (simulation)", () => {
   for (const seats of [[1, 3], [1, 2, 4], [1, 2, 3, 4]]) {
-    it(`${seats.length} bots end with a winner within the turn cap over 20 seeds`, () => {
-      for (let seed = 1; seed <= 20; seed++) {
+    it(`${seats.length} bots end with a winner within the turn cap over ${SIM_SEEDS} seeds`, () => {
+      for (let seed = 1; seed <= SIM_SEEDS; seed++) {
         const result = simulate(seed, seats, chooseBotTurn);
         expect(result, `seed ${seed}`).toBeDefined();
         expect(seats).toContain(result!.winner);

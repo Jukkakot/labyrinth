@@ -73,6 +73,10 @@ everything works and is final.
   this repo is `tsx watch` + Vite (both reload by themselves); anything else listening on
   2567/5173 (an old build, another checkout) must be stopped first. Check with PowerShell
   `Get-NetTCPConnection -LocalPort 2567,5173 -State Listen` and the owning process command line.
+- Stopping a dev server Claude started: stopping the background task is not enough on Windows (Vite
+  and the tsx server survive as orphans and block the user's VS Code "Full stack"). Afterwards stop
+  the processes Claude started that still listen on 2567/5173(+) and any `tsx watch` of that run,
+  by process id; never the user's own ones (check the start time or the parent process).
 - Before committing, run the check chain **once**, right before the commit (not after every task
   group; while working, run only the tests of the workspace you touch):
   `npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client`.
