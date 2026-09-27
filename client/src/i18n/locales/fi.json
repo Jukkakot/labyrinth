@@ -296,6 +296,37 @@
     "vibration": "Värinä",
     "vibrationNote": "Lyhyt värinä, kun vuorosi alkaa.",
     "vibrationUnsupported": "Tämä laite ei tue värinää.",
-    "deviceOnly": "Asetukset tallentuvat vain tähän laitteeseen."
+    "deviceOnly": "Asetukset tallentuvat vain tähän laitteeseen.",
+    "help": "Ohjeet"
+  },
+  "howTo": {
+    "open": "Näin pelaat",
+    "title": "Näin pelaat",
+    "goal": {
+      "title": "Tavoite",
+      "body": "Kerää salaiset aarteesi yksi kerrallaan ja palaa sitten lähtöruutuusi. Ensimmäinen perillä voittaa."
+    },
+    "push": {
+      "title": "Työnnä laatta",
+      "body": "Vuoro alkaa aina työnnöllä: napauta nuolta laudan reunalla, niin vapaa laatta liukuu sisään ja koko rivi siirtyy. Voit kääntää laattaa ensin.",
+      "more": "Toisesta päästä ulos työntynyt laatta on seuraava vapaa laatta. Jos nappula työntyy ulos, se palaa rivin toiseen päähän. Edellistä työntöä ei saa kumota työntämällä samaa riviä heti takaisin."
+    },
+    "walk": {
+      "title": "Kävele",
+      "body": "Työnnön jälkeen kävele avoimia käytäviä pitkin niin pitkälle kuin haluat – tai jää paikallesi. Ruudut, joihin pääset, on merkitty."
+    },
+    "treasure": {
+      "title": "Aarteet",
+      "body": "Kohteesi näkyy pelaajalistassa ja laudalla violettina kehyksenä. Kun pysähdyt sen laatalle, saat aarteen ja näet seuraavan kohteen. Muiden kohteita et näe."
+    },
+    "home": {
+      "title": "Paluu kotiin",
+      "body": "Kun kaikki aarteesi on löydetty, kohteesi on lähtöruutusi. Se, joka ehtii sinne ensimmäisenä, voittaa."
+    },
+    "daily": {
+      "title": "Päivän pulma",
+      "body": "Joka päivä yksi yksinpeli, sama kaikille: vie nappula yhden aarteen luo mahdollisimman harvalla vuorolla. Näet parhaan mahdollisen tuloksen, eikä aikarajaa ole.",
+      "more": "Voit perua siirtoja ja yrittää uudelleen. Päivän tulokseksi jää paras yrityksesi, ja sen voi jakaa."
+    }
   }
 }

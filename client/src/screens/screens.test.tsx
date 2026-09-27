@@ -378,3 +378,13 @@ describe("game-session › Resume after closing the app (start screen)", () => {
     expect(screen.queryByRole("button", { name: "Jatka peliä" })).toBeNull();
   });
 });
+
+describe("how-to-play › Rules screen reachable before and during a game", () => {
+  it("From the start screen: Näin pelaat opens the rules, Takaisin returns", () => {
+    render(<StartScreen session={sessionOf()} wake={ready} />);
+    fireEvent.click(screen.getByRole("button", { name: "Näin pelaat" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Näin pelaat" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Takaisin" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Labyrintti" })).toBeTruthy();
+  });
+});

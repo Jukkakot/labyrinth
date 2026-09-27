@@ -1,5 +1,7 @@
-import { IconArrowLeft, IconSettings } from "@tabler/icons-react";
-import { useId } from "react";
+import { IconChevronRight, IconSettings } from "@tabler/icons-react";
+import { useId, useState } from "react";
+import { HowToPlay } from "../howto/HowToPlay.tsx";
+import { BackButton } from "../ui/BackButton.tsx";
 import { useTranslation } from "react-i18next";
 import { Button } from "../ui/Button.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
@@ -56,14 +58,11 @@ export function SettingsScreen({ onClose }: { onClose(): void }) {
   const { t } = useTranslation();
   const { theme } = useSettings();
   const vibrationOk = canVibrate();
+  const [howToOpen, setHowToOpen] = useState(false);
+  if (howToOpen) return <HowToPlay onClose={() => setHowToOpen(false)} />;
   return (
     <Screen
-      start={
-        <Button variant="secondary" className={styles.back} onClick={onClose}>
-          <IconArrowLeft size={20} aria-hidden="true" />
-          {t("settings.back")}
-        </Button>
-      }
+      start={<BackButton onClick={onClose} />}
       end={<LanguageSwitcher />}
     >
       <div className={styles.page}>
@@ -103,6 +102,16 @@ export function SettingsScreen({ onClose }: { onClose(): void }) {
           <Toggle name="sounds" />
           <Toggle name="turnTitle" />
           <Toggle name="vibration" disabled={!vibrationOk} note={vibrationOk ? undefined : t("settings.vibrationUnsupported")} />
+        </section>
+
+        <section className={styles.group} aria-labelledby="settings-help">
+          <h2 id="settings-help" className={styles.heading}>
+            {t("settings.help")}
+          </h2>
+          <button type="button" className={styles.row} onClick={() => setHowToOpen(true)}>
+            <span className={styles.name}>{t("howTo.open")}</span>
+            <IconChevronRight size={20} aria-hidden="true" className={styles.chevron} />
+          </button>
         </section>
 
         <p className={styles.footnote}>{t("settings.deviceOnly")}</p>

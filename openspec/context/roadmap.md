@@ -59,6 +59,9 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
 22. `share-and-colors`: share the invite link through the phone's share sheet (Web Share API);
     a player picks their own colour or avatar
 
+Extras done outside the numbered list: ~~`how-to-play`~~ (done): "Näin pelaat" rules screen with
+pictures from the start screen and the settings (also during a game).
+
 ## Improvement backlog
 
 Ideas for existing features, picked up after the roadmap items above or when a change touches the

@@ -10,7 +10,9 @@ import type { GameSession } from "../session/useGameSession.ts";
 import { SettingsButton, SettingsScreen } from "../settings/SettingsScreen.tsx";
 import { TipsReset } from "../tips/TipsReset.tsx";
 import { Button } from "../ui/Button.tsx";
+import { HowToPlay } from "../howto/HowToPlay.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
+import { LinkButton } from "../ui/LinkButton.tsx";
 import { Message } from "../ui/Message.tsx";
 import { Screen } from "../ui/Screen.tsx";
 import { BuildInfo } from "./BuildInfo.tsx";
@@ -78,7 +80,9 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
   const [dailyUnfinished] = useState(() => daily !== undefined && loadLocalGame(daily.roomId)?.game.step !== undefined && loadLocalGame(daily.roomId)?.game.step !== "finished");
   const waited = useSecondsWaited(wake.state === "waking" && status !== "connecting" && status !== "error");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
   if (settingsOpen) return <SettingsScreen onClose={() => setSettingsOpen(false)} />;
+  if (howToOpen) return <HowToPlay onClose={() => setHowToOpen(false)} />;
 
   let content;
   if (status === "connecting") {
@@ -108,6 +112,7 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
       <>
         <Message title={t("app.title")}>
           <p>{invite ? t("start.invited") : t("app.tagline")}</p>
+          <LinkButton onClick={() => setHowToOpen(true)}>{t("howTo.open")}</LinkButton>
         </Message>
 
         {offerResume && (

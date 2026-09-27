@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LinkButton } from "../ui/LinkButton.tsx";
 import styles from "./TipsReset.module.css";
 import { loadSeenTips, resetTips } from "./tips.ts";
 
@@ -10,15 +11,13 @@ export function TipsReset() {
   if (state === "none") return null;
   if (state === "done") return <p className={styles.done} role="status">{t("tips.resetDone")}</p>;
   return (
-    <button
-      type="button"
-      className={styles.link}
+    <LinkButton
       onClick={() => {
         resetTips();
         setState("done");
       }}
     >
       {t("tips.reset")}
-    </button>
+    </LinkButton>
   );
 }

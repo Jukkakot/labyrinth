@@ -33,3 +33,15 @@ describe("settings › settings screen", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 });
+
+describe("how-to-play › Rules screen reachable before and during a game", () => {
+  it("During a game: the settings open the rules, Takaisin returns to the settings", () => {
+    const onClose = vi.fn();
+    render(<SettingsScreen onClose={onClose} />);
+    fireEvent.click(screen.getByRole("button", { name: "Näin pelaat" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Näin pelaat" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Takaisin" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Asetukset" })).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});

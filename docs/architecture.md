@@ -189,6 +189,7 @@ client/src/
   game/         board SVG and its layers, turn line, player strip, step/kick/leave controls
   tips/         first-game tips (pure pick + localStorage) and the start screen's reset link
   settings/     device settings store, settings screen, theme, generated sounds, turn alert
+  howto/        the rules screen ("Näin pelaat"), pictures drawn with the board's own tile and pawn
   ui/           tokens.css and shared components (Screen, Message, Button, Badge, Notice, …)
   logging/ i18n/ config.ts CrashBoundary.tsx
 ```
@@ -240,6 +241,10 @@ client/src/
   on `<html>` (set before the first paint by an inline script in `index.html`, then by `theme.ts`; `tokens.css` holds the dark tokens for the media query and the forced
   attribute). Sounds are generated with Web Audio (no files). The turn alert fires when the viewer's
   own turn begins (sound, vibration; the tab title only while the page is hidden).
+- **Sub-screens:** settings and the rules screen are not routes: the start screen and the settings
+  screen swap themselves for them through local state, so "Takaisin" returns to where they opened
+  (during a game: game → settings → rules). The rules open from a link on the start screen and a row
+  in the settings.
 - **Early wake-up:** the start screen fetches `/health` once per page load (retries up to 90 s) so
   a sleeping Render server wakes while the player types; server join actions wait for it (local
   bot games and a local "Jatka peliä" do not), and the screen

@@ -296,6 +296,37 @@
     "vibration": "Vibration",
     "vibrationNote": "A short vibration when your turn begins.",
     "vibrationUnsupported": "This device cannot vibrate.",
-    "deviceOnly": "Settings are saved on this device only."
+    "deviceOnly": "Settings are saved on this device only.",
+    "help": "Help"
+  },
+  "howTo": {
+    "open": "How to play",
+    "title": "How to play",
+    "goal": {
+      "title": "Goal",
+      "body": "Collect your secret treasures one at a time, then return to your start square. The first one home wins."
+    },
+    "push": {
+      "title": "Push a tile",
+      "body": "Every turn starts with a push: tap an arrow on the edge of the board and the spare tile slides in, moving the whole row. You can turn the tile first.",
+      "more": "The tile pushed out at the other end is the next spare. A pawn pushed out comes back at the other end of the row. You may not undo the previous push by pushing the same row straight back."
+    },
+    "walk": {
+      "title": "Walk",
+      "body": "After the push, walk along open corridors as far as you like – or stay where you are. The squares you can reach are marked."
+    },
+    "treasure": {
+      "title": "Treasures",
+      "body": "Your target is shown in the player list and as a purple frame on the board. Stop on its tile to collect it and see your next target. You cannot see the others' targets."
+    },
+    "home": {
+      "title": "Return home",
+      "body": "Once all your treasures are found, your target is your start square. Whoever gets there first wins."
+    },
+    "daily": {
+      "title": "Daily puzzle",
+      "body": "One solo game a day, the same for everyone: take your pawn to one treasure in as few turns as possible. The best possible result is shown, and there is no time limit.",
+      "more": "You can undo moves and try again. Your best attempt is the day's result, and you can share it."
+    }
   }
 }
