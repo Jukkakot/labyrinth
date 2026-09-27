@@ -28,10 +28,13 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
     client with `packages/rules`
 14. ~~`resume-game`~~ (done): "Jatka peliä" on the start screen within the 5-minute seat hold
     after the app was closed mid-game; the wake-up wait counts seconds with a spinner
-15. `local-play-and-pwa`: new games vs bots run in the browser with `packages/rules` (no server,
+15. ~~`local-play-and-pwa`~~ (done): quick bot games run on the device over a rules game engine
+    (no server, no wake-up wait, offline, resumable any time); installable PWA with offline start
+    and auto-update. Originally: new games vs bots run in the browser with `packages/rules` (no server,
     no wake-up wait, works offline) and the app installs to the home screen as a PWA. Multiplayer
     and watching stay on the server. An online game never switches to local play by itself
-16. `first-game-tips`: 3–4 hints during the first game (push a row from an arrow, walk to a
+16. ~~`first-game-tips`~~ (done): four one-time tips (target, push, walk, home) below the controls,
+    reset from the start screen; the hint ring became a pulsing yellow ring. Originally: 3–4 hints during the first game (push a row from an arrow, walk to a
     highlighted square, your target, return home); shown once, can be reset
 17. ~~`smarter-bots`~~ (done): look-ahead bot that blocks every opponent (leader 1.25x), 1-in-5 selfish turns so games never lock; tournament 90/61/42 % vs 1/2/3 greedy bots. Originally: replaces the bot with the
     best one we can make; no difficulty levels (the user: nobody wants to pick a bot). Look-ahead;
@@ -55,7 +58,4 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
 Ideas for existing features, picked up after the roadmap items above or when a change touches the
 same area. Each becomes its own change (or joins a related one) when picked up.
 
-- **Hint ring stands out** (from `hint`, seen in the UI check 2026-09-27): the hint's double ring
-  uses the same orange as the reach circles in the shift preview, so it is only moderately easy to
-  spot. Give it its own look (e.g. a pulsing or differently coloured ring, static under reduced
-  motion).
+- ~~**Hint ring stands out**~~ (done in `first-game-tips`): pulsing yellow ring on a dark halo.

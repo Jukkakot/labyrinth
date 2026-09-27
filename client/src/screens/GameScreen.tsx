@@ -17,6 +17,7 @@ import { TurnLine } from "../game/TurnLine.tsx";
 import { nextTrace } from "../game/turnTrace.ts";
 import { NOTICE_MS, type GameSession } from "../session/useGameSession.ts";
 import type { GameView } from "../session/viewModel.ts";
+import { FirstGameTips } from "../tips/FirstGameTips.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
 import { Notice } from "../ui/Notice.tsx";
 import { Screen } from "../ui/Screen.tsx";
@@ -241,6 +242,12 @@ export function GameScreen({ view, session }: GameScreenProps) {
         />
       )}
       <Notice message={message} />
+      <FirstGameTips
+        playing={!view.spectating && view.phase === "playing" && !view.finished}
+        isMyTurn={view.isMyTurn}
+        step={view.step}
+        heading={view.myTarget === undefined ? undefined : view.myTarget === "home" ? "home" : "treasure"}
+      />
     </Screen>
   );
 }

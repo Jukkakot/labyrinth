@@ -8,6 +8,12 @@
   - client on http://localhost:5173 (also on the LAN for phones: see the Vite output)
 - In development the client is served at `/`; production uses `/labyrinth/`.
 - Two browser tabs are two players (session per tab).
+- Quick games against bots (and `?dev=1vN`) run in the browser without the server; online play,
+  watching (`?dev=0vN`) and the waiting room need it.
+- PWA: the service worker is off in `npm run dev`. To try install and offline start:
+  `npm run build -w @labyrinth/client && npm run preview -w @labyrinth/client` (port 4173), then
+  DevTools → Application. Icons: edit `client/public/favicon.svg`, run
+  `npm run icons -w @labyrinth/client`, commit the PNGs.
 - Logs: the terminal shows pretty lines; `logs/dev.log` has the same entries as JSON (server and
   client). Add `?debug=1` to the client URL to also get its debug entries. Clear the file only
   while the server is stopped (it keeps the file open).

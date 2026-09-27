@@ -1,4 +1,9 @@
-## ADDED Requirements
+# first-game-tips Specification
+
+## Purpose
+Teach a new player the basics during their first game with a few one-time tips that never get in the way.
+
+## Requirements
 
 ### Requirement: One-time tips in the first game
 While the viewer plays in a running game (seated, not watching, not finished), the game screen
@@ -12,8 +17,8 @@ SHALL show short tips, each at most once per browser, at the moment it becomes r
 4. **Home**: once the viewer has found every treasure: return to the start corner to win.
 
 At most one tip SHALL be visible at a time; when several are relevant, the earlier one in this list
-comes first. A tip MUST be dismissable with a button of at least 44 × 44 px, MUST NOT cover the
-board or the step controls, and MUST be announced politely to screen readers. A tip counts as seen
+comes first. A tip MUST be dismissable with a button of at least 44 × 44 px, MUST NOT cover any
+control, the board or the step controls, and MUST be announced politely to screen readers. A tip counts as seen
 once it has been shown; it also goes away by itself when its moment has passed (e.g. the push tip
 once the viewer has pushed). When the browser cannot store what was seen, tips still work for the
 current game. Spectators never see tips.

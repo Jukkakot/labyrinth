@@ -4,7 +4,7 @@
 
 ## 2. Tips on the game screen
 
-- [x] 2.1 `client/src/tips/FirstGameTips.tsx` + `.module.css`: plain props `{ playing, isMyTurn, step, heading }`, one card fixed at the top, lightbulb icon, 44 px close button, polite live region, marks the tip seen when shown, clears it when its moment passes; fi/en texts; render test (shown, closed, not shown again)
+- [x] 2.1 `client/src/tips/FirstGameTips.tsx` + `.module.css`: plain props `{ playing, isMyTurn, step, heading }`, one card in the page flow below the controls, lightbulb icon, 44 px close button, polite live region, marks the tip seen when shown, clears it when its moment passes; fi/en texts; render test (shown, closed, not shown again)
 
 ## 3. Reset from the start screen
 
@@ -18,4 +18,7 @@
 
 - [x] 5.1 Update `docs/architecture.md` client section (tips module, local storage keys); run client tests, lint, typecheck; list the GameScreen mount under "Coordinator to do"
 
-Note: the GameScreen mount and the UI check are left to the coordinator (hot file); see the job report.
+## 6. Coordinator
+
+- [x] 6.1 Mount `FirstGameTips` in `GameScreen`; move `--hint`/`--hint-halo` to `tokens.css`; card moved into the page flow (it covered "Poistu")
+- [x] 6.2 Full check chain, UI check, archive with roadmap item 16 and the backlog item marked done

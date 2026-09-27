@@ -278,7 +278,9 @@ walk to after it; the mark disappears while another shift or rotation is preview
 step it MUST mark the square to walk to. The same position MUST always give the same hint. The
 button MUST be enabled only on the viewer's own turn while no command waits for the server, and
 shown but disabled otherwise. Hints are not limited. The marked square MUST be told apart from the
-reach and move marks by more than colour and MUST have a text alternative.
+reach and move marks by more than colour and MUST have a text alternative. It MUST also have a
+colour of its own, not the colour of the reach and move marks, and it MUST draw the eye with a
+gentle pulse that stays still when the viewer prefers reduced motion.
 
 #### Scenario: Hint for the shift
 - **WHEN** it is the viewer's shift step and they press "Vihje"
@@ -303,3 +305,11 @@ reach and move marks by more than colour and MUST have a text alternative.
 #### Scenario: Same position, same hint
 - **WHEN** the viewer presses "Vihje" twice in the same position
 - **THEN** both show the same shift and square
+
+#### Scenario: Ring stands out
+- **WHEN** the hint ring is shown next to reach rings or move outlines
+- **THEN** it has a different colour from them and pulses gently
+
+#### Scenario: Reduced motion
+- **WHEN** the viewer prefers reduced motion and the hint ring is shown
+- **THEN** the ring does not pulse

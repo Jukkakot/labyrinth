@@ -24,6 +24,9 @@
   /* The viewer's own target: solid ring + badge (move targets are dashed, previews orange) */
   --target: #7b2cbf;
   --target-contrast: #fffaf0;
+  /* The hint's square: yellow ring with a dark halo, apart from the orange reach rings */
+  --hint: #f0e442;
+  --hint-halo: var(--text);
 
   /* Seats: Okabe–Ito, colour-blind safe; always paired with a pawn shape */
   --seat-1: #0072b2;
@@ -72,6 +75,7 @@
     --highlight: #f0a060;
     --target: #c79bff;
     --target-contrast: #141a17;
+    --hint-halo: var(--bg);
     --pawn-outline: #141a17;
   }
 }

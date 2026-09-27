@@ -19,9 +19,13 @@
 commit → push to `main` (Claude pushes before each summary) → CI (lint, typecheck, tests, build, bundle
 size, E2E smoke) → Pages deploy (client) and Render deploy hook (server, CI's `deploy-server` job after green checks) →
 **production smoke** (`prod-smoke.yml`: waits until the live server's `/health` version and the
-client's `version.json` carry this commit's code, then `npm run e2e:prod -w @labyrinth/e2e` plays a
-1v1 quick game on the live site and leaves; also daily at 05:17 UTC and by hand). No staging
+client's `version.json` carry this commit's code, then `npm run e2e:prod -w @labyrinth/e2e` starts a
+1v1 bot game on the device, then a server game (Pelaa, one bot, start) on the live site and leaves; also daily at 05:17 UTC and by hand). No staging
 environment.
+
+**Service worker:** the client is a PWA. A phone with the app open or installed picks up a new
+Pages deploy on its next load (the new worker takes over and reloads the page once). To rule out a
+stale client when checking a deploy, compare the footer's "Client …" build time.
 
 ### After a deploy (manual checks)
 

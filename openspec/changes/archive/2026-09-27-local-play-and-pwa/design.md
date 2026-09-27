@@ -106,3 +106,10 @@ syncing a local game to another device.
 ## Open Questions
 
 None blocking.
+
+## Decisions made while building
+
+- The production smoke played a 1v1 quick game to test the live server; that game is now local, so
+  the smoke plays a local 1v1 first and then a server game (Pelaa, one bot, start).
+- The favicon was still Vite's default; it became a labyrinth icon (green tile, cream corridor,
+  yellow target dot) and the source of the PWA icons.

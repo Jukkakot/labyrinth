@@ -34,12 +34,11 @@ spectators or the waiting room, syncing tip state across devices.
   vinkit uudelleen" covers that.
 - **A tip whose moment passed is not re-queued**: it was seen. The next relevant unseen tip shows
   right away (e.g. walk after push).
-- **Placement: a card fixed to the top of the screen over the top bar**, below the safe-area
-  inset, max 36ch wide, centred. The bottom is taken by the step controls and the `Notice` toast;
-  the board and its arrows must stay free. The top bar (game id, leave, language) is the least
-  needed area during play, and the card is small and dismissable. Card look follows `Notice`
-  (surface, border, radius-m, soft shadow) but in the surface colour so it does not read as an
-  error or status toast. A lightbulb icon links it to "Vihje".
+- **Placement: in the page flow below the step controls** (changed by the coordinator after the
+  UI check: a card fixed over the top bar covered "Poistu", which the production smoke could not
+  tap). Max 36ch wide, centred, no shadow; it never covers the board, the arrows, the controls or
+  the top bar. On a phone portrait screen the space below the controls is empty, so it is in view.
+  A lightbulb icon links it to "Vihje".
 - **Dismiss:** an icon button "✕" (`aria-label` "Sulje vinkki"/"Close tip") 44 × 44 px. The card is
   a `role="status"` live region (polite), always mounted, so the text is announced when it
   appears.
@@ -71,6 +70,6 @@ spectators or the waiting room, syncing tip state across devices.
 
 ## Risks / Trade-offs
 
-- Covering the top bar hides "Poistu" while a tip is up → the tip is one tap away from gone.
+- On a short screen the card may sit below the fold → it is only a tip; the game never depends on it.
 - The target tip also shows while bots are moving; it is informational and small.
 - Tips are per browser, not per player: a shared device shows them once. Acceptable.

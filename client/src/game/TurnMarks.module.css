@@ -26,18 +26,8 @@
 /*
  * Hint: a thick solid ring in a colour of its own (Okabe–Ito yellow, like the "Vihje" bulb) on a dark
  * halo, unlike the thin orange reach rings and the dashed move outline; it breathes gently.
- * Local tokens: tokens.css is the eventual home.
+ * Colours: --hint and --hint-halo in tokens.css.
  */
-.hintMark {
-  --hint: #f0e442;
-  --hint-halo: var(--text);
-}
-
-@media (prefers-color-scheme: dark) {
-  .hintMark {
-    --hint-halo: var(--bg);
-  }
-}
 
 .hintHalo {
   fill: none;

@@ -25,6 +25,8 @@ delivered by that roadmap change.
 - **Monorepo**, npm workspaces, TypeScript everywhere. Hosting: client on GitHub Pages, server on
   Render ([operations.md](operations.md)).
 - **No database.** Games live in server memory and are lost on restart, deploy or sleep.
+- **Quick games against bots run on the device** (see Client → Local play); online games,
+  watching and the waiting room use the server.
 
 ## Workspaces — Implemented
 
@@ -106,7 +108,8 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   the deal seed and seat) and sends the shift; 1 s later the move. A rejected choice logs
   `bot.fallback` and the bot makes an allowed shift and stays. One `botTimer` per room, cleared
   on every turn change, finish and dispose.
-- **Quick bot game:** creating a room with `bots: 1–3` makes it private; when the creator joins,
+- **Quick bot game (server path):** the client now runs quick bot games on the device, so nothing
+  sends this today; it stays for later use. Creating a room with `bots: 1–3` makes it private; when the creator joins,
   `onJoin` seats the bots in the next seats and calls the same `startGame()` as the host's `start`
   (`game.started { quick: true }`), so the client lands straight on the board.
 - **Nobody left:** when no person is seated and nobody watches (held drops count), a started game
@@ -152,7 +155,9 @@ turn; each seat's optional public `foundTreasures` rules those out as an opponen
 old greedy one kept as a baseline, `botSeed`), `botHint` (the "Vihje" hint: the look-ahead in the
 viewer's seat, always blocking, rng seeded from the position; `hintTurn` for the shift step,
 `hintMove` for the move step after a shift; the client maps its view to a `BotView` with only
-its own target in `client/src/game/hint.ts`), `botTournament` (whole games among
+its own target in `client/src/game/hint.ts`), `game` (a whole game as JSON-serialisable data: `startGame`, `applyShift`, `applyMove` with the
+server's rejection codes and order, `botViewOf`, `botRngFor`; runs the games on the device; the
+server still composes the same rule functions itself), `botTournament` (whole games among
 strategies, win rates and ms per turn; not in the package entry). Test fixtures in
 `@labyrinth/rules/testing` (`boardFromRows`, `boardToText`). Board coordinates: `(row, col)`
 0–6 from the top-left; tile ids never change, which is what the client animates by.
@@ -183,11 +188,24 @@ client/src/
   newly opened app offers "Jatka peliä" within the server's 5-minute seat hold. `leave()` is local-first: the start
   screen shows at once, then `room.leave()`. Close codes 4100/4101 and join failures become a
   start-screen notice.
+- **Local play:** a quick game against bots is a `LocalRoom` (`session/localRoom.ts`) that
+  implements the same `GameRoomLike` as a Colyseus room, over the rules `game` engine: it exposes
+  the synced-state shape (only the player's own target), answers commands with `CommandResult`,
+  plays bots with the server's pauses and fallback, and has no turn clock. The connector routes by
+  prefix: room ids `local-…` and tokens `local:…` (`reconnect`, and `joinById` for rematch) go to
+  the device, everything else to the server; the SDK client is created only for server games. The
+  one local game is saved in localStorage (`labyrinth.localGame`) after every step, so a reload,
+  an app update or "Jatka peliä" (no time limit for a local token) continues it, also offline.
+  Start and end are logged as `client.local.started` / `client.local.finished`.
+- **PWA:** `vite-plugin-pwa` builds the manifest and a Workbox service worker that precaches the
+  app shell (auto-update: a new version takes over on the next load and reloads once; both kinds
+  of game survive a reload). Off in `vite dev`. Icons are generated from `public/favicon.svg`.
 - **First-game tips:** which one-time tips were seen is kept in localStorage
   (`labyrinth.tips.seen`); the tips take plain props from the game screen, so they do not depend on
   the session or its transport.
 - **Early wake-up:** the start screen fetches `/health` once per page load (retries up to 90 s) so
-  a sleeping Render server wakes while the player types; join actions wait for it, and the screen
+  a sleeping Render server wakes while the player types; server join actions wait for it (local
+  bot games and a local "Jatka peliä" do not), and the screen
   counts the seconds waited.
 - **i18n:** Finnish is the key source of truth (type-checked), a test enforces fi/en parity.
   Language: `?lng=` → saved choice → Finnish.
