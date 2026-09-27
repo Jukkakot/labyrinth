@@ -1,11 +1,12 @@
 import type { BotTurn, BotView } from "./bot.js";
-import { DEFAULT_WEIGHTS, lookaheadMove, lookaheadStrategy, type LookaheadWeights } from "./botLookahead.js";
+import { DEFAULT_WEIGHTS } from "./botLookahead.js";
+import { DEFAULT_SAMPLING, samplingMove, samplingStrategy, type SamplingOptions } from "./botSampling.js";
 import type { Square } from "./geometry.js";
 import { createRng, MAX_SEED } from "./rng.js";
 
 /** The hint is the bots' strategy, always minding the opponents (no random selfish turns). */
-const HINT_WEIGHTS: LookaheadWeights = { ...DEFAULT_WEIGHTS, blockChance: 1 };
-const hintStrategy = lookaheadStrategy(HINT_WEIGHTS);
+const HINT_OPTIONS: SamplingOptions = { ...DEFAULT_SAMPLING, weights: { ...DEFAULT_WEIGHTS, blockChance: 1 } };
+const hintStrategy = samplingStrategy(HINT_OPTIONS);
 
 /** A seed from everything the hint depends on, so the same position always gives the same hint. */
 export function hintSeed(view: BotView): number {
@@ -42,5 +43,5 @@ export function hintTurn(view: BotView): BotTurn {
  * and `view.lastInsertion` that shift.
  */
 export function hintMove(view: BotView): Square {
-  return lookaheadMove(view, createRng(hintSeed(view)), HINT_WEIGHTS);
+  return samplingMove(view, createRng(hintSeed(view)), HINT_OPTIONS);
 }

@@ -250,7 +250,7 @@ const SIM_SEEDS = env.BOT_SIM === "full" ? 20 : 5;
 
 describe("bots › Bots finish a game (simulation)", () => {
   for (const seats of [[1, 3], [1, 2, 4], [1, 2, 3, 4]]) {
-    it(`${seats.length} bots end with a winner within the turn cap over ${SIM_SEEDS} seeds`, () => {
+    it(`${seats.length} bots end with a winner within the turn cap over ${SIM_SEEDS} seeds`, { timeout: 5 * 60 * 1000 }, () => {
       for (let seed = 1; seed <= SIM_SEEDS; seed++) {
         const result = simulateGame(seed, new Map(seats.map((s) => [s, chooseBotTurn])));
         expect(result, `seed ${seed}`).toBeDefined();
