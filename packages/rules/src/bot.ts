@@ -14,6 +14,8 @@ export interface BotSeatView {
   readonly pawn: Square;
   readonly found: number;
   readonly cardsLeft: number;
+  /** The treasures it has found (public). Optional: without them found treasures still count as possible targets. */
+  readonly foundTreasures?: readonly TreasureId[];
 }
 
 /**

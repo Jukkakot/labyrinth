@@ -5,6 +5,7 @@ import { createRng } from "./rng.js";
 import { setupBoard } from "./setup.js";
 import { reverseOf, shiftBoard, type InsertionId } from "./shift.js";
 import { dealGame, homeSquare, settleMove } from "./treasures.js";
+import type { TreasureId } from "./tileSet.js";
 import { nextSeat } from "./turns.js";
 
 /*
@@ -43,7 +44,7 @@ export function simulateGame(
   const deal = dealGame(seed, seats);
   const pawns = new Map(seats.map((s) => [s, homeSquare(s)]));
   const stacks = new Map(seats.map((s) => [s, [...deal.stacks.get(s)!]]));
-  const found = new Map(seats.map((s) => [s, 0]));
+  const found = new Map(seats.map((s) => [s, [] as TreasureId[]]));
   const rngs = new Map(seats.map((s) => [s, createRng(botSeed(seed, s))]));
   let last: InsertionId | undefined;
   let turnSeat = deal.startSeat;
@@ -51,7 +52,13 @@ export function simulateGame(
     const view: BotView = {
       board,
       seat: turnSeat,
-      seats: seats.map((s) => ({ seat: s, pawn: pawns.get(s)!, found: found.get(s)!, cardsLeft: stacks.get(s)!.length })),
+      seats: seats.map((s) => ({
+        seat: s,
+        pawn: pawns.get(s)!,
+        found: found.get(s)!.length,
+        cardsLeft: stacks.get(s)!.length,
+        foundTreasures: found.get(s)!,
+      })),
       lastInsertion: last,
       target: stacks.get(turnSeat)![0],
     };
@@ -73,7 +80,7 @@ export function simulateGame(
     if (outcome.won) return { winner: turnSeat, turns };
     if (outcome.collected) {
       stacks.get(turnSeat)!.shift();
-      found.set(turnSeat, found.get(turnSeat)! + 1);
+      found.set(turnSeat, [...found.get(turnSeat)!, outcome.collected]);
     }
     turnSeat = nextSeat(seats, turnSeat);
   }
