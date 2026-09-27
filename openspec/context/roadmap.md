@@ -59,3 +59,10 @@ Ideas for existing features, picked up after the roadmap items above or when a c
 same area. Each becomes its own change (or joins a related one) when picked up.
 
 - ~~**Hint ring stands out**~~ (done in `first-game-tips`): pulsing yellow ring on a dark halo.
+- **Smarter bots 2: sampling search** (asked 2026-09-27): today's look-ahead scores one own turn
+  and each opponent's best next shift on the board it leaves, but never plays turns in alternation
+  (opponents' shifts between its turns are ignored) and cannot know their targets. Idea: Monte
+  Carlo search that samples opponents' targets from the treasures not yet found, plays a few turns
+  ahead with good moves for everyone and picks the best average move; must stay within a
+  phone's time budget (now a few ms per turn). Compare with `botTournament` before switching;
+  the hint would get stronger with it. Pick up when the current bot starts to feel easy.
