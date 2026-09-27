@@ -20,7 +20,10 @@ The modes (ask / säästö / rinnakkain) and what fits are in `.claude/CLAUDE.md
 4. When a job reports: merge its branch into `main` (rebase on conflicts; you resolve them,
    typically i18n JSON and docs), run the full check chain **once** for everything merged so far,
    do the UI check on the local dev servers if the job is visible, archive the change (specs,
-   roadmap), commit, push, remove the worktree and branch.
+   roadmap; tick the job's own "roadmap marked done" task), commit, push, remove the worktree and
+   branch. On Windows `git worktree remove` fails on the job's `node_modules` ("Directory not
+   empty") after unregistering it: finish with PowerShell
+   `Remove-Item -Recurse -Force .claude\worktrees\<name>`, then `git branch -d <branch>`.
 5. One summary covers all jobs; the user sees the decisions per change.
 
 If the user prefers to steer a job themselves, create the worktree instead
