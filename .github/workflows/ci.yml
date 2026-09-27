@@ -50,3 +50,34 @@ jobs:
             e2e/playwright-report
             e2e/test-results
           retention-days: 7
+
+  # Render auto-deploy is off: it only looked at the last commit of a push and missed server
+  # changes in earlier ones. Instead, compare the commit the live server was built from with this
+  # one, and deploy through the hook when the server code differs (also catches cancelled runs).
+  deploy-server:
+    needs: [check, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Deploy the server when its code changed
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          HEALTH_URL: https://labyrinth-server-3z1m.onrender.com/health
+          SERVER_PATHS: server packages/rules packages/protocol package-lock.json render.yaml
+        run: |
+          # A sleeping server takes about a minute to answer.
+          live=$(curl -sf --retry 12 --retry-delay 10 --retry-all-errors --max-time 20 "$HEALTH_URL" | jq -r '.version // empty' || true)
+          if [ -n "$live" ] && git cat-file -e "$live^{commit}" 2>/dev/null; then
+            if git diff --quiet "$live" HEAD -- $SERVER_PATHS; then
+              echo "Live server ($live) already has this server code: nothing to deploy"
+              exit 0
+            fi
+            echo "Server code changed since $live: deploying"
+          else
+            echo "Live version '$live' unknown: deploying"
+          fi
+          curl -sf -X POST "$HOOK" -o /dev/null
+          echo "Render deploy triggered for ${GITHUB_SHA::7}"

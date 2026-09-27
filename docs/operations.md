@@ -5,7 +5,7 @@
 | | URL | Hosted on | Deploys when |
 |---|---|---|---|
 | Client | https://jukkakot.github.io/labyrinth/ | GitHub Pages | push to `main` touching `client/`, `packages/rules/`, lockfile ("Deploy client" workflow) |
-| Server | https://labyrinth-server-3z1m.onrender.com | Render free web service `labyrinth-server` (Frankfurt) | push to `main` touching `server/`, `packages/rules/`, lockfile, `render.yaml` — **after CI passes** |
+| Server | https://labyrinth-server-3z1m.onrender.com | Render free web service `labyrinth-server` (Frankfurt) | green CI on `main` when the server code (`server/`, `packages/rules/`, `packages/protocol/`, lockfile, `render.yaml`) differs from the live server's commit: the `deploy-server` job in CI calls Render's deploy hook (secret `RENDER_DEPLOY_HOOK_URL`); Render auto-deploy is off |
 
 - Render ids: service `srv-darps5navr4c73fmplh0`, workspace `tea-d7vbs7l7vvec73dbddt0`.
 - **Free tier:** the server sleeps after ~15 min without traffic; the next request wakes it in
@@ -17,7 +17,7 @@
 ## Release flow — Implemented
 
 commit → push to `main` (Claude pushes before each summary) → CI (lint, typecheck, tests, build, bundle
-size, E2E smoke) → Pages deploy (client) and Render deploy (server, only after green CI). No staging
+size, E2E smoke) → Pages deploy (client) and Render deploy hook (server, CI's `deploy-server` job after green checks). No staging
 environment.
 
 ### After a deploy (manual checks)

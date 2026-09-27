@@ -1,6 +1,6 @@
 name: Deploy client
 
-# Server deploys are handled by Render (render.yaml) after CI passes.
+# The server is deployed by the deploy-server job in ci.yml, after CI passes.
 on:
   push:
     branches: [main]
