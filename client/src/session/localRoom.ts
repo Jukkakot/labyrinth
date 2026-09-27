@@ -22,6 +22,7 @@ import {
 } from "@labyrinth/rules";
 import { log } from "../logging/logger.ts";
 import { loadDailyRecord, saveDailyRecord, saveDailyResult } from "./dailyRecord.ts";
+import { deviceLooks, loadLook } from "./look.ts";
 import {
   clearLocalGame,
   DAILY_ROOM_PREFIX,
@@ -75,7 +76,9 @@ function newGame(nickname: string, bots: number, deps: LocalRoomDeps): SavedLoca
   const roomId = newLocalRoomId();
   // The player hosts, so they play first.
   const game = startGame(deps.seed(), quickSeats(nickname, bots), 1);
-  const saved = { roomId, game };
+  // The player sits in seat 1 and gets their own pawn; the bots take the others.
+  const looks = deviceLooks(game.seats.map((s) => s.seat), 1, loadLook());
+  const saved = { roomId, game, looks };
   saveLocalGame(saved);
   log.info("client.local.started", { room: roomId, dealSeed: game.seed, seats: game.seats.map((s) => s.seat).join(","), startSeat: game.turnSeat });
   return saved;
@@ -118,7 +121,8 @@ export class LocalRoom implements GameRoomLike {
     const { game, par } = startDailyPuzzle(date, name);
     saveDailyRecord({ date, roomId, par, best: loadDailyRecord(date)?.best });
     log.info("client.daily.started", { room: roomId, date, dealSeed: game.seed, par });
-    return new LocalRoom({ roomId, game, marks: "", par, history: [] }, { ...defaultDeps(), ...deps });
+    const looks = deviceLooks(game.seats.map((s) => s.seat), 1, loadLook());
+    return new LocalRoom({ roomId, game, looks, marks: "", par, history: [] }, { ...defaultDeps(), ...deps });
   }
 
   /** The saved game `roomId`, continued where it was; undefined when it is gone. */
@@ -139,6 +143,7 @@ export class LocalRoom implements GameRoomLike {
         s.bot ? `bot:${s.seat}` : ME,
         {
           seat: s.seat,
+          look: this.saved.looks?.[s.seat] ?? s.seat,
           name: s.name,
           bot: s.bot,
           ...(!s.bot && { autoplay: this.saved.autoplay ?? false }),

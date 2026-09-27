@@ -18,12 +18,13 @@ export function TurnLine({ view }: { view: TurnLineView }) {
   const mineSeat = turnSeat === mySeat;
   const moving = step === "move";
   const nameOf = (seat: number) => view.seats.find((s) => s.seat === seat)?.name ?? "";
+  const lookOf = (seat: number) => view.seats.find((s) => s.seat === seat)?.look;
   if (finished && winnerSeat > 0) {
     const iWon = winnerSeat === mySeat;
     return (
       <p className={`${styles.line} ${styles.mine}`} data-winner-seat={winnerSeat}>
         <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
-          <Pawn seat={winnerSeat} isMe={iWon} />
+          <Pawn seat={winnerSeat} look={lookOf(winnerSeat)} isMe={iWon} />
         </svg>
         <span>
           {daily
@@ -47,7 +48,7 @@ export function TurnLine({ view }: { view: TurnLineView }) {
   return (
     <p className={isMyTurn ? `${styles.line} ${styles.mine}` : styles.line} data-turn-seat={turnSeat}>
       <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
-        <Pawn seat={turnSeat} isMe={mineSeat} />
+        <Pawn seat={turnSeat} look={lookOf(turnSeat)} isMe={mineSeat} />
       </svg>
       <span>{text}</span>
       <TurnTimer deadline={turnDeadline} expired={turnExpired} />

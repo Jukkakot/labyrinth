@@ -46,6 +46,8 @@ export interface SyncedState {
 
 export interface SyncedPlayer {
   seat: number;
+  /** The pawn 1–4; 0 or missing = the seat's own. */
+  look?: number;
   connected: boolean;
   /** True for a computer-controlled seat. */
   bot?: boolean;
@@ -65,6 +67,8 @@ export type Target = TreasureId | "home";
 
 export interface SeatView {
   seat: number;
+  /** The player's pawn 1–4 (colour + shape); missing = the seat's own. */
+  look?: number;
   sessionId: string;
   /** The player's nickname. */
   name: string;
@@ -185,7 +189,7 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     const target = readTarget(p.target, found.length, p.cards ?? 0);
     const isBot = p.bot === true;
     const autoplay = !isBot && p.autoplay === true;
-    seats.push({ seat: p.seat, sessionId, name: p.name ?? "", connected: isBot || p.connected, isMe, isBot, autoplay, square, cards: p.cards ?? 0, found, target });
+    seats.push({ seat: p.seat, look: p.look || p.seat, sessionId, name: p.name ?? "", connected: isBot || p.connected, isMe, isBot, autoplay, square, cards: p.cards ?? 0, found, target });
   });
   seats.sort((a, b) => a.seat - b.seat);
   const mySeat = seats.find((s) => s.isMe)?.seat;

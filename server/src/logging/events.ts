@@ -23,6 +23,7 @@ export const SERVER_LOG_EVENTS = [
   "player.dropped",
   "player.reconnected",
   "player.removed",
+  "player.look",
   "bot.added",
   "bot.removed",
   "bot.fallback",

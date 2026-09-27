@@ -7,6 +7,7 @@ import { inviteUrl } from "../session/inviteLink.ts";
 import { NOTICE_MS, type GameSession } from "../session/useGameSession.ts";
 import type { GameView } from "../session/viewModel.ts";
 import { Button } from "../ui/Button.tsx";
+import { LookPicker } from "../ui/LookPicker.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
 import { Notice } from "../ui/Notice.tsx";
 import { Screen } from "../ui/Screen.tsx";
@@ -17,7 +18,7 @@ const SEATS = [1, 2, 3, 4] as const;
 
 export interface WaitingRoomScreenProps {
   view: Pick<GameView, "roomId" | "seats" | "hostSeat" | "mySeat">;
-  session: Pick<GameSession, "start" | "addBot" | "removeBot" | "leave" | "pending" | "notice">;
+  session: Pick<GameSession, "start" | "addBot" | "removeBot" | "setLook" | "leave" | "pending" | "notice">;
   sharer?: Sharer;
 }
 
@@ -28,12 +29,14 @@ export interface WaitingRoomScreenProps {
  */
 export function WaitingRoomScreen({ view, session, sharer = browserSharer() }: WaitingRoomScreenProps) {
   const { t } = useTranslation();
-  const { start, addBot, removeBot, leave, pending, notice } = session;
+  const { start, addBot, removeBot, setLook, leave, pending, notice } = session;
   const [confirming, setConfirming] = useState(false);
   const [shareNote, setShareNote] = useState<string>();
   const isHost = view.mySeat !== undefined && view.mySeat === view.hostSeat;
   const host = view.seats.find((s) => s.seat === view.hostSeat);
   const enough = view.seats.length >= 2;
+  const me = view.seats.find((s) => s.isMe);
+  const takenLooks = new Set(view.seats.filter((s) => !s.isMe).map((s) => s.look ?? s.seat));
 
   useEffect(() => {
     if (!shareNote) return;
@@ -83,7 +86,7 @@ export function WaitingRoomScreen({ view, session, sharer = browserSharer() }: W
           return (
             <li key={seat} className={[styles.seat, !s.connected && styles.offline].filter(Boolean).join(" ")} data-seat={seat}>
               <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
-                <Pawn seat={seat} isMe={s.isMe} />
+                <Pawn seat={seat} look={s.look} isMe={s.isMe} />
               </svg>
               {s.isBot && <IconRobot size={18} stroke={2} aria-hidden="true" className={styles.botIcon} />}
               <span className={styles.name}>{s.name}</span>
@@ -114,6 +117,12 @@ export function WaitingRoomScreen({ view, session, sharer = browserSharer() }: W
           );
         })}
       </ul>
+
+      {me && (
+        <div className={styles.look}>
+          <LookPicker value={me.look ?? me.seat} taken={takenLooks} disabled={pending} onPick={(look) => void setLook(look)} />
+        </div>
+      )}
 
       <div className={styles.actions}>
         {confirming ? (

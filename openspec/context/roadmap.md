@@ -56,8 +56,9 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
 21. ~~`settings`~~ (done): settings screen from the start screen and a gear in the game's top bar
     (language moved there): confirm shift/move, theme, generated sounds, turn notification (tab
     title while hidden, vibration). Originally: confirmations, theme, sounds, **turn notification** (tab title, vibration, sound)
-22. `share-and-colors`: share the invite link through the phone's share sheet (Web Share API);
-    a player picks their own colour or avatar
+22. ~~`share-and-colors`~~ (done): invite link through the share sheet (earlier), and in
+    `player-colours` a player's own pawn (colour + shape pair, only free ones) picked on the start
+    screen and changeable in the waiting room; device games use it too
 
 Extras done outside the numbered list: ~~`how-to-play`~~ (done): "Näin pelaat" rules screen with
 pictures from the start screen and the settings (also during a game).

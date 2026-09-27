@@ -16,6 +16,8 @@ export const Player = schema({
   connected: t.boolean().default(true),
   /** 1–4, clockwise from the top-left start corner. */
   seat: t.uint8().default(0),
+  /** The pawn 1–4 (colour + shape), different for every seated player. */
+  look: t.uint8().default(0),
   /** The player's nickname (trimmed, 2–16 characters). */
   name: t.string().default(""),
   /** The square the pawn stands on; starts on the seat's start corner. */

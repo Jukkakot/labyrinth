@@ -14,10 +14,10 @@ const HEAD_HALF_WIDTH = 12;
  * The last walked route in the mover's colour: a dashed line through the tile hubs, a small hollow
  * ring where it began and an arrowhead that ends at the pawn where it stopped.
  */
-export function RouteTrace({ route, seat }: { route: readonly Square[]; seat: number }) {
+export function RouteTrace({ route, look }: { route: readonly Square[]; look: number }) {
   const start = route[0];
   if (!start || route.length < 2) return null;
-  const colour = `var(--seat-${seat})`;
+  const colour = `var(--seat-${look})`;
   const hubs = route.map(hubOf);
   const [ex, ey] = hubs.at(-1)!;
   const [px, py] = hubs.at(-2)!;
@@ -53,16 +53,16 @@ const PUSH_SIDES = {
  * the shifted line, in the colour of the player who shifted. It stands in the page gutter, so the
  * board keeps its size.
  */
-export function PushMark({ insertion, seat }: { insertion: InsertionId; seat: number }) {
+export function PushMark({ insertion, look }: { insertion: InsertionId; look: number }) {
   const side = insertion[0] as keyof typeof PUSH_SIDES;
   const { x, y, angle } = PUSH_SIDES[side](Number(insertion.slice(1)));
   return (
-    <g className={styles.marks} aria-hidden data-push={insertion} data-seat={seat}>
+    <g className={styles.marks} aria-hidden data-push={insertion} data-look={look}>
       <polygon
         points="-20,-27 20,-27 0,-4"
         transform={`translate(${x} ${y}) rotate(${angle})`}
         className={styles.push}
-        style={{ fill: `var(--seat-${seat})` }}
+        style={{ fill: `var(--seat-${look})` }}
       />
     </g>
   );

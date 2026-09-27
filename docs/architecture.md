@@ -122,6 +122,11 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   (bot or auto-played person); turning it on mid-turn plays the current step (on the move step
   the rules' `botMoveAfterShift`), turning it off clears the pending step. The bot acts as
   `{ sessionId: <the person's>, bot: true }`; the person's own shift/move is `AUTOPLAYING`.
+- **Pawns** (spec `pawn-looks`): a look 1–4 is a colour+shape pair (`--seat-N` tokens and the
+  pawn shapes, indexed by look). `pickLook` in `packages/protocol` gives one out (preferred →
+  seat's own → lowest free) on join (join option `look`, the device's stored choice), for bots and
+  for games on the device. `setLook { look }` changes it in the waiting room (`LOOK_TAKEN`). The
+  client draws every pawn and last-move mark by look; the seat only places crowded pawns.
   Auto-played people still count as people for "Nobody left".
 - **Quick bot games** run only on the device: `bots` without `watch` is refused (`INVALID_OPTIONS`).
 - **Nobody left:** when no person is seated and nobody watches (held drops count), a started game
@@ -142,7 +147,7 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 
 ## State sync — Implemented
 
-- Synced (`server/src/rooms/schema/GameState.ts`): players (seat, nickname, `bot`, `autoplay`, connected, pawn
+- Synced (`server/src/rooms/schema/GameState.ts`): players (seat, `look`, nickname, `bot`, `autoplay`, connected, pawn
   square, card count, found treasures, and the **view-filtered** current target), the 49 squares
   and the spare as `{ id, rotation }`, `phase`, `turnSeat`, `hostSeat`, `winnerSeat`,
   `lastInsertion`, `turnDeadline`, `turnExpired`, `spectators` (count), `botSpeed`, `rematchRoomId`.
@@ -213,7 +218,7 @@ client/src/
   saved with the game), and has no turn clock. The connector routes by
   prefix: room ids `local-…` and tokens `local:…` (`reconnect`, and `joinById` for rematch) go to
   the device, everything else to the server; the SDK client is created only for server games. The
-  one local game is saved in localStorage (`labyrinth.localGame`) after every step, so a reload,
+  one local game (with its pawns by seat) is saved in localStorage (`labyrinth.localGame`) after every step, so a reload,
   an app update or "Jatka peliä" (no time limit for a local token) continues it, also offline.
   Start and end are logged as `client.local.started` / `client.local.finished`.
 - **Daily puzzle:** a `LocalRoom` of a solo game from the rules' `startDailyPuzzle(date)`: the

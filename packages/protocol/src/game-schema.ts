@@ -15,6 +15,7 @@ import {
   type WatchRequest,
   type StartPayload,
 } from "./game-codes.js";
+import { LOOKS, type LookPayload } from "./looks.js";
 
 export const shiftPayloadSchema = z.strictObject({
   insertion: z.enum(INSERTION_IDS),
@@ -43,6 +44,10 @@ export const speedPayloadSchema = z.strictObject({
 export const autoplayPayloadSchema = z.strictObject({
   on: z.boolean(),
 }) satisfies z.ZodType<AutoplayPayload>;
+
+export const lookPayloadSchema = z.strictObject({
+  look: z.literal(LOOKS),
+}) satisfies z.ZodType<LookPayload>;
 
 export const rematchPayloadSchema = z.strictObject({}) satisfies z.ZodType<RematchPayload>;
 
@@ -73,6 +78,7 @@ export const joinOptionsSchema = z
     watch: z.boolean().optional(),
     speed: z.literal(BOT_SPEEDS).optional(),
     botSeats: z.array(seat).max(3).optional(),
+    look: z.literal(LOOKS).optional(),
   })
   .superRefine((o, ctx) => {
     if (!o.watch && o.bots !== undefined) ctx.addIssue({ code: "custom", path: ["bots"], message: "bots only when watching" });

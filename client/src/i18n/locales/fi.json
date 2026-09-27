@@ -147,6 +147,7 @@
     "TURN_NOT_EXPIRED": "Pelaajan aika ei ole vielä loppunut",
     "NOT_HOST": "Vain pelin luoja voi aloittaa pelin",
     "NOT_ENOUGH_PLAYERS": "Tarvitaan vähintään 2 pelaajaa",
+    "LOOK_TAKEN": "Joku ehti valita sen nappulan",
     "SEAT_TAKEN": "Paikka on jo varattu",
     "NOT_A_BOT": "Paikalla ei ole bottia",
     "NOT_SPECTATOR": "Vain katsoja voi muuttaa nopeutta",
@@ -327,6 +328,16 @@
       "title": "Päivän pulma",
       "body": "Joka päivä yksi yksinpeli, sama kaikille: vie nappula yhden aarteen luo mahdollisimman harvalla vuorolla. Näet parhaan mahdollisen tuloksen, eikä aikarajaa ole.",
       "more": "Voit perua siirtoja ja yrittää uudelleen. Päivän tulokseksi jää paras yrityksesi, ja sen voi jakaa."
+    }
+  },
+  "look": {
+    "title": "Nappulasi",
+    "taken": "{{name}} (varattu)",
+    "names": {
+      "1": "Sininen ympyrä",
+      "2": "Oranssi neliö",
+      "3": "Vihreä kolmio",
+      "4": "Pinkki vinoneliö"
     }
   }
 }

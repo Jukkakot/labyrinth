@@ -8,7 +8,9 @@ import {
   CLOSE_CODES,
   joinOptionsSchema,
   kickPayloadSchema,
+  lookPayloadSchema,
   MAX_SPECTATORS,
+  pickLook,
   movePayloadSchema,
   rematchPayloadSchema,
   shiftPayloadSchema,
@@ -197,6 +199,17 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       this.syncSeats();
     }),
 
+    setLook: this.command("setLook", lookPayloadSchema, (client, { look }) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player) throw new CommandRejection("NOT_SEATED");
+      if (this.state.phase !== "waiting") throw new CommandRejection("WRONG_PHASE", { expected: "waiting" });
+      if (player.look === look) return;
+      if ([...this.state.players.values()].some((p) => p !== player && p.look === look)) throw new CommandRejection("LOOK_TAKEN", { look });
+
+      log.info("player.look", this.logCtx(client, { seat: player.seat, from: player.look, to: look }));
+      player.look = look;
+    }),
+
     shift: this.command("shift", shiftPayloadSchema, (client, { insertion, rotation }) => {
       const player = this.requirePlaying(client);
       this.game = this.accepted(this.game && applyShift(this.game, player.seat, insertion, rotation), player.seat, "shift");
@@ -347,7 +360,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     const used = new Set(this.bots().map((p) => p.name));
     const name = BOT_NAMES.find((n) => !used.has(n))!; // four names for at most three bots
     const corner = START_CORNERS[seat - 1]!;
-    this.state.players.set(botKey(seat), new Player({ seat, name, bot: true, row: corner.row, col: corner.col }));
+    const look = pickLook(this.takenLooks(), seat);
+    this.state.players.set(botKey(seat), new Player({ seat, look, name, bot: true, row: corner.row, col: corner.col }));
     log.info("bot.added", this.logCtx(undefined, { seat, name }));
     this.syncSeats();
   }
@@ -358,6 +372,11 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     if (!player) throw new CommandRejection("NOT_SEATED");
     if (player.seat !== this.state.hostSeat) throw new CommandRejection("NOT_HOST", { seat: player.seat });
     if (this.state.phase !== "waiting") throw new CommandRejection("WRONG_PHASE", { expected: "waiting" });
+  }
+
+  /** The pawns seated players hold. */
+  private takenLooks(): number[] {
+    return [...this.state.players.values()].map((p) => p.look);
   }
 
   /** The player (person or bot) in `seat`, if any. */
@@ -740,7 +759,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     super.onJoin(client, undefined, undefined, { name });
     const seat = this.freeSeat();
     const corner = START_CORNERS[seat - 1]!;
-    const player = new Player({ seat, name, row: corner.row, col: corner.col });
+    const look = pickLook(this.takenLooks(), seat, auth!.look);
+    const player = new Player({ seat, look, name, row: corner.row, col: corner.col });
     this.state.players.set(client.sessionId, player);
     this.showOwnPlayer(client, player);
     if (this.state.hostSeat === 0) {

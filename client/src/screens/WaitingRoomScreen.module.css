@@ -111,3 +111,8 @@
   text-align: center;
   color: var(--muted);
 }
+
+/* The viewer's own pawn choice, under the seats. */
+.look {
+  width: min(100%, 22rem);
+}

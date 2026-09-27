@@ -14,6 +14,8 @@ const CROWD_SCALE = 0.6;
 
 export interface PawnProps {
   seat: number;
+  /** The player's pawn 1–4 (colour + shape); the seat's own when missing. */
+  look?: number;
   /** The player's nickname, for assistive technology. */
   name?: string;
   isMe?: boolean;
@@ -27,8 +29,8 @@ export interface PawnProps {
   crowded?: boolean;
 }
 
-/** A player's pawn: seat colour + seat shape (never colour alone); the viewer's own pawn gets a ring. */
-export function Pawn({ seat, name = "", isMe = false, connected = true, x = 0, y = 0, moveMs = 0, crowded = false }: PawnProps) {
+/** A player's pawn: its colour + shape (never colour alone); the viewer's own pawn gets a ring. The seat only picks the crowd quadrant. */
+export function Pawn({ seat, look = seat, name = "", isMe = false, connected = true, x = 0, y = 0, moveMs = 0, crowded = false }: PawnProps) {
   const { t } = useTranslation();
   const label = t(isMe ? "board.pawnMe" : "board.pawn", { name });
   const [dx, dy] = CROWD_OFFSET[seat] ?? [0, 0];
@@ -38,13 +40,14 @@ export function Pawn({ seat, name = "", isMe = false, connected = true, x = 0, y
       role="img"
       aria-label={label}
       data-seat={seat}
+      data-look={look}
       data-me={isMe || undefined}
       data-crowded={crowded || undefined}
       className={connected ? undefined : styles.away}
     >
       <g transform={crowded ? `translate(${50 + dx} ${50 + dy}) scale(${CROWD_SCALE}) translate(-50 -50)` : undefined}>
         {isMe && <circle cx={50} cy={50} r={34} className={styles.ring} />}
-        <path d={SHAPES[seat]} className={styles.pawn} style={{ fill: `var(--seat-${seat})` }} />
+        <path d={SHAPES[look]} className={styles.pawn} style={{ fill: `var(--seat-${look})` }} />
       </g>
     </g>
   );

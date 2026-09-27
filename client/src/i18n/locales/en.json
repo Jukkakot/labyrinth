@@ -147,6 +147,7 @@
     "TURN_NOT_EXPIRED": "Their time isn't up yet",
     "NOT_HOST": "Only the game's creator can start it",
     "NOT_ENOUGH_PLAYERS": "At least 2 players are needed",
+    "LOOK_TAKEN": "Someone already has that pawn",
     "SEAT_TAKEN": "That seat is already taken",
     "NOT_A_BOT": "There is no bot in that seat",
     "NOT_SPECTATOR": "Only a spectator can change the speed",
@@ -327,6 +328,16 @@
       "title": "Daily puzzle",
       "body": "One solo game a day, the same for everyone: take your pawn to one treasure in as few turns as possible. The best possible result is shown, and there is no time limit.",
       "more": "You can undo moves and try again. Your best attempt is the day's result, and you can share it."
+    }
+  },
+  "look": {
+    "title": "Your pawn",
+    "taken": "{{name}} (taken)",
+    "names": {
+      "1": "Blue circle",
+      "2": "Orange square",
+      "3": "Green triangle",
+      "4": "Pink diamond"
     }
   }
 }

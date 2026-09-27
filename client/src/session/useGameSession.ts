@@ -15,6 +15,8 @@ import {
   type SpeedPayload,
   type StartPayload,
   type WatchRequest,
+  type Look,
+  type LookPayload,
 } from "@labyrinth/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { serverUrl } from "../config.ts";
@@ -22,6 +24,7 @@ import { log, setLogContext } from "../logging/logger.ts";
 import { isLocalRoomId, isLocalToken, roomIdOfToken } from "./localGameStore.ts";
 import { loadDailyRecord, todayString } from "./dailyRecord.ts";
 import { LocalRoom } from "./localRoom.ts";
+import { loadLook, saveLook } from "./look.ts";
 import { loadNickname, randomNickname, saveNickname } from "./nickname.ts";
 import { clearResume, loadResume, saveResume, type ResumeRecord } from "./resumeRecord.ts";
 import { clearToken, loadToken, saveToken } from "./sessionToken.ts";
@@ -95,7 +98,11 @@ async function restoreLocal(roomId: string): Promise<GameRoomLike> {
  */
 export function createConnector(): Connector {
   const pool = quickPlayPool();
-  const withPool = (options: JoinRequest): JoinOptions => (pool ? { ...options, pool } : { ...options });
+  // The player's pawn goes with every join; the server gives it when it is free.
+  const withPool = (options: JoinRequest): JoinOptions => {
+    const look = loadLook();
+    return { ...options, ...(pool && { pool }), ...(look && { look }) };
+  };
   return {
     joinOrCreate: (options) => sdkClient().joinOrCreate("game", withPool(options)) as unknown as Promise<GameRoomLike>,
     createPrivate: (options) =>
@@ -176,7 +183,7 @@ export function noticeKey(code: string): NoticeKey {
   return (GAME_ERROR_CODES as readonly string[]).includes(code) ? `errors.${code as GameErrorCode}` : "errors.generic";
 }
 
-type Command = "start" | "addBot" | "removeBot" | "shift" | "move" | "kick" | "setSpeed" | "rematch" | "undo" | "setAutoplay";
+type Command = "start" | "addBot" | "removeBot" | "setLook" | "shift" | "move" | "kick" | "setSpeed" | "rematch" | "undo" | "setAutoplay";
 
 export interface GameSession {
   status: SessionStatus;
@@ -201,6 +208,8 @@ export interface GameSession {
   watch(roomId: string, nickname: string): void;
   /** Watches a new game of 2–4 bots (leaving the current game, if any). */
   watchBots(nickname: string, bots: number, speed?: BotSpeed): void;
+  /** Waiting room: takes a free pawn, and remembers it as the player's choice. */
+  setLook(look: Look): Promise<CommandResult | undefined>;
   /** A spectator sets the bots' speed. Resolves undefined without sending while another command is pending. */
   setSpeed(speed: BotSpeed): Promise<CommandResult | undefined>;
   /** Hands the viewer's seat to the bot (`on`) or takes it back. Resolves undefined without sending while another command is pending. */
@@ -459,7 +468,7 @@ export function useGameSession(connector?: Connector): GameSession {
   }, [notice]);
 
   /** Sends one command at a time; a rejection becomes a notice. */
-  const send = useCallback(async (cmd: Command, payload: StartPayload | BotSeatPayload | ShiftPayload | MovePayload | KickPayload | SpeedPayload | AutoplayPayload) => {
+  const send = useCallback(async (cmd: Command, payload: StartPayload | BotSeatPayload | ShiftPayload | MovePayload | KickPayload | SpeedPayload | AutoplayPayload | LookPayload) => {
     const room = roomRef.current;
     if (!room || pendingRef.current) return undefined;
     pendingRef.current = true;
@@ -486,6 +495,13 @@ export function useGameSession(connector?: Connector): GameSession {
   const start = useCallback(() => send("start", {}), [send]);
   const addBot = useCallback((seat: number) => send("addBot", { seat }), [send]);
   const removeBot = useCallback((seat: number) => send("removeBot", { seat }), [send]);
+  const setLook = useCallback(
+    (look: Look) => {
+      saveLook(look);
+      return send("setLook", { look });
+    },
+    [send],
+  );
   const shift = useCallback(
     (insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]) => send("shift", { insertion, rotation }),
     [send],
@@ -571,6 +587,7 @@ export function useGameSession(connector?: Connector): GameSession {
     start,
     addBot,
     removeBot,
+    setLook,
     shift,
     move,
     kick,

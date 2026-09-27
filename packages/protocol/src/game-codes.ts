@@ -26,6 +26,7 @@ export const GAME_ERROR_CODES = [
   "PEOPLE_PLAYING",
   "AUTOPLAYING",
   "SERVER_FULL",
+  "LOOK_TAKEN",
 ] as const;
 export type GameErrorCode = (typeof GAME_ERROR_CODES)[number];
 
@@ -114,6 +115,8 @@ export interface JoinOptions {
   speed?: BotSpeed;
   /** Seats that get a bot as soon as the room is created (a rematch keeps the finished game's bots). */
   botSeats?: number[];
+  /** The pawn (1–4) the player would like; they get it when nobody in the game has it. */
+  look?: number;
 }
 
 /** Body of `POST /watch`: join a running game as a spectator. */

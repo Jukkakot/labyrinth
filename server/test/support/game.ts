@@ -43,8 +43,8 @@ export async function waitingRoom(colyseus: Server, players: number, options: Ga
 }
 
 /** Seats one more player in `room` under `nickname`. */
-export async function join(colyseus: Server, room: GameRoom, nickname: string): Promise<TestClient> {
-  return (await colyseus.connectTo(room as never, { nickname })) as unknown as TestClient;
+export async function join(colyseus: Server, room: GameRoom, nickname: string, options: { look?: number } = {}): Promise<TestClient> {
+  return (await colyseus.connectTo(room as never, { nickname, ...options })) as unknown as TestClient;
 }
 
 /** The running game as the room's rules engine holds it (undefined in the waiting room). */

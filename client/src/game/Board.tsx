@@ -36,6 +36,8 @@ export interface BoardProps {
 export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target, trace, reach, hint }: BoardProps) {
   const { t } = useTranslation();
   const clipId = useId();
+  // The last turn's marks are drawn in the mover's pawn colour.
+  const traceLook = trace?.seat === undefined ? undefined : (seats.find((s) => s.seat === trace.seat)?.look ?? trace.seat);
   return (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className={styles.board} aria-label={t("board.label")} role="group">
       {/* Corridors open toward the board edge end at the tiles' outer edge instead of sticking out. */}
@@ -59,8 +61,8 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
           );
         })}
       </g>
-      {trace?.insertion && trace.seat !== undefined && <PushMark insertion={trace.insertion} seat={trace.seat} />}
-      {trace?.route && trace.seat !== undefined && <RouteTrace route={trace.route} seat={trace.seat} />}
+      {trace?.insertion && traceLook !== undefined && <PushMark insertion={trace.insertion} look={traceLook} />}
+      {trace?.route && traceLook !== undefined && <RouteTrace route={trace.route} look={traceLook} />}
       {reach && <ReachMarks squares={reach} />}
       {moveTargets && <MoveTargets {...moveTargets} />}
       {hint && <HintMark square={hint} />}

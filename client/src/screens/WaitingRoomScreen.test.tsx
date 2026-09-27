@@ -25,6 +25,7 @@ function setup(seats: SeatView[], mySeat: number, session: Partial<GameSession> 
   const leave = vi.fn<GameSession["leave"]>();
   const addBot = vi.fn<GameSession["addBot"]>(async () => ({ ok: true }));
   const removeBot = vi.fn<GameSession["removeBot"]>(async () => ({ ok: true }));
+  const setLook = vi.fn<GameSession["setLook"]>(async () => ({ ok: true }));
   const view: WaitingRoomScreenProps["view"] = {
     roomId: "brave-otters-sing",
     hostSeat: 1,
@@ -33,9 +34,9 @@ function setup(seats: SeatView[], mySeat: number, session: Partial<GameSession> 
   };
   const copy = vi.fn(async (_text: string) => {});
   const utils = render(
-    <WaitingRoomScreen view={view} session={{ start, addBot, removeBot, leave, pending: false, ...session }} sharer={sharer ?? { copy }} />,
+    <WaitingRoomScreen view={view} session={{ start, addBot, removeBot, setLook, leave, pending: false, ...session }} sharer={sharer ?? { copy }} />,
   );
-  return { start, addBot, removeBot, leave, copy, ...utils };
+  return { start, addBot, removeBot, setLook, leave, copy, ...utils };
 }
 
 const button = (name: string) => screen.getByRole("button", { name }) as HTMLButtonElement;
@@ -152,5 +153,19 @@ describe("lobby › Leaving the waiting room", () => {
     fireEvent.click(button("Poistu"));
     fireEvent.click(button("Poistu"));
     expect(leave).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("pawn-looks › Changing the pawn in the waiting room", () => {
+  it("all four pawns shown, the others' disabled, the own one chosen; a free one is sent", () => {
+    const { setLook } = setup([seat(1, "Maija"), { ...seat(2, "Robo"), isBot: true, look: 3 }], 1);
+    const group = screen.getByRole("group", { name: "Nappulasi" });
+    const pawns = [...group.querySelectorAll("button")];
+    expect(pawns).toHaveLength(4);
+    expect(button("Sininen ympyrä").getAttribute("aria-pressed")).toBe("true");
+    expect(button("Vihreä kolmio (varattu)").disabled).toBe(true);
+    expect(button("Oranssi neliö").disabled).toBe(false);
+    fireEvent.click(button("Pinkki vinoneliö"));
+    expect(setLook).toHaveBeenCalledWith(4);
   });
 });

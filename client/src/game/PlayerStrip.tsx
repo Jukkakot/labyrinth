@@ -36,7 +36,7 @@ export function PlayerStrip({ view }: { view: Pick<GameView, "seats"> }) {
           <li key={s.seat} className={cls} data-seat={s.seat} data-offline={s.connected ? undefined : ""} data-autoplay={s.autoplay ? "" : undefined}>
             <span className={styles.srOnly}>{summary}</span>
             <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
-              <Pawn seat={s.seat} isMe={s.isMe} />
+              <Pawn seat={s.seat} look={s.look} isMe={s.isMe} />
             </svg>
             {(s.isBot || s.autoplay) && <IconRobot size={16} stroke={2} aria-hidden="true" className={styles.botIcon} />}
             <span className={styles.name} aria-hidden="true">

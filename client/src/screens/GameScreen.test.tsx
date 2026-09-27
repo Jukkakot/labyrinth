@@ -590,7 +590,7 @@ describe("board-view › Last turn shown (game screen)", () => {
 
     const push = container.querySelector("[data-push]");
     expect(push?.getAttribute("data-push")).toBe("N3");
-    expect(push?.getAttribute("data-seat")).toBe("2");
+    expect(push?.getAttribute("data-look")).toBe("2");
     expect(container.querySelector("[data-route-start]")).toBeTruthy();
     expect(container.querySelector("[data-route-end]")).toBeTruthy();
     const route = container.querySelector("[data-route]")?.getAttribute("data-route")?.split(" ");

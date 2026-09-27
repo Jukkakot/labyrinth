@@ -37,7 +37,7 @@ pawn mid-game, a pawn choice for spectators.
 - **Device games**: `SavedLocalGame.looks` (seat → look), fixed at creation from the preference;
   a save without it (older saves) falls back to look = seat. A rematch on the device re-reads the
   preference.
-- **Rendering**: `SeatView.look`; `Pawn` gets `look` (colour and shape) next to `seat` (crowd
+- **Rendering**: `SeatView.look` (optional in the type: missing = the seat's own, so test fixtures and old saves need no change); `Pawn` gets `look` (colour and shape) next to `seat` (crowd
   quadrant only); `TurnMarks` and the turn line and result look up the mover's look.
 
 ## Risks / Trade-offs

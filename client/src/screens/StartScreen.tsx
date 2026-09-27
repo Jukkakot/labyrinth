@@ -13,6 +13,8 @@ import { Button } from "../ui/Button.tsx";
 import { HowToPlay } from "../howto/HowToPlay.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
 import { LinkButton } from "../ui/LinkButton.tsx";
+import { LookPicker } from "../ui/LookPicker.tsx";
+import { loadLook, saveLook } from "../session/look.ts";
 import { Message } from "../ui/Message.tsx";
 import { Screen } from "../ui/Screen.tsx";
 import { BuildInfo } from "./BuildInfo.tsx";
@@ -81,6 +83,8 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
   const waited = useSecondsWaited(wake.state === "waking" && status !== "connecting" && status !== "error");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [howToOpen, setHowToOpen] = useState(false);
+  // Without a stored choice the blue circle shows: it is what the player gets in a game on the device.
+  const [look, setLook] = useState(() => loadLook() ?? 1);
   if (settingsOpen) return <SettingsScreen onClose={() => setSettingsOpen(false)} />;
   if (howToOpen) return <HowToPlay onClose={() => setHowToOpen(false)} />;
 
@@ -169,6 +173,13 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
               {t(nickname.issue === "characters" ? "start.nicknameCharacters" : "start.nicknameLength")}
             </p>
           )}
+          <LookPicker
+            value={look}
+            onPick={(picked) => {
+              saveLook(picked);
+              setLook(picked);
+            }}
+          />
           <div className={styles.actions}>
             {invite ? (
               <>

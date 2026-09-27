@@ -26,6 +26,8 @@ const keyOf = (roomId: string) => (isDailyRoomId(roomId) ? DAILY_KEY : KEY);
 export interface SavedLocalGame {
   roomId: string;
   game: GameState;
+  /** Pawns by seat, fixed when the game starts; missing in older saves (then the seat's own). */
+  looks?: Record<number, number>;
   /** The player's seat is handed to the bot. */
   autoplay?: boolean;
   /** Where the bot on turn moves after its shift (chosen with the shift). */
