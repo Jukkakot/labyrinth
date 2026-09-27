@@ -8,7 +8,7 @@ the same rules as people, and how a game with bots ends when no person is left.
 
 ### Requirement: Adding and removing bots
 In the waiting room the host SHALL be able to seat a bot in any free seat and to remove a bot from
-its seat. A bot takes an ordinary seat: it gets that seat's start corner, pawn shape and colour, and
+its seat. A bot takes an ordinary seat: it gets that seat's start corner and a pawn as pawn-looks says (its seat's pawn when free), and
 counts as a seated player for the start and for the seat count. A bot MUST get the first name from
 Robo, Pixel, Byte, Nova that no other bot in the game has. Adding a bot MUST be rejected, without
 changing the game, when:
