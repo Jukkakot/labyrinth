@@ -236,6 +236,14 @@ describe("lobby › Nickname", () => {
     expect(session.playBots).toHaveBeenCalledWith("Maija", 2);
   });
 
+  it("No waiting for the server: 1v1–1v3 and a device game's Jatka peliä stay enabled while waking", () => {
+    const resumable = { token: "local:local-abc", roomId: "local-abc", seenAt: 0 };
+    render(<StartScreen session={sessionOf({ resumable })} wake={{ state: "waking", slow: false }} />);
+    for (const n of [1, 2, 3]) expect(screen.getByRole("button", { name: new RegExp(`sinä ja ${n} bott`) }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Jatka peliä" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Pelaa" }).hasAttribute("disabled")).toBe(true);
+  });
+
   it("control characters get their own hint", () => {
     render(<StartScreen session={sessionOf()} wake={ready} />);
     fireEvent.change(field(), { target: { value: "Ma\u0007ija" } });

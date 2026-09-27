@@ -1,6 +1,6 @@
 /**
- * Development only: `?dev=1v3` starts a quick game against 3 bots (1–3) as soon as the server is
- * awake, so a UI check or a quick try lands on the board without tapping through the start
+ * Development only: `?dev=1v3` starts a quick game against 3 bots (1–3) on the device at once,
+ * so a UI check or a quick try lands on the board without tapping through the start
  * screen. Undefined in a production build, where the parameter does nothing.
  */
 export function devBotCount(search = globalThis.location?.search ?? "", isDev = import.meta.env.DEV): number | undefined {

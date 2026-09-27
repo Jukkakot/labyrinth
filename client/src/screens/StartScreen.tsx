@@ -2,6 +2,7 @@ import { IconDice5 } from "@tabler/icons-react";
 import { RULES_VERSION } from "@labyrinth/rules";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isLocalToken } from "../session/localGameStore.ts";
 import { checkNickname, loadNickname, randomNickname } from "../session/nickname.ts";
 import type { ServerWake } from "../session/serverWake.ts";
 import type { OpenGames } from "../session/useOpenGames.ts";
@@ -105,7 +106,7 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
               {t("start.resumeTitle")}
             </h2>
             <p className={styles.resumeBody}>{t("start.resumeBody")}</p>
-            <Button disabled={waking} onClick={resume}>
+            <Button disabled={waking && !isLocalToken(resumable.token)} onClick={resume}>
               {t("start.resume")}
             </Button>
           </section>
@@ -179,7 +180,7 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
                     <Button
                       key={bots}
                       variant="secondary"
-                      disabled={disabled}
+                      disabled={!nickname.ok}
                       onClick={() => playBots(name, bots)}
                       aria-label={t("start.botGameLabel", { count: bots })}
                     >

@@ -18,6 +18,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { serverUrl } from "../config.ts";
 import { log, setLogContext } from "../logging/logger.ts";
+import { isLocalRoomId, isLocalToken, roomIdOfToken } from "./localGameStore.ts";
+import { LocalRoom } from "./localRoom.ts";
 import { loadNickname, randomNickname, saveNickname } from "./nickname.ts";
 import { clearResume, loadResume, saveResume, type ResumeRecord } from "./resumeRecord.ts";
 import { clearToken, loadToken, saveToken } from "./sessionToken.ts";
@@ -76,6 +78,17 @@ export function sdkClient(): Client {
   return (sharedClient ??= new Client(serverUrl()));
 }
 
+/** The saved game on the device with this id; rejects like a gone server room when it is not there. */
+async function restoreLocal(roomId: string): Promise<GameRoomLike> {
+  const room = LocalRoom.restore(roomId);
+  if (!room) throw Object.assign(new Error("local game gone"), { code: 524 });
+  return room;
+}
+
+/**
+ * Games against bots run on the device (ids and tokens with the local prefix); everything else
+ * goes to the server. The SDK client is only created for the server's games.
+ */
 export function createConnector(): Connector {
   const pool = quickPlayPool();
   const withPool = (options: JoinRequest): JoinOptions => (pool ? { ...options, pool } : { ...options });
@@ -83,9 +96,9 @@ export function createConnector(): Connector {
     joinOrCreate: (options) => sdkClient().joinOrCreate("game", withPool(options)) as unknown as Promise<GameRoomLike>,
     createPrivate: (options) =>
       sdkClient().create("game", { ...withPool(options), private: true }) as unknown as Promise<GameRoomLike>,
-    createBotGame: ({ bots, ...options }) =>
-      sdkClient().create("game", { ...withPool(options), bots, private: true }) as unknown as Promise<GameRoomLike>,
-    joinById: (roomId, options) => sdkClient().joinById(roomId, withPool(options)) as unknown as Promise<GameRoomLike>,
+    createBotGame: async ({ bots, nickname }) => LocalRoom.create(nickname, bots),
+    joinById: (roomId, options) =>
+      isLocalRoomId(roomId) ? restoreLocal(roomId) : (sdkClient().joinById(roomId, withPool(options)) as unknown as Promise<GameRoomLike>),
     watch: async (roomId, { nickname }) => {
       // JSON as text/plain: no CORS preflight.
       const res = await fetch(`${serverUrl()}/watch`, {
@@ -98,7 +111,8 @@ export function createConnector(): Connector {
     },
     createBotWatch: ({ bots, speed, ...options }) =>
       sdkClient().create("game", { ...withPool(options), watch: true, bots, speed, private: true }) as unknown as Promise<GameRoomLike>,
-    reconnect: (token) => sdkClient().reconnect(token) as unknown as Promise<GameRoomLike>,
+    reconnect: (token) =>
+      isLocalToken(token) ? restoreLocal(roomIdOfToken(token)) : (sdkClient().reconnect(token) as unknown as Promise<GameRoomLike>),
   };
 }
 

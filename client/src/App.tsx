@@ -35,7 +35,9 @@ export default function App() {
   const devUsed = useRef(false);
 
   useEffect(() => {
-    if ((devBots ?? devWatch) === undefined || devUsed.current || wake.state === "waking" || status !== "idle") return;
+    // A bot game runs on the device and starts at once; watching needs the server awake.
+    const waiting = devBots === undefined && wake.state === "waking";
+    if ((devBots ?? devWatch) === undefined || devUsed.current || waiting || status !== "idle") return;
     devUsed.current = true;
     dropDevShortcut();
     const nickname = loadNickname() || randomNickname(i18n.language);
