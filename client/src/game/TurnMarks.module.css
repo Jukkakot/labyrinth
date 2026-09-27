@@ -22,3 +22,16 @@
   stroke: var(--highlight);
   stroke-width: 4;
 }
+
+/* Hint: a thick solid ring on a light halo, unlike the thin reach rings and the dashed move outline. */
+.hintHalo {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 13;
+}
+
+.hint {
+  fill: none;
+  stroke: var(--highlight);
+  stroke-width: 7;
+}

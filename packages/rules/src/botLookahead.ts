@@ -1,6 +1,6 @@
 import type { Board } from "./board.js";
 import type { BotStrategy, BotTurn, BotView } from "./bot.js";
-import { ALL_SQUARES, BOARD_SIZE, squareIndex } from "./geometry.js";
+import { ALL_SQUARES, BOARD_SIZE, squareIndex, type Square } from "./geometry.js";
 import { insertionLine, INSERTIONS, reverseOf, type InsertionId } from "./shift.js";
 import { openings, ROTATIONS, TILE_KINDS, type Rotation, type TileKind } from "./tile.js";
 import { TILE_SET, TREASURES } from "./tileSet.js";
@@ -187,19 +187,47 @@ export function lookaheadStrategy(weights: LookaheadWeights = DEFAULT_WEIGHTS): 
   return (view, rng) => lookaheadTurn(view, rng, weights);
 }
 
+/**
+ * The best square to walk to after a shift already made: `view.board` is the shifted board and
+ * `view.lastInsertion` the shift just made (its reverse is what the next player may not do). Scored
+ * exactly like the second half of a look-ahead turn for that one shift.
+ */
+export function lookaheadMove(view: BotView, rng: { int(min: number, max: number): number }, weights: LookaheadWeights = DEFAULT_WEIGHTS): Square {
+  if (view.lastInsertion === undefined) throw new Error("A move needs the shift just made");
+  return search(view, rng, weights, true).to;
+}
+
 function lookaheadTurn(view: BotView, rng: { int(min: number, max: number): number }, w: LookaheadWeights): BotTurn {
+  return search(view, rng, w, false);
+}
+
+/** Bits of every treasure found by anyone: no one's target any more (the deck has no repeats). */
+function foundBits(view: BotView): number {
+  let bits = 0;
+  for (const seat of view.seats) for (const t of seat.foundTreasures ?? []) bits |= 2 ** TREASURES.indexOf(t);
+  return bits;
+}
+
+/**
+ * The look-ahead search. With `fixed` false it tries every allowed shift of `view.board`; with
+ * `fixed` true the shift is already made (`view.board` is the shifted board, `view.lastInsertion`
+ * the shift) and only the squares to walk to are compared.
+ */
+function search(view: BotView, rng: { int(min: number, max: number): number }, w: LookaheadWeights, fixed: boolean): BotTurn {
   const own = view.seats.find((s) => s.seat === view.seat);
   if (!own) throw new Error(`Seat ${view.seat} is not in the view`);
   const heading = view.target === undefined;
   const targetId = targetTileId(view.seat, view.target);
   const ownBit = heading ? 0 : TREASURE_BIT[targetId]!;
+  // An opponent may be heading for any treasure but the bot's own target and those already found.
+  const possible = 0xffffff & ~ownBit & ~foundBits(view);
+  const treasureCount = popcount(possible);
   const me = squareIndex(own.pawn);
   const opponents = view.seats.filter((s) => s.seat !== view.seat);
   const minCards = Math.min(...view.seats.map((s) => s.cardsLeft));
   const oppPawn = opponents.map((o) => squareIndex(o.pawn));
   const oppHome = opponents.map((o) => (o.cardsLeft === 0 ? squareIndex(homeSquare(o.seat)) : -1));
   const oppWeight = opponents.map((o) => (o.cardsLeft === minCards ? 1 + w.leader : 1));
-  const treasureCount = popcount(0xffffff & ~ownBit);
   const nextPlayer = nextSeat(
     view.seats.map((s) => s.seat),
     view.seat,
@@ -219,7 +247,6 @@ function lookaheadTurn(view: BotView, rng: { int(min: number, max: number): numb
   const oppMask = new Array<number>(opponents.length);
   const oppHit = new Array<boolean>(opponents.length);
 
-  const forbidden = view.lastInsertion === undefined ? -1 : REVERSE[INSERTION_INDEX.get(view.lastInsertion)!]!;
   let best: BotTurn[] = [];
   let bestScore = -Infinity;
   const offer = (score: number, turn: BotTurn) => {
@@ -229,84 +256,95 @@ function lookaheadTurn(view: BotView, rng: { int(min: number, max: number): numb
     } else if (score >= bestScore - EPSILON) best.push(turn);
   };
 
-  for (let ins1 = 0; ins1 < INSERTIONS.length; ins1++) {
-    if (ins1 === forbidden) continue;
-    for (const rot1 of distinctRotations(b0.spareKind)) {
-      shiftInto(b0, b1, ins1, rot1);
-      const insertion = INSERTIONS[ins1]!;
-      const rotation = ROTATIONS[rot1]! as Rotation;
-      const pawn1 = PAWN_AFTER[ins1]![me]!;
-      const count = reach(b1, pawn1, seen, ++stamp);
-      for (let k = 0; k < count; k++) mine[k] = queue[k]!;
-      const target1 = b1.ids.indexOf(targetId);
+  /** Scores every square reachable on `b` after the shift `ins1` (already applied), the pawn on `pawn1`. */
+  const evaluate = (b: Fast, ins1: number, rotation: Rotation, pawn1: number) => {
+    const insertion = INSERTIONS[ins1]!;
+    const count = reach(b, pawn1, seen, ++stamp);
+    for (let k = 0; k < count; k++) mine[k] = queue[k]!;
+    const target1 = b.ids.indexOf(targetId);
 
-      // Collecting (or winning) now beats anything else; the opponents' chances still break ties.
-      const collectable = target1 !== -1 && seen[target1] === stamp;
-      for (let k = 0; k < count; k++) {
-        reachCount[mine[k]!] = 0;
-        distSum[mine[k]!] = 0;
-      }
-      oppMask.fill(0);
-      oppHit.fill(false);
-      let next = 0;
-      for (let ins2 = 0; ins2 < INSERTIONS.length; ins2++) {
-        if (ins2 === REVERSE[ins1]) continue;
-        const after = PAWN_AFTER[ins2]!;
-        for (const rot2 of distinctRotations(b1.spareKind)) {
-          shiftInto(b1, b2, ins2, rot2);
-          next++;
-          if (!collectable) {
-            const t2 = b2.ids.indexOf(targetId);
-            if (t2 !== -1) reach(b2, t2, comp, ++stamp);
-            for (let k = 0; k < count; k++) {
-              const d = mine[k]!;
-              const p = after[d]!;
-              if (t2 === -1) distSum[d] += OFF_BOARD_DISTANCE;
-              else {
-                if (comp[p] === stamp) reachCount[d]++;
-                distSum[d] += Math.abs(ROW[p]! - ROW[t2]!) + Math.abs(COL[p]! - COL[t2]!);
-              }
-            }
-          }
-          if (blocking) {
-            for (let o = 0; o < opponents.length; o++) {
-              const reached = reach(b2, after[oppPawn[o]!]!, seen, ++stamp);
-              if (oppHome[o] !== -1) {
-                if (seen[oppHome[o]!] === stamp) oppHit[o] = true;
-                continue;
-              }
-              let mask = oppMask[o]!;
-              for (let k = 0; k < reached; k++) mask |= TREASURE_BIT[b2.ids[queue[k]!]!]!;
-              oppMask[o] = mask;
+    // Collecting (or winning) now beats anything else; the opponents' chances still break ties.
+    const collectable = target1 !== -1 && seen[target1] === stamp;
+    for (let k = 0; k < count; k++) {
+      reachCount[mine[k]!] = 0;
+      distSum[mine[k]!] = 0;
+    }
+    oppMask.fill(0);
+    oppHit.fill(false);
+    let next = 0;
+    for (let ins2 = 0; ins2 < INSERTIONS.length; ins2++) {
+      if (ins2 === REVERSE[ins1]) continue;
+      const after = PAWN_AFTER[ins2]!;
+      for (const rot2 of distinctRotations(b.spareKind)) {
+        shiftInto(b, b2, ins2, rot2);
+        next++;
+        if (!collectable) {
+          const t2 = b2.ids.indexOf(targetId);
+          if (t2 !== -1) reach(b2, t2, comp, ++stamp);
+          for (let k = 0; k < count; k++) {
+            const d = mine[k]!;
+            const p = after[d]!;
+            if (t2 === -1) distSum[d] += OFF_BOARD_DISTANCE;
+            else {
+              if (comp[p] === stamp) reachCount[d]++;
+              distSum[d] += Math.abs(ROW[p]! - ROW[t2]!) + Math.abs(COL[p]! - COL[t2]!);
             }
           }
         }
-      }
-
-      // The opponents count evenly (their mean chance), so blocking does not grow with the seat count.
-      let chances = 0;
-      let wins = 0;
-      for (let o = 0; o < opponents.length; o++) {
-        if (oppHome[o] !== -1) {
-          // Only the next player shifts the very board the bot leaves; later ones count as a sure chance.
-          if (!oppHit[o]) continue;
-          if (opponents[o]!.seat === nextPlayer) wins += oppWeight[o]!;
-          else chances += oppWeight[o]!;
-        } else chances += (oppWeight[o]! * popcount(oppMask[o]! & ~ownBit)) / treasureCount;
-      }
-      const penalty = (w.block * chances) / Math.max(1, opponents.length) + w.home * wins;
-
-      for (let k = 0; k < count; k++) {
-        const d = mine[k]!;
-        const to = ALL_SQUARES[d]!;
-        let score: number;
-        if (collectable) {
-          if (d !== target1) continue;
-          score = (heading ? WIN : COLLECT) - penalty;
-        } else {
-          score = (w.reach * reachCount[d]!) / next - (w.distance * distSum[d]!) / next - penalty;
+        if (blocking) {
+          for (let o = 0; o < opponents.length; o++) {
+            const reached = reach(b2, after[oppPawn[o]!]!, seen, ++stamp);
+            if (oppHome[o] !== -1) {
+              if (seen[oppHome[o]!] === stamp) oppHit[o] = true;
+              continue;
+            }
+            let mask = oppMask[o]!;
+            for (let k = 0; k < reached; k++) mask |= TREASURE_BIT[b2.ids[queue[k]!]!]!;
+            oppMask[o] = mask;
+          }
         }
-        offer(score, { insertion, rotation, to });
+      }
+    }
+
+    // The opponents count evenly (their mean chance), so blocking does not grow with the seat count.
+    let chances = 0;
+    let wins = 0;
+    for (let o = 0; o < opponents.length; o++) {
+      if (oppHome[o] !== -1) {
+        // Only the next player shifts the very board the bot leaves; later ones count as a sure chance.
+        if (!oppHit[o]) continue;
+        if (opponents[o]!.seat === nextPlayer) wins += oppWeight[o]!;
+        else chances += oppWeight[o]!;
+      } else if (treasureCount > 0) chances += (oppWeight[o]! * popcount(oppMask[o]! & possible)) / treasureCount;
+    }
+    const penalty = (w.block * chances) / Math.max(1, opponents.length) + w.home * wins;
+
+    for (let k = 0; k < count; k++) {
+      const d = mine[k]!;
+      const to = ALL_SQUARES[d]!;
+      let score: number;
+      if (collectable) {
+        if (d !== target1) continue;
+        score = (heading ? WIN : COLLECT) - penalty;
+      } else {
+        score = (w.reach * reachCount[d]!) / next - (w.distance * distSum[d]!) / next - penalty;
+      }
+      offer(score, { insertion, rotation, to });
+    }
+  };
+
+  if (fixed) {
+    const ins1 = INSERTION_INDEX.get(view.lastInsertion!)!;
+    // The shift is made: the pawn is where it stands, the inserted tile sits on the line's entry.
+    const rotation = view.board.squares[LINES[ins1]![0]!]!.rotation;
+    evaluate(b0, ins1, rotation, me);
+  } else {
+    const forbidden = view.lastInsertion === undefined ? -1 : REVERSE[INSERTION_INDEX.get(view.lastInsertion)!]!;
+    for (let ins1 = 0; ins1 < INSERTIONS.length; ins1++) {
+      if (ins1 === forbidden) continue;
+      for (const rot1 of distinctRotations(b0.spareKind)) {
+        shiftInto(b0, b1, ins1, rot1);
+        evaluate(b1, ins1, ROTATIONS[rot1]! as Rotation, PAWN_AFTER[ins1]![me]!);
       }
     }
   }

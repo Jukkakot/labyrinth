@@ -155,6 +155,11 @@
     "to": "Move to row {{row}}, column {{col}}",
     "stayHere": "Your square – stay"
   },
+  "hint": {
+    "button": "Hint",
+    "title": "Show what a bot would do on your turn",
+    "square": "Hint: walk to row {{row}}, column {{col}}"
+  },
   "progress": {
     "label": "Players and treasures found",
     "count": "{{found}}/{{cards}} treasures found",

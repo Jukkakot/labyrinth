@@ -136,7 +136,8 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 - **Hidden information:** `Player.target` is `.view()`-tagged; each player's `StateView` holds only
   its own player, a spectator's holds all. A room test decodes another client's state to prove
   nothing leaks.
-- UI-only state (shift preview, local rotation, the last turn's marks) never crosses the network.
+- UI-only state (shift preview, local rotation, the last turn's marks, the hint) never crosses the
+  network.
 
 ## Rules package — Implemented
 
@@ -147,7 +148,11 @@ the 24 treasures), `rng` + `setup` (seeded board; draw order pinned by a golden 
 (deals, collect and win), `turns` (next seat, kick rule, clock limits), `bot` (the replaceable
 `BotStrategy` over a fair `BotView`, `chooseBotTurn` = the look-ahead bot in `botLookahead`
 (typed-array board, one own turn plus every next shift, averaged opponent blocking; a few ms per
-turn), the old greedy one kept as a baseline, `botSeed`), `botTournament` (whole games among
+turn; each seat's optional public `foundTreasures` rules those out as an opponent's targets), the
+old greedy one kept as a baseline, `botSeed`), `botHint` (the "Vihje" hint: the look-ahead in the
+viewer's seat, always blocking, rng seeded from the position; `hintTurn` for the shift step,
+`hintMove` for the move step after a shift; the client maps its view to a `BotView` with only
+its own target in `client/src/game/hint.ts`), `botTournament` (whole games among
 strategies, win rates and ms per turn; not in the package entry). Test fixtures in
 `@labyrinth/rules/testing` (`boardFromRows`, `boardToText`). Board coordinates: `(row, col)`
 0–6 from the top-left; tile ids never change, which is what the client animates by.

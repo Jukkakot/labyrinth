@@ -142,6 +142,25 @@ describe("bots › Bot turn choice", () => {
     expect(blocking).toBeLessThan(without * 0.95);
   });
 
+  it("Found treasures are no threat", () => {
+    // Every treasure but the bot's own target is found: no opponent can be heading for any of them.
+    const selfish = lookaheadStrategy({ ...DEFAULT_WEIGHTS, block: 0, home: 0 });
+    const minding = lookaheadStrategy({ ...DEFAULT_WEIGHTS, blockChance: 1 });
+    let blockedWithoutLists = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const target = TREASURES[seed % TREASURES.length]!;
+      const opponent: BotSeatView = { seat: 3, pawn: ALL_SQUARES[(seed * 17) % 49]!, found: 11, cardsLeft: 1 };
+      const withLists = viewOf(setupBoard(seed), target, homeSquare(1), undefined, [
+        { ...opponent, foundTreasures: TREASURES.filter((t) => t !== target) },
+      ]);
+      const withoutLists = viewOf(setupBoard(seed), target, homeSquare(1), undefined, [opponent]);
+      expect(minding(withLists, createRng(7))).toEqual(selfish(withLists, createRng(7)));
+      if (JSON.stringify(minding(withoutLists, createRng(7))) !== JSON.stringify(selfish(withoutLists, createRng(7)))) blockedWithoutLists++;
+    }
+    // Without the found lists the same positions do get blocking moves.
+    expect(blockedWithoutLists).toBeGreaterThan(0);
+  });
+
   it("Opponent about to win", () => {
     // Seat 3 has every treasure and could get home next turn; the bot can't collect but can stop it.
     const home = homeSquare(3);
