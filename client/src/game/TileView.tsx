@@ -19,13 +19,15 @@ export interface TileViewProps {
   highlight?: boolean;
   /** This tile is the viewer's target: a treasure to collect, or home. */
   target?: "treasure" | "home";
+  /** Seat whose last shift pushed this tile in: outlined in that seat's colour. */
+  pushedBy?: number;
 }
 
 /**
  * One tile in the corridor style: plain tile, corridors from the centre to each open side, treasure icon.
  * Positioned with a CSS transform so a tile that moves (same key, new x/y) slides there.
  */
-export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false, target }: TileViewProps) {
+export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false, target, pushedBy }: TileViewProps) {
   const { t } = useTranslation();
   const treasure = TILE_SET[tile.id]?.treasure;
   const Icon = treasure ? TREASURE_ICONS[treasure] : undefined;
@@ -58,6 +60,9 @@ export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false,
       ))}
       <circle cx={C} cy={C} r={15} className={styles.hub} />
       {Icon && <Icon x={33} y={33} width={34} height={34} size={34} stroke={2} className={styles.icon} />}
+      {pushedBy !== undefined && (
+        <rect x={7} y={7} width={86} height={86} rx={8} className={styles.pushed} style={{ stroke: `var(--seat-${pushedBy})` }} data-pushed-by={pushedBy} />
+      )}
       {highlight && <rect x={6} y={6} width={88} height={88} rx={8} className={styles.highlight} data-highlight />}
       {target && (
         <g className={styles.target}>

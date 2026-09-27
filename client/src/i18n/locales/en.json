@@ -59,7 +59,9 @@
     "spare": "Spare tile",
     "fixed": "fixed tile",
     "targetTreasure": "Your target: {{name}}",
-    "targetHome": "Your home square – return here to win"
+    "targetHome": "Your home square – return here to win",
+    "reach_one": "Only your own square within reach after this shift",
+    "reach_other": "{{count}} squares within reach after this shift"
   },
   "start": {
     "play": "Play",

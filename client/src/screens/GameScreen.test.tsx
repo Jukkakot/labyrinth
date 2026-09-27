@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { homeTileId, isReachable, openings, reachableSquares, rotate, setupBoard, shiftBoard, square, squareIndex, TILE_SET, TREASURES, type TreasureId } from "@labyrinth/rules";
+import { homeTileId, isReachable, openings, reachableSquares, rotate, setupBoard, shiftBoard, square, squareIndex, TILE_SET, TREASURES, type Board, type TreasureId } from "@labyrinth/rules";
 import { describe, expect, it, vi } from "vitest";
 import i18n from "../i18n";
 import { SpareTile } from "../game/SpareTile.tsx";
@@ -9,6 +9,7 @@ import { toGameView, type SyncedState } from "../session/viewModel.ts";
 import { GameScreen } from "./GameScreen.tsx";
 
 const board = setupBoard(7);
+const testBoard = board;
 
 /** Session parts the tests below do not look at. */
 const extra = { setSpeed: vi.fn(), rematch: vi.fn(), rematching: false, watchBots: vi.fn(), nickname: () => "Maija" };
@@ -27,9 +28,12 @@ interface Turn {
   turnExpired?: boolean;
   /** Player 2 has left: only my seat remains. */
   otherGone?: boolean;
+  /** The synced board (default: the test board). */
+  board?: Board;
 }
 
 function view(turn: Turn = {}) {
+  const board = turn.board ?? testBoard;
   const state: SyncedState = {
     squares: board.squares.map(({ id, rotation }) => ({ id, rotation })),
     spare: { id: board.spare.id, rotation: board.spare.rotation },
@@ -551,5 +555,46 @@ describe("spectators › game screen", () => {
     expect(rematch).toHaveBeenCalledTimes(1);
     rerender(<GameScreen view={view({ phase: "finished", winnerSeat: 2 })} session={session({ rematch, rematching: true })} />);
     expect((screen.getByRole("button", { name: "Pelaa uudelleen" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe("board-view › Reach shown in the shift preview", () => {
+  it("Preview opens a corridor: N3 marks every square reachable on the previewed board; Peru removes them", () => {
+    const { container } = setup();
+    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+    const previewed = shiftBoard(board, "N3", board.spare.rotation, [square(0, 0), square(0, 6)]);
+    const expected = reachableSquares(previewed.board, previewed.pawns[0]!);
+    const marks = [...container.querySelectorAll("[data-reach]")].map((el) => el.getAttribute("data-reach"));
+    expect(marks).toEqual(expected.map((sq) => `${sq.row},${sq.col}`));
+    expect(screen.getByRole("img", { name: new RegExp(`${expected.length} ruutua|Vain oma ruutusi`) })).toBeTruthy();
+    // Not tappable: no move buttons appear during the preview.
+    expect(container.querySelector("[data-move-target]")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Peru" }));
+    expect(container.querySelector("[data-reach]")).toBeNull();
+  });
+});
+
+describe("board-view › Last turn shown (game screen)", () => {
+  it("Bot shifts and walks: pushed-in tile outlined and route drawn in seat 2's colour; own preview hides them", () => {
+    const corners = [square(0, 0), square(0, 6)];
+    const shifted = shiftBoard(board, "N3", 0, corners);
+    const from = shifted.pawns[1]!;
+    const to = reachableSquares(shifted.board, from).find((sq) => sq.row !== from.row || sq.col !== from.col)!;
+    const { container, rerender } = setup({ turnSeat: 2 });
+    const show = (turn: Turn) =>
+      rerender(<GameScreen view={view(turn)} session={{ ...extra, shift: vi.fn(), move: vi.fn(), kick: vi.fn(), leave: vi.fn(), pending: false }} />);
+    show({ board: shifted.board, turnSeat: 2, phase: "move", lastInsertion: "N3", mine: shifted.pawns[0], other: { row: from.row, col: from.col } });
+    show({ board: shifted.board, turnSeat: 1, phase: "shift", lastInsertion: "N3", mine: shifted.pawns[0], other: { row: to.row, col: to.col } });
+
+    const pushed = container.querySelector("[data-pushed-by]");
+    expect(pushed?.getAttribute("data-pushed-by")).toBe("2");
+    expect(pushed?.closest("[data-tile-id]")?.getAttribute("data-tile-id")).toBe(String(shifted.board.squares[3]!.id));
+    const route = container.querySelector("[data-route]")?.getAttribute("data-route")?.split(" ");
+    expect(route?.[0]).toBe(`${from.row},${from.col}`);
+    expect(route?.at(-1)).toBe(`${to.row},${to.col}`);
+
+    fireEvent.click(arrow("Työnnä vasemmalta riviin 2"));
+    expect(container.querySelector("[data-route]")).toBeNull();
+    expect(container.querySelector("[data-pushed-by]")).toBeNull();
   });
 });

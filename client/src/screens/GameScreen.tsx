@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BotSpeed } from "@labyrinth/protocol";
-import { reverseOf, rotate, shiftBoard, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
+import { reachableSquares, reverseOf, rotate, shiftBoard, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
@@ -13,6 +13,7 @@ import { ShiftControls } from "../game/ShiftControls.tsx";
 import { SpectatorCount, SpectatorPanel } from "../game/SpectatorControls.tsx";
 import type { TargetMark } from "../game/target.ts";
 import { TurnLine } from "../game/TurnLine.tsx";
+import { nextTrace } from "../game/turnTrace.ts";
 import { NOTICE_MS, type GameSession } from "../session/useGameSession.ts";
 import type { GameView } from "../session/viewModel.ts";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
@@ -62,6 +63,16 @@ export function GameScreen({ view, session }: GameScreenProps) {
   );
   // Pawns on the previewed line are shown where the shift would carry them.
   const seats = preview ? view.seats.map((s, i) => ({ ...s, square: preview.pawns[i]! })) : view.seats;
+  // The viewer's reach on the previewed board, from where the preview carries their pawn.
+  const myIndex = view.seats.findIndex((s) => s.isMe);
+  const reach = useMemo(
+    () => (preview && myIndex >= 0 ? reachableSquares(preview.board, preview.pawns[myIndex]!) : undefined),
+    [preview, myIndex],
+  );
+  // What the last turn did (pushed-in tile, walked route), kept until the next shift.
+  const [trace, setTrace] = useState(() => nextTrace(undefined, view));
+  const nextTraced = nextTrace(trace, view);
+  if (nextTraced !== trace) setTrace(nextTraced);
   const forbidden = view.lastInsertion ? reverseOf(view.lastInsertion) : undefined;
   const shifting = view.isMyTurn && view.step === "shift";
   const canAct = shifting && !pending;
@@ -140,6 +151,8 @@ export function GameScreen({ view, session }: GameScreenProps) {
         seats={seats}
         highlightTileId={preview ? spare.id : undefined}
         target={target}
+        trace={preview ? undefined : nextTraced}
+        reach={reach}
         shiftTargets={shifting ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
         moveTargets={view.reachable ? { reachable: view.reachable, busy: pending, onSelect: moveTo } : undefined}
       />

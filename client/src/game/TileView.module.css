@@ -30,6 +30,12 @@
   color: var(--corridor-icon);
 }
 
+/* Pushed in by the last shift: a thin solid outline in the mover's colour (the route layer adds the rest). */
+.pushed {
+  fill: none;
+  stroke-width: 4;
+}
+
 .highlight {
   fill: none;
   stroke: var(--highlight);

@@ -59,7 +59,9 @@
     "spare": "Ylimääräinen laatta",
     "fixed": "kiinteä laatta",
     "targetTreasure": "Kohteesi: {{name}}",
-    "targetHome": "Kotiruutusi – palaa tänne voittaaksesi"
+    "targetHome": "Kotiruutusi – palaa tänne voittaaksesi",
+    "reach_one": "Vain oma ruutusi ulottuvilla tämän työnnön jälkeen",
+    "reach_other": "{{count}} ruutua ulottuvilla tämän työnnön jälkeen"
   },
   "start": {
     "play": "Pelaa",

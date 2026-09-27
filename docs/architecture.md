@@ -136,7 +136,7 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 - **Hidden information:** `Player.target` is `.view()`-tagged; each player's `StateView` holds only
   its own player, a spectator's holds all. A room test decodes another client's state to prove
   nothing leaks.
-- UI-only state (shift preview, local rotation) never crosses the network.
+- UI-only state (shift preview, local rotation, the last turn's marks) never crosses the network.
 
 ## Rules package — Implemented
 
@@ -164,7 +164,8 @@ client/src/
 ```
 
 - **Server state is the truth.** `toGameView()` turns synced state into an immutable `GameView`;
-  components render it. Previews (shift) are computed locally with the same rules functions.
+  components render it. Previews (shift and the reach after it) are computed locally with the same rules functions;
+  the last turn's marks (pushed-in tile, walked route) are derived by comparing successive views.
 - **UI foundation:** every colour, spacing and radius is a token (light and dark); CSS Modules;
   anything shown twice is a shared component. Board: one SVG, 100 units per tile; pawns = seat
   colour + shape; tiles and pawns animate with CSS transforms keyed by id; reduced motion honoured.

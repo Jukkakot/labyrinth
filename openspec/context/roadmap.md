@@ -21,7 +21,7 @@ One OpenSpec change at a time, in this order. Adjust as we learn.
     bot strategies by eye
 Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer extras after.
 
-13. `turn-feedback`: (a) after each turn, highlight for a moment the tile that was pushed in and
+13. ~~`turn-feedback`~~ (done): pushed-in tile and walked route marked until the next shift, reach shown in the shift preview. Originally: (a) after each turn, highlight for a moment the tile that was pushed in and
     the pawn's from and to squares, so an opponent's turn is easy to follow; no event log (the
     user: nobody reads it). (b) While a shift is previewed (tile placed at an arrow, not yet
     confirmed), already highlight the squares the player could reach after it, computed in the
