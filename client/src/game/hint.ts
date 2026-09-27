@@ -1,4 +1,4 @@
-import { hintMove, hintTurn, insertionLine, sameSquare, tileAt, type BotTurn, type BotView, type Square } from "@labyrinth/rules";
+import { bestLine, bestMove, hintMove, hintTurn, insertionLine, sameSquare, tileAt, type BotTurn, type BotView, type Square } from "@labyrinth/rules";
 import type { GameView } from "../session/viewModel.ts";
 
 /**
@@ -23,9 +23,24 @@ export function botViewOf(view: GameView): BotView | undefined {
   };
 }
 
-/** The hinted whole turn on the viewer's own shift step; undefined otherwise. */
+/** How deep the puzzle hint searches for a best route; deeper takes seconds on a phone. */
+const PUZZLE_HINT_TURNS = 2;
+
+/** The daily puzzle's destination, when the viewer is in a puzzle. */
+const puzzleTarget = (view: GameView) => (view.daily && view.myTarget !== undefined && view.myTarget !== "home" ? view.myTarget : undefined);
+
+/**
+ * The hinted whole turn on the viewer's own shift step; undefined otherwise. In the daily puzzle
+ * it is the first step of a best route, when one is within reach of the search.
+ */
 export function shiftHint(view: GameView): BotTurn | undefined {
   if (!view.isMyTurn || view.step !== "shift") return undefined;
+  const target = puzzleTarget(view);
+  const me = view.seats.find((s) => s.isMe);
+  if (target && me) {
+    const line = bestLine(view.board, me.square, target, view.lastInsertion, PUZZLE_HINT_TURNS);
+    if (line?.[0]) return line[0];
+  }
   const bot = botViewOf(view);
   return bot && hintTurn(bot);
 }
@@ -45,6 +60,9 @@ export function moveHint(view: GameView, earlier?: BotTurn): Square | undefined 
   ) {
     return earlier.to;
   }
+  const target = puzzleTarget(view);
+  const best = target && bestMove(view.board, view.reachable, target, view.lastInsertion, PUZZLE_HINT_TURNS);
+  if (best) return best;
   const bot = botViewOf(view);
   return bot && view.lastInsertion ? hintMove(bot) : undefined;
 }

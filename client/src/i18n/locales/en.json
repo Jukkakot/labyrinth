@@ -247,6 +247,14 @@
     "shareTitle": "Labyrinth – daily puzzle {{date}}",
     "share": "Share result",
     "copied": "Result copied to the clipboard",
-    "copyFailed": "Copying did not work"
+    "copyFailed": "Copying did not work",
+    "replay": "Show the best route",
+    "replayTitle": "Best route · step {{n}}/{{count}}",
+    "replayStart": "Start",
+    "replayShift": "Turn {{turn}}: push",
+    "replayMove": "Turn {{turn}}: walk",
+    "replayPrev": "Previous step",
+    "replayNext": "Next step",
+    "replayClose": "Close"
   }
 }

@@ -210,7 +210,9 @@ client/src/
   a quick game never replace each other; leaving an unfinished puzzle keeps it. `labyrinth.daily`
   records the date, the current attempt, the par and the day's best solve (fewest turns over any
   number of attempts). The view model spots a puzzle by its room id; local games also report
-  `turn` (and a puzzle its `par` and `undoable`). Logged as `client.daily.started` /
+  `turn` (and a puzzle its `par` and `undoable`). The puzzle's hint and the end screen's
+  best-route replay use the same search with shift paths (`bestLine`, `bestMove`); the replay is
+  view state only (frames rebuilt from the date). Logged as `client.daily.started` /
   `client.daily.finished`.
 - **PWA:** `vite-plugin-pwa` builds the manifest and a Workbox service worker that precaches the
   app shell (auto-update: a new version takes over on the next load and reloads once; both kinds

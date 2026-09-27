@@ -53,11 +53,13 @@ export interface DailyOverProps {
   onHome(): void;
   /** "Uudelleen": the same puzzle from the start. */
   onRetry(): void;
+  /** "Näytä paras reitti": replays a best solution on the board. */
+  onReplay(): void;
   sharer?: Sharer;
 }
 
 /** Under the board once the daily puzzle is solved: back to the start, try again, and share the day's best (the main action). */
-export function DailyOver({ roomId, onHome, onRetry, sharer }: DailyOverProps) {
+export function DailyOver({ roomId, onHome, onRetry, onReplay, sharer }: DailyOverProps) {
   const { t } = useTranslation();
   const record = dailyRecordOf(roomId);
   return (
@@ -70,6 +72,9 @@ export function DailyOver({ roomId, onHome, onRetry, sharer }: DailyOverProps) {
           {t("daily.retry")}
         </Button>
       </div>
+      <Button variant="secondary" onClick={onReplay}>
+        {t("daily.replay")}
+      </Button>
       {/* Full width on its own row: three buttons in one row would squeeze the label on a phone. */}
       {record?.best && <DailyShare date={record.date} result={record.best} par={record.par} variant="primary" sharer={sharer} />}
     </div>

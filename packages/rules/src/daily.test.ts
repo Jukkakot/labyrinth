@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { tileAt, type Board } from "./board.js";
 import { DAILY_PAR, DAILY_SEAT, applyPuzzleMove, dailySeed, startDailyPuzzle } from "./daily.js";
-import { fewestTurns } from "./dailySolver.js";
+import { bestLine, bestMove, fewestTurns } from "./dailySolver.js";
 import { applyShift, targetOf, type GameState } from "./game.js";
 import type { Square } from "./geometry.js";
 import { reachableSquares } from "./move.js";
@@ -91,5 +91,39 @@ describe("daily-puzzle › Goal and score", () => {
     expect(solved.ok && solved.state.step).toBe("finished");
     expect(solved.ok && solved.state.winnerSeat).toBe(DAILY_SEAT);
     expect(solved.ok && solved.state.turn).toBe(1);
+  });
+});
+
+describe("daily-puzzle › Puzzle hint follows a best route", () => {
+  for (const date of ["2026-09-27", "2026-09-28", "2026-10-01"]) {
+    it(`Following the hint solves at par (${date}): the best line has par steps and the engine solves with it`, () => {
+      const { game, par } = startDailyPuzzle(date, "Aino");
+      const target = targetOf(game.seats[0]!)!;
+      const line = bestLine(game.board, game.seats[0]!.pawn, target, undefined, par)!;
+      expect(line).toHaveLength(par);
+      let state: GameState = game;
+      for (const step of line) {
+        const shifted = applyShift(state, DAILY_SEAT, step.insertion, step.rotation);
+        if (!shifted.ok) throw new Error(shifted.code);
+        const moved = applyPuzzleMove(shifted.state, DAILY_SEAT, step.to);
+        if (!moved.ok) throw new Error(moved.code);
+        state = moved.state;
+      }
+      expect(state.step).toBe("finished");
+      expect(state.turn).toBe(par);
+    });
+  }
+
+  it("Hint on the move step: after a shift off the best line, the square keeps the fewest turns", () => {
+    const { game } = startDailyPuzzle("2026-09-27", "Aino");
+    const target = targetOf(game.seats[0]!)!;
+    const shifted = applyShift(game, DAILY_SEAT, "N1", 0);
+    if (!shifted.ok) throw new Error(shifted.code);
+    const reach = reachableSquares(shifted.state.board, shifted.state.seats[0]!.pawn);
+    const to = bestMove(shifted.state.board, reach, target, "N1", 2)!;
+    expect(reach).toContainEqual(to);
+    // From the hinted square the rest is as short as from any reachable square.
+    const rest = (sq: Square) => bestLine(shifted.state.board, sq, target, "N1", 2)?.length ?? 99;
+    expect(rest(to)).toBe(Math.min(...reach.map(rest)));
   });
 });

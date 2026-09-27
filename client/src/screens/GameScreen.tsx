@@ -5,6 +5,9 @@ import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
 import { DailyOver } from "../game/DailyShare.tsx";
+import { ReplayControls } from "../game/ReplayControls.tsx";
+import { solutionFrames, type ReplayFrame } from "../game/solutionReplay.ts";
+import { dailyRecordOf } from "../session/dailyRecord.ts";
 import { GameOverControls } from "../game/GameOverControls.tsx";
 import { moveHint, quarterTurns, shiftHint } from "../game/hint.ts";
 import { KickControl } from "../game/KickControl.tsx";
@@ -85,10 +88,12 @@ export function GameScreen({ view, session }: GameScreenProps) {
   const canAct = shifting && !pending;
 
   // Hint: once asked for, it stays on for the rest of the viewer's turn (the move step follows by itself).
+  // A solo puzzle player is always on turn, so a new turn number ends it too.
   const [hinted, setHinted] = useState(false);
+  const [hintedTurn, setHintedTurn] = useState(view.turn);
   const [shiftHinted, setShiftHinted] = useState<BotTurn>();
   const [moveHinted, setMoveHinted] = useState<{ key: string; to?: Square }>();
-  if (!view.isMyTurn && (hinted || shiftHinted || moveHinted)) {
+  if ((!view.isMyTurn || hintedTurn !== view.turn) && (hinted || shiftHinted || moveHinted)) {
     setHinted(false);
     setShiftHinted(undefined);
     setMoveHinted(undefined);
@@ -99,6 +104,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
   const showHint = () => {
     if (!view.isMyTurn || pending) return;
     setHinted(true);
+    setHintedTurn(view.turn);
     if (view.step !== "shift") return;
     const turn = shiftHint(view);
     if (!turn) return;
@@ -133,6 +139,16 @@ export function GameScreen({ view, session }: GameScreenProps) {
     if (!pending) void move(target);
   };
   const me = view.seats.find((s) => s.isMe);
+
+  // The best route's replay on a solved puzzle: the board shows its frames instead; nothing is sent.
+  const [replay, setReplay] = useState<{ frames: ReplayFrame[]; index: number }>();
+  const openReplay = () => {
+    const record = dailyRecordOf(view.roomId);
+    if (record && me) setReplay({ frames: solutionFrames(record.date, me.name), index: 0 });
+  };
+  const frame = view.finished ? replay?.frames[replay.index] : undefined;
+  const stepReplay = (by: number) =>
+    setReplay((r) => r && { ...r, index: Math.min(r.frames.length - 1, Math.max(0, r.index + by)) });
   const target: TargetMark | undefined =
     view.targetTileId === undefined ? undefined : { tileId: view.targetTileId, home: view.targetHome };
 
@@ -187,11 +203,17 @@ export function GameScreen({ view, session }: GameScreenProps) {
       <TurnLine view={view} />
       <PlayerStrip view={view} />
       <Board
-        board={preview?.board ?? view.board}
-        seats={seats}
+        board={frame?.board ?? preview?.board ?? view.board}
+        seats={frame ? view.seats.map((s) => (s.isMe ? { ...s, square: frame.pawn } : s)) : seats}
         highlightTileId={preview ? spare.id : undefined}
-        target={target}
-        trace={preview ? undefined : nextTraced}
+        target={frame ? { tileId: frame.targetTileId, home: false } : target}
+        trace={
+          frame && me
+            ? { shiftKey: "replay", seat: me.seat, insertion: frame.insertion, route: frame.route }
+            : preview
+              ? undefined
+              : nextTraced
+        }
         reach={reach}
         hint={hintSquare}
         shiftTargets={shifting ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
@@ -207,8 +229,17 @@ export function GameScreen({ view, session }: GameScreenProps) {
                 : undefined
             }
           />
+        ) : view.daily && frame && replay ? (
+          <ReplayControls
+            index={replay.index}
+            count={replay.frames.length}
+            frame={frame}
+            onPrev={() => stepReplay(-1)}
+            onNext={() => stepReplay(1)}
+            onClose={() => setReplay(undefined)}
+          />
         ) : view.daily ? (
-          <DailyOver roomId={view.roomId} onHome={leave} onRetry={() => playDaily?.(nickname())} />
+          <DailyOver roomId={view.roomId} onHome={leave} onRetry={() => playDaily?.(nickname())} onReplay={openReplay} />
         ) : (
           <GameOverControls onHome={leave} onRematch={rematch} rematching={rematching} />
         )

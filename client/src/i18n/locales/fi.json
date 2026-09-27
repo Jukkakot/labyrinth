@@ -247,6 +247,14 @@
     "shareTitle": "Muuttuva labyrintti – päivän pulma {{date}}",
     "share": "Jaa tulos",
     "copied": "Tulos kopioitu leikepöydälle",
-    "copyFailed": "Kopiointi ei onnistunut"
+    "copyFailed": "Kopiointi ei onnistunut",
+    "replay": "Näytä paras reitti",
+    "replayTitle": "Paras reitti · vaihe {{n}}/{{count}}",
+    "replayStart": "Lähtötilanne",
+    "replayShift": "Vuoro {{turn}}: työnnä",
+    "replayMove": "Vuoro {{turn}}: kävele",
+    "replayPrev": "Edellinen vaihe",
+    "replayNext": "Seuraava vaihe",
+    "replayClose": "Sulje"
   }
 }
