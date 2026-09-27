@@ -83,6 +83,11 @@ In this order:
    reachable squares, hint ring, last push/route, shift preview reach). Start by listing each mark
    with a screenshot and asking the user which ones confuse; options: fewer/distinct marks, a
    short label or legend, tie them to the first-game tips.
+4. `game-link-badge`: the game id in the top-left corner becomes an easy way to link the game to
+   someone: tapping it shares/copies an http URL — a join link while the game is in the waiting
+   room, a watch link once it is running (invite links already open both). To decide in the
+   proposal: where the bug-report line (id · time · version) goes, and what device games (no URL)
+   show and copy.
 
 ## Improvement backlog
 
