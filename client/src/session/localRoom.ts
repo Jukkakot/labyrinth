@@ -65,7 +65,8 @@ function quickSeats(nickname: string, bots: number): NewSeat[] {
 /** A new saved game against `bots` bots, replacing any saved one; logs its start. */
 function newGame(nickname: string, bots: number, deps: LocalRoomDeps): SavedLocalGame {
   const roomId = newLocalRoomId();
-  const game = startGame(deps.seed(), quickSeats(nickname, bots));
+  // The player hosts, so they play first.
+  const game = startGame(deps.seed(), quickSeats(nickname, bots), 1);
   const saved = { roomId, game };
   saveLocalGame(saved);
   log.info("client.local.started", { room: roomId, dealSeed: game.seed, seats: game.seats.map((s) => s.seat).join(","), startSeat: game.turnSeat });

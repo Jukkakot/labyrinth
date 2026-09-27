@@ -12,13 +12,17 @@ beforeEach(() => {
   vi.useRealTimers();
 });
 
-/** A game whose seed makes seat `first` start; tries seeds until it does. */
-function gameStartingWith(first: number, bots = 1, strategy: BotStrategy = greedyBotTurn) {
-  for (let seed = 1; ; seed++) {
-    const room = LocalRoom.create("Maija", bots, { seed: () => seed, strategy, setTimeout: () => 0, clearTimeout: () => {} });
-    if (room.game.turnSeat === first) return room;
-    void room.leave();
-  }
+/** A new game with bot timers switched off (Maija, the host, has the first turn). */
+function quietGame(bots = 1, strategy: BotStrategy = greedyBotTurn) {
+  return LocalRoom.create("Maija", bots, { seed: () => 7, strategy, setTimeout: () => 0, clearTimeout: () => {} });
+}
+
+/** A game with real (fake-timer) bot pauses where Maija has shifted N1 and stayed: Robo is on turn. */
+async function robosTurn() {
+  const room = LocalRoom.create("Maija", 1, { seed: () => 7, strategy: greedyBotTurn });
+  await room.request("shift", { insertion: "N1", rotation: 0 });
+  await room.request("move", room.game.seats[0]!.pawn);
+  return room;
 }
 
 describe("bots › Quick game against bots (on the device)", () => {
@@ -36,13 +40,13 @@ describe("bots › Quick game against bots (on the device)", () => {
   });
 
   it("No turn clock: the view has no deadline and nothing to kick", () => {
-    const room = gameStartingWith(1);
+    const room = quietGame();
     const view = toGameView(room.state, room.roomId, room.sessionId)!;
     expect(view).toMatchObject({ turnDeadline: 0, turnExpired: false, canKick: false, isMyTurn: true, step: "shift" });
   });
 
   it("commands answer like the server and every step is saved", async () => {
-    const room = gameStartingWith(1);
+    const room = quietGame();
     const changes: unknown[] = [];
     room.onStateChange((s) => changes.push(s));
     expect(await room.request("move", homeSquare(1))).toEqual({ ok: false, code: "WRONG_PHASE" });
@@ -56,14 +60,13 @@ describe("bots › Quick game against bots (on the device)", () => {
     expect(await room.request("shift", { insertion: reverseOf("N1"), rotation: 0 })).toEqual({ ok: false, code: "NOT_YOUR_TURN" });
   });
 
-  it("bots play with the server's pauses", () => {
+  it("First player starts: Maija, the host, always has the first turn", () => {
+    for (const seed of [1, 2, 3, 4]) expect(LocalRoom.create("Maija", 3, { seed: () => seed, setTimeout: () => 0 }).game.turnSeat).toBe(1);
+  });
+
+  it("bots play with the server's pauses", async () => {
     vi.useFakeTimers();
-    let room: LocalRoom;
-    for (let seed = 1; ; seed++) {
-      room = LocalRoom.create("Maija", 1, { seed: () => seed, strategy: greedyBotTurn });
-      if (room.game.turnSeat === 2) break;
-      void room.leave();
-    }
+    const room = await robosTurn();
     vi.advanceTimersByTime(BOT_SHIFT_DELAY_MS - 1);
     expect(room.game.step).toBe("shift");
     vi.advanceTimersByTime(1);
@@ -72,14 +75,9 @@ describe("bots › Quick game against bots (on the device)", () => {
     expect(room.game).toMatchObject({ step: "shift", turnSeat: 1 });
   });
 
-  it("a restored game continues where it was, a bot's pending move included", () => {
+  it("a restored game continues where it was, a bot's pending move included", async () => {
     vi.useFakeTimers();
-    let room: LocalRoom;
-    for (let seed = 1; ; seed++) {
-      room = LocalRoom.create("Maija", 1, { seed: () => seed, strategy: greedyBotTurn });
-      if (room.game.turnSeat === 2) break;
-      void room.leave();
-    }
+    const room = await robosTurn();
     vi.advanceTimersByTime(BOT_SHIFT_DELAY_MS);
     const before = room.game;
     room.removeAllListeners();
@@ -92,14 +90,14 @@ describe("bots › Quick game against bots (on the device)", () => {
   });
 
   it("Leaving a quick bot game: the game is gone", async () => {
-    const room = gameStartingWith(1);
+    const room = quietGame();
     await room.leave();
     expect(LocalRoom.restore(room.roomId)).toBeUndefined();
     expect(await room.request("shift", { insertion: "N1", rotation: 0 })).toEqual({ ok: false, code: "WRONG_PHASE" });
   });
 
   it("Quick bot game again: a finished game's rematch is a new saved game with the same bots", async () => {
-    const room = gameStartingWith(1, 2);
+    const room = quietGame(2);
     expect(await room.request("rematch", {})).toEqual({ ok: false, code: "WRONG_PHASE" });
     // Finish it by handing Maija every card and walking home.
     const internal = room as unknown as { saved: { game: typeof room.game } };
@@ -124,7 +122,7 @@ describe("game-session › Resume after closing the app (on the device)", () => 
   });
 
   it("the connector restores a saved game by token and by id, and refuses a gone one like a gone room", async () => {
-    const room = gameStartingWith(1);
+    const room = quietGame();
     const connector = createConnector();
     const byToken = await connector.reconnect(room.reconnectionToken);
     expect(byToken.roomId).toBe(room.roomId);

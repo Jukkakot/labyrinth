@@ -7,7 +7,7 @@ import { setupBoard } from "./setup.js";
 import { reverseOf, shiftBoard, type InsertionId } from "./shift.js";
 import type { Rotation } from "./tile.js";
 import type { TreasureId } from "./tileSet.js";
-import { dealGame, homeSquare, settleMove } from "./treasures.js";
+import { dealGame, firstSeat, homeSquare, settleMove } from "./treasures.js";
 import { nextSeat } from "./turns.js";
 
 /*
@@ -54,8 +54,8 @@ export type GameRejection = "NOT_SEATED" | "WRONG_PHASE" | "NOT_YOUR_TURN" | "RE
 
 export type GameCommandResult = { ok: true; state: GameState } | { ok: false; code: GameRejection };
 
-/** A started game: board and deal from `seed`, pawns on their start corners, the drawn seat on turn. */
-export function startGame(seed: number, seats: readonly NewSeat[]): GameState {
+/** A started game: board and deal from `seed`, pawns on their start corners; the host on turn (else the drawn seat). */
+export function startGame(seed: number, seats: readonly NewSeat[], hostSeat?: number): GameState {
   const ordered = [...seats].sort((a, b) => a.seat - b.seat);
   const { stacks, startSeat } = dealGame(
     seed,
@@ -66,7 +66,7 @@ export function startGame(seed: number, seats: readonly NewSeat[]): GameState {
     board: setupBoard(seed),
     seats: ordered.map(({ seat, name, bot }) => ({ seat, name, bot, pawn: homeSquare(seat), stack: stacks.get(seat)!, found: [] })),
     step: "shift",
-    turnSeat: startSeat,
+    turnSeat: firstSeat(hostSeat, ordered.map((s) => s.seat), startSeat),
     turn: 1,
     lastInsertion: undefined,
     winnerSeat: 0,

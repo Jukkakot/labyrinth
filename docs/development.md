@@ -52,7 +52,7 @@ npm run e2e   # smoke test, when UI or connection code changed
 | Level | Tools | Status |
 |---|---|---|
 | Rules | Vitest; fast-check properties over random boards (`boardArb` in `board.test.ts`); test names follow spec scenarios (`board › Rotation › Rotating a corner`); the bot simulation plays 5 games per player count, 20 with `BOT_SIM=full npm test -w @labyrinth/rules` (run it when a bot strategy changes); the bot tournament (look-ahead vs greedy, win rates, ms/turn) runs with `BOT_TOURNAMENT=300 npx vitest run botTournament --silent=false` in `packages/rules` (about 3 min) | Implemented |
-| Server | Vitest + @colyseus/testing (real rooms, SDK clients in-process); `captureLogs()` asserts log lines; `test/support/game.ts`: `waitingRoom(n)`, `startedGame(n, { startSeat })` (nicknamed players, host starts, start seat fixed via `drawDealSeed`) | Implemented |
+| Server | Vitest + @colyseus/testing (real rooms, SDK clients in-process); `captureLogs()` asserts log lines; `test/support/game.ts`: `waitingRoom(n)`, `startedGame(n, { startSeat })` (nicknamed players, host starts, start seat forced via the `chooseStartSeat` hook) | Implemented |
 | Client | Vitest; jsdom + Testing Library for components (`// @vitest-environment jsdom`) | Implemented |
 | E2E | Playwright, Galaxy S24 profile — **one smoke test** for now (two browser contexts: nickname + Play, the waiting room, the host starts, both see the whole board, fits 360×780) | Implemented |
 

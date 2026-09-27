@@ -146,13 +146,13 @@ players seated, counting bots. A start MUST be rejected, without changing the ga
 - the game is no longer in its waiting room: `WRONG_PHASE`;
 - fewer than 2 players are seated: `NOT_ENOUGH_PLAYERS`.
 
-An accepted start MUST deal the treasure cards to the seated players, bots included, choose the
-first player at random among them, and take every player from the waiting room to the board at
+An accepted start MUST deal the treasure cards to the seated players, bots included, give the
+first turn to the host, and take every player from the waiting room to the board at
 once. From then on the game MUST NOT accept new players and MUST NOT be listed.
 
 #### Scenario: Host starts
 - **WHEN** the host starts with 3 players seated
-- **THEN** every player sees the board, each has 8 treasure cards, and one of the three has the turn with a running clock
+- **THEN** every player sees the board, each has 8 treasure cards, and the host has the turn with a running clock
 
 #### Scenario: Host starts against bots
 - **WHEN** the host starts with two bots seated and no other people

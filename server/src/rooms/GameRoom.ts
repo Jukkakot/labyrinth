@@ -24,6 +24,7 @@ import {
   createBoard,
   createRng,
   dealGame,
+  firstSeat,
   MIN_SEATS,
   DISCONNECT_LIMIT_SECONDS,
   isInsertionId,
@@ -126,6 +127,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
 
   /** Draws the seed of the deal at the start; room tests replace it to fix the start seat. */
   drawDealSeed = () => randomInt(0, MAX_SEED + 1);
+  /** The first seat: the rule's choice (the host); room tests replace it to start elsewhere. */
+  chooseStartSeat = (seat: number) => seat;
 
   /** How bots choose their turns; replaceable (a smarter strategy, or a bad one in tests). */
   botStrategy: BotStrategy = chooseBotTurn;
@@ -272,7 +275,9 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     const seats = this.seats();
     this.startBotSeats = this.bots().map((p) => p.seat).sort((a, b) => a - b);
     const dealSeed = this.drawDealSeed();
-    const { stacks, startSeat } = dealGame(dealSeed, seats);
+    const deal = dealGame(dealSeed, seats);
+    const { stacks } = deal;
+    const startSeat = this.chooseStartSeat(firstSeat(this.state.hostSeat, seats, deal.startSeat));
     this.stacks = stacks;
     this.botRngs = new Map(this.bots().map((p) => [p.seat, createRng(botSeed(dealSeed, p.seat))]));
     for (const p of this.state.players.values()) {

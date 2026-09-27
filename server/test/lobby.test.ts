@@ -91,7 +91,8 @@ describe("lobby in a room", () => {
         expect(player(i).cards).toBe(8);
         expect(player(i).target).not.toBe("");
       });
-      expect([1, 2, 3]).toContain(room.state.turnSeat);
+      // turns › First player starts: the host (seat 1) has the first turn.
+      expect(room.state.turnSeat).toBe(1);
       expect(room.state.phase).toBe("shift");
       expect(room.state.turnDeadline).toBeGreaterThan(Date.now());
       expect(room.locked).toBe(true);

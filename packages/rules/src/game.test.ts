@@ -35,6 +35,10 @@ describe("startGame", () => {
     expect(state).toMatchObject({ step: "shift", turn: 1, winnerSeat: 0, lastInsertion: undefined });
   });
 
+  it("First player starts: the host has the first turn whatever the seed draws", () => {
+    for (const seed of [1, 2, 3, 4, 5, 6]) expect(startGame(seed, [ME, ROBO, PIXEL], 1).turnSeat).toBe(1);
+  });
+
   it("one against three: 6 cards each, deterministic in the seed", () => {
     const a = startGame(42, [ME, ROBO, PIXEL, BYTE]);
     expect(a.seats.map((s) => s.stack.length)).toEqual([6, 6, 6, 6]);

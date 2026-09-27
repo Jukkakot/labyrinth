@@ -88,9 +88,9 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   out) closes the room for everyone (`closeRoom`, close code `HOST_LEFT` 4101). Private rooms
   (`setPrivate`) are never listed or quick-matched; metadata `{ host, open, pool, seated }` feeds
   the list (`seated` = people + bots).
-- **Start** (host only, ≥ 2 seated): `dealGame(dealSeed, seats)` deals 24/n cards and draws the
-  start seat from one seeded RNG, so `game.started { dealSeed, seats, startSeat }` reproduces the
-  opening. The room locks: nobody joins a started game.
+- **Start** (host only, ≥ 2 seated): `dealGame(dealSeed, seats)` deals 24/n cards from one seeded RNG;
+  the host takes the first turn (`firstSeat`; a bot-only game keeps the seat the deal drew), and
+  `game.started { dealSeed, seats, startSeat }` records the opening. The room locks: nobody joins a started game.
 - **Turn:** `shift` then `move` by the current player; the turn passes clockwise to the next taken
   seat after the move or when the current player leaves. Shift and move before the start or after
   the end are `WRONG_PHASE`.

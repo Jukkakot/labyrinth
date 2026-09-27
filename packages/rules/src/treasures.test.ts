@@ -6,7 +6,7 @@ import { MAX_SEED } from "./rng.js";
 import { setupBoard } from "./setup.js";
 import { shiftBoard } from "./shift.js";
 import { TREASURES, treasureOf } from "./tileSet.js";
-import { dealGame, dealTreasures, homeSquare, homeTileId, settleMove, targetTileId, tileOfTreasure } from "./treasures.js";
+import { dealGame, dealTreasures, firstSeat, homeSquare, homeTileId, settleMove, targetTileId, tileOfTreasure } from "./treasures.js";
 
 const seedArb = fc.integer({ min: 0, max: MAX_SEED });
 const seatCountArb = fc.integer({ min: 2, max: 4 });
@@ -101,6 +101,17 @@ describe("treasures › Treasure cards dealt at the start", () => {
   it("every seat can start", () => {
     const starts = new Set(Array.from({ length: 200 }, (_, seed) => dealGame(seed, [1, 2, 3]).startSeat));
     expect([...starts].sort()).toEqual([1, 2, 3]);
+  });
+});
+
+describe("turns › Current player (first seat)", () => {
+  it("First player starts: the seated host, whatever was drawn", () => {
+    expect(firstSeat(1, [1, 2, 3], 3)).toBe(1);
+  });
+
+  it("Bots only: no seated host keeps the drawn seat", () => {
+    expect(firstSeat(0, [1, 2, 3], 2)).toBe(2);
+    expect(firstSeat(undefined, [1, 2], 2)).toBe(2);
   });
 });
 

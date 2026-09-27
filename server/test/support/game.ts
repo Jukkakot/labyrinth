@@ -1,7 +1,6 @@
 import type { ColyseusTestServer } from "@colyseus/testing";
 import { expect } from "vitest";
 import type { CommandResult } from "@labyrinth/protocol";
-import { dealGame } from "@labyrinth/rules";
 import type appConfig from "../../src/app.config.js";
 import type { GameRoom } from "../../src/rooms/GameRoom.js";
 
@@ -47,12 +46,9 @@ export async function join(colyseus: Server, room: GameRoom, nickname: string): 
   return (await colyseus.connectTo(room as never, { nickname })) as unknown as TestClient;
 }
 
-/** Makes the next start deal so that `startSeat` begins, keeping the deal itself seeded. */
+/** Makes the next start give the first turn to `startSeat` instead of the host. */
 export function forceStartSeat(room: GameRoom, startSeat: number): void {
-  room.drawDealSeed = () => {
-    const seats = [...room.state.players.values()].map((p) => p.seat);
-    for (let seed = 0; ; seed++) if (dealGame(seed, seats).startSeat === startSeat) return seed;
-  };
+  room.chooseStartSeat = () => startSeat;
 }
 
 /**

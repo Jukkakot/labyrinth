@@ -47,6 +47,14 @@ export function dealGame(seed: number, seats: Iterable<number>): GameDeal {
   return { stacks, startSeat: ordered[rng.int(0, ordered.length - 1)]! };
 }
 
+/**
+ * Who takes the first turn: the host, so the person who started the game plays at once; without a
+ * seated host (a game of bots only), the seat `drawn` from the deal.
+ */
+export function firstSeat(hostSeat: number | undefined, seats: Iterable<number>, drawn: number): number {
+  return hostSeat !== undefined && [...seats].includes(hostSeat) ? hostSeat : drawn;
+}
+
 /** The start corner of seat 1–4 (clockwise from the top-left). */
 export function homeSquare(seat: number): Square {
   const corner = START_CORNERS[seat - 1];

@@ -159,8 +159,8 @@ player standing, person or bot, wins, and otherwise the game goes on with the bo
 The start screen SHALL offer quick games against bots under the heading "Pikapeli botteja vastaan":
 "1v1", "1v2" and "1v3", the player against one, two or three bots. Tapping one MUST start a new
 game on the player's own device, without contacting the server: the player in seat 1, the bots in
-the following seats with the usual bot names, the treasure cards dealt and the first player drawn
-at random as in every game. The player MUST go straight to the board without a waiting room or a
+the following seats with the usual bot names, the treasure cards dealt and the player on turn
+first, as the host of every game. The player MUST go straight to the board without a waiting room or a
 connecting state. The game MUST follow the same rules, bot behaviour, bot pacing, hint, turn marks
 and result as a game on the server, with two differences: it has no turn time limit (nobody can be
 kicked), and nobody else can see, join or watch it. The buttons MUST be disabled only for an
@@ -171,7 +171,7 @@ server MUST still refuse a request for a game with fewer than 1 or more than 3 b
 
 #### Scenario: One against one
 - **WHEN** Maija taps "1v1" on the start screen
-- **THEN** she sees the board with herself and Robo, each holding 12 treasure cards, and one of them has the turn
+- **THEN** she sees the board with herself and Robo, each holding 12 treasure cards, and it is her turn
 
 #### Scenario: One against three
 - **WHEN** Maija taps "1v3"
