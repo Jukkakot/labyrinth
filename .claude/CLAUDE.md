@@ -69,14 +69,14 @@ everything works and is final.
   structure). This overrides the global "test every UI change in three sizes" rule for this
   project. Check facts with snapshots or DOM queries; screenshot only where the look needs judging. Save screenshots under `.playwright-mcp/` (git-ignored) and close the tabs you opened
   when the check is done.
-- Before a UI check or E2E run, make sure the dev servers are the current code: `npm run dev` in
-  this repo is `tsx watch` + Vite (both reload by themselves); anything else listening on
-  2567/5173 (an old build, another checkout) must be stopped first. Check with PowerShell
-  `Get-NetTCPConnection -LocalPort 2567,5173 -State Listen` and the owning process command line.
-- Stopping a dev server Claude started: stopping the background task is not enough on Windows (Vite
-  and the tsx server survive as orphans and block the user's VS Code "Full stack"). Afterwards stop
-  the processes Claude started that still listen on 2567/5173(+) and any `tsx watch` of that run,
-  by process id; never the user's own ones (check the start time or the parent process).
+- Dev servers stay running locally (the user's wish: faster to try things). Before a UI check or
+  E2E run, assume they are up and only check: PowerShell `Get-NetTCPConnection -LocalPort
+  2567,5173 -State Listen` and the owning process command line. This repo's `npm run dev`
+  (`tsx watch` + Vite) reloads by itself, so a running one is current; use it. Start it only when
+  nothing listens, detached so it outlives the session: `Start-Process -WindowStyle Hidden npm
+  -ArgumentList 'run','dev'` in the repo root (not a background task, which leaves orphans when
+  stopped). Stop something only if it is not this checkout's dev server (an old build, another
+  checkout). Never stop the user's own processes; leave the servers running at the end.
 - Before committing, run the check chain **once**, right before the commit (not after every task
   group; while working, run only the tests of the workspace you touch):
   `npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client`.
