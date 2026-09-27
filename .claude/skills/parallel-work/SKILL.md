@@ -15,6 +15,8 @@ The modes (ask / säästö / rinnakkain) and what fits are in `.claude/CLAUDE.md
    - run only the touched workspace's tests plus `lint` and `typecheck`;
    - no dev servers, no UI check, no push, no archive, do not edit `openspec/context/roadmap.md`;
    - update the wiki pages it affects;
+   - UI placement: anything that would cover or hide a control (a fixed card, overlay, toast over
+     buttons) is not decided in the job; describe the options under **"Coordinator to do"**;
    - changes it needs outside its allowed files (hot files, roadmap, other workspaces): do not
      make them, list them under **"Coordinator to do"** in the answer, each concrete enough to
      implement (file, what and why);

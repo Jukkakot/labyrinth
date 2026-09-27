@@ -157,7 +157,7 @@
   },
   "hint": {
     "button": "Vihje",
-    "title": "Näytä, mitä botti tekisi sinun vuorollasi",
+    "title": "Näytä sinulle hyvä siirto: työntö ja ruutu, johon kävellä",
     "square": "Vihje: kävele ruutuun rivi {{row}}, sarake {{col}}"
   },
   "progress": {

@@ -157,7 +157,7 @@
   },
   "hint": {
     "button": "Hint",
-    "title": "Show what a bot would do on your turn",
+    "title": "Show a good move for you: the push and the square to walk to",
     "square": "Hint: walk to row {{row}}, column {{col}}"
   },
   "progress": {
