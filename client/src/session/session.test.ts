@@ -104,6 +104,18 @@ describe("game-session › view model", () => {
     expect(shiftStep).toMatchObject({ step: "shift", reachable: undefined });
   });
 
+  it("marks bots, which always count as connected", () => {
+    const state = syncedState({ me: 1 });
+    state.players = new Map([
+      ["me", { seat: 1, connected: true }],
+      ["bot:2", { seat: 2, connected: false, bot: true, name: "Robo" }],
+    ]);
+    expect(toGameView(state, "r", "me")!.seats.map((s) => [s.seat, s.isBot, s.connected])).toEqual([
+      [1, false, true],
+      [2, true, true],
+    ]);
+  });
+
   it("returns undefined until the board has arrived", () => {
     expect(toGameView({ squares: [], players: new Map() }, "r", "me")).toBeUndefined();
     // Right after joining, before the first patch, the decoded state is still empty.
@@ -260,6 +272,23 @@ describe("game-session › move command", () => {
     });
     expect(room.request).toHaveBeenCalledWith("move", { row: 2, col: 4 });
     expect(result.current.notice).toBe("errors.UNREACHABLE");
+  });
+});
+
+describe("game-session › bot commands", () => {
+  it("addBot and removeBot send the seat; a rejection gives its notice", async () => {
+    const room = fakeRoom({ request: vi.fn(async (type: string) => (type === "addBot" ? { ok: true } : { ok: false, code: "NOT_A_BOT" })) });
+    const { result } = await playingWith(room);
+    await act(async () => {
+      await result.current.addBot(3);
+    });
+    expect(room.request).toHaveBeenCalledWith("addBot", { seat: 3 });
+    expect(result.current.notice).toBeUndefined();
+    await act(async () => {
+      await result.current.removeBot(2);
+    });
+    expect(room.request).toHaveBeenCalledWith("removeBot", { seat: 2 });
+    expect(result.current.notice).toBe("errors.NOT_A_BOT");
   });
 });
 

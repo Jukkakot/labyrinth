@@ -1,4 +1,4 @@
-import { IconHome, IconWifiOff } from "@tabler/icons-react";
+import { IconHome, IconRobot, IconWifiOff } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import type { GameView } from "../session/viewModel.ts";
 import { Pawn } from "./Pawn.tsx";
@@ -8,7 +8,7 @@ import { TREASURE_ICONS } from "./treasureIcons.ts";
 /**
  * One chip per seat: pawn shape and colour, the nickname (shortened with an ellipsis; the full name is
  * in the accessible text), treasures found out of cards, and a dimmed chip with an icon when
- * disconnected. The viewer's chip also shows their target.
+ * disconnected. A bot's chip has a robot icon. The viewer's chip also shows their target.
  */
 export function PlayerStrip({ view }: { view: Pick<GameView, "seats" | "myTarget"> }) {
   const { t } = useTranslation();
@@ -21,6 +21,7 @@ export function PlayerStrip({ view }: { view: Pick<GameView, "seats" | "myTarget
         const showTarget = s.isMe && TargetIcon && targetName;
         const summary = [
           t(s.isMe ? "board.pawnMe" : "board.pawn", { name: s.name }),
+          s.isBot ? t("progress.bot") : undefined,
           t("progress.count", { found: s.found.length, cards: s.cards }),
           showTarget ? t("progress.target", { name: targetName }) : undefined,
           s.connected ? undefined : t("progress.disconnected"),
@@ -34,6 +35,7 @@ export function PlayerStrip({ view }: { view: Pick<GameView, "seats" | "myTarget
             <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
               <Pawn seat={s.seat} isMe={s.isMe} />
             </svg>
+            {s.isBot && <IconRobot size={16} stroke={2} aria-hidden="true" className={styles.botIcon} />}
             <span className={styles.name} aria-hidden="true">
               {s.name}
             </span>

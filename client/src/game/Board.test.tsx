@@ -43,8 +43,8 @@ describe("board-view › Pawns on their squares", () => {
       <Board
         board={setupBoard(1)}
         seats={[
-          { seat: 1, sessionId: "a", name: "Maija", connected: true, isMe: true, cards: 0, found: [], square: { row: 0, col: 0 } },
-          { seat: 2, sessionId: "b", name: "Pekka", connected: true, isMe: false, cards: 0, found: [], square: { row: 0, col: 6 } },
+          { seat: 1, sessionId: "a", name: "Maija", connected: true, isMe: true, isBot: false, cards: 0, found: [], square: { row: 0, col: 0 } },
+          { seat: 2, sessionId: "b", name: "Pekka", connected: true, isMe: false, isBot: false, cards: 0, found: [], square: { row: 0, col: 6 } },
         ]}
       />,
     );
@@ -63,9 +63,9 @@ describe("board-view › Pawns on their squares (shared)", () => {
       <Board
         board={setupBoard(1)}
         seats={[
-          { seat: 1, sessionId: "a", name: "Maija", connected: true, isMe: true, cards: 0, found: [], square: { row: 3, col: 2 } },
-          { seat: 2, sessionId: "b", name: "Pekka", connected: true, isMe: false, cards: 0, found: [], square: { row: 3, col: 2 } },
-          { seat: 3, sessionId: "c", name: "Liisa", connected: true, isMe: false, cards: 0, found: [], square: { row: 6, col: 6 } },
+          { seat: 1, sessionId: "a", name: "Maija", connected: true, isMe: true, isBot: false, cards: 0, found: [], square: { row: 3, col: 2 } },
+          { seat: 2, sessionId: "b", name: "Pekka", connected: true, isMe: false, isBot: false, cards: 0, found: [], square: { row: 3, col: 2 } },
+          { seat: 3, sessionId: "c", name: "Liisa", connected: true, isMe: false, isBot: false, cards: 0, found: [], square: { row: 6, col: 6 } },
         ]}
       />,
     );

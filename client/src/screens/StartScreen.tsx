@@ -139,11 +139,11 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
                       className={styles.game}
                       disabled={disabled}
                       onClick={() => joinById(g.roomId, name)}
-                      aria-label={t("start.gameEntryLabel", { host: g.host, count: g.clients })}
+                      aria-label={t("start.gameEntryLabel", { host: g.host, count: g.seated })}
                       data-room={g.roomId}
                     >
                       <span className={styles.gameHost}>{g.host}</span>
-                      <span className={styles.gameCount}>· {g.clients}/4</span>
+                      <span className={styles.gameCount}>· {g.seated}/4</span>
                     </button>
                   </li>
                 ))}

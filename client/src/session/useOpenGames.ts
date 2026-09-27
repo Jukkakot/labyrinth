@@ -7,8 +7,8 @@ export interface OpenGame {
   roomId: string;
   /** The host's nickname. */
   host: string;
-  /** Seats taken. */
-  clients: number;
+  /** Seats taken, by people and bots. */
+  seated: number;
 }
 
 export interface OpenGames {
@@ -25,7 +25,7 @@ export interface RoomListing {
   locked?: boolean;
   private?: boolean;
   createdAt?: string | number | Date;
-  metadata?: { host?: unknown; open?: unknown; pool?: unknown };
+  metadata?: { host?: unknown; open?: unknown; pool?: unknown; seated?: unknown };
 }
 
 /** The parts of the SDK's lobby room this hook uses. */
@@ -44,12 +44,15 @@ export const connectLobby: LobbyConnector = (pool) =>
 
 const time = (r: RoomListing) => (r.createdAt === undefined ? 0 : new Date(r.createdAt).getTime() || 0);
 
+/** Seats taken: people and bots from the metadata, or the connected people from an older server. */
+const seatedOf = (r: RoomListing) => (typeof r.metadata?.seated === "number" ? r.metadata.seated : r.clients);
+
 /** Joinable entries, oldest first: the server lists locked and full rooms too. */
 export function toOpenGames(rooms: Iterable<RoomListing>): OpenGame[] {
   return [...rooms]
-    .filter((r) => !r.locked && !r.private && r.clients < r.maxClients && r.metadata?.open === true)
+    .filter((r) => !r.locked && !r.private && r.clients < r.maxClients && seatedOf(r) < 4 && r.metadata?.open === true)
     .sort((a, b) => time(a) - time(b))
-    .map((r) => ({ roomId: r.roomId, host: typeof r.metadata?.host === "string" ? r.metadata.host : "", clients: r.clients }));
+    .map((r) => ({ roomId: r.roomId, host: typeof r.metadata?.host === "string" ? r.metadata.host : "", seated: seatedOf(r) }));
 }
 
 /**

@@ -1,4 +1,3 @@
-import type { Client } from "colyseus";
 import type { CommandResult } from "@labyrinth/protocol";
 import type { z } from "zod";
 import { log, type LogFields } from "../logging/logger.js";
@@ -17,9 +16,15 @@ export class CommandRejection extends Error {
   }
 }
 
+/** Who sends a command: a connected client (a Colyseus `Client` fits) or a bot seat, which has no connection. */
+export interface Actor {
+  readonly sessionId: string;
+  readonly bot?: true;
+}
+
 export interface CommandContext {
   /** Log context of the room and sender. */
-  logCtx: (client: Client, extra?: LogFields) => LogFields;
+  logCtx: (actor: Actor, extra?: LogFields) => LogFields;
   /** Current phase, turn etc. added to rejection lines. */
   stateFacts: () => Record<string, unknown>;
 }
@@ -35,15 +40,15 @@ export function defineCommand<S extends z.ZodType>(
   ctx: CommandContext,
   name: string,
   schema: S,
-  handler: (client: Client, payload: z.infer<S>) => void | Promise<void>,
+  handler: (actor: Actor, payload: z.infer<S>) => void | Promise<void>,
 ) {
-  return async (client: Client, payload: unknown): Promise<CommandResult> => {
+  return async (actor: Actor, payload: unknown): Promise<CommandResult> => {
     const start = performance.now();
     const parsed = schema.safeParse(payload);
     if (!parsed.success) {
       log.warn(
         "cmd.rejected",
-        ctx.logCtx(client, {
+        ctx.logCtx(actor, {
           cmd: name,
           code: "INVALID_COMMAND",
           issues: parsed.error.issues.map((i) => `${i.path.join(".") || "payload"}: ${i.message}`),
@@ -55,14 +60,14 @@ export function defineCommand<S extends z.ZodType>(
     }
 
     try {
-      await handler(client, parsed.data);
-      log.info("cmd.accepted", ctx.logCtx(client, { cmd: name, payload: parsed.data, durMs: elapsedMs(start) }));
+      await handler(actor, parsed.data);
+      log.info("cmd.accepted", ctx.logCtx(actor, { cmd: name, payload: parsed.data, durMs: elapsedMs(start) }));
       return { ok: true };
     } catch (err) {
       if (err instanceof CommandRejection) {
         log.warn(
           "cmd.rejected",
-          ctx.logCtx(client, {
+          ctx.logCtx(actor, {
             cmd: name,
             code: err.code,
             payload: parsed.data,
@@ -75,7 +80,7 @@ export function defineCommand<S extends z.ZodType>(
       }
       log.error(
         "cmd.failed",
-        ctx.logCtx(client, { cmd: name, payload: parsed.data, ...ctx.stateFacts(), err, durMs: elapsedMs(start) }),
+        ctx.logCtx(actor, { cmd: name, payload: parsed.data, ...ctx.stateFacts(), err, durMs: elapsedMs(start) }),
       );
       return { ok: false, code: "INTERNAL_ERROR" };
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { joinOptionsSchema, kickPayloadSchema, movePayloadSchema, nicknameSchema, shiftPayloadSchema, startPayloadSchema } from "./game-schema.js";
+import { botSeatPayloadSchema, joinOptionsSchema, kickPayloadSchema, movePayloadSchema, nicknameSchema, shiftPayloadSchema, startPayloadSchema } from "./game-schema.js";
 
 describe("shiftPayloadSchema", () => {
   it("accepts every insertion point and rotation", () => {
@@ -13,6 +13,21 @@ describe("shiftPayloadSchema", () => {
     expect(shiftPayloadSchema.safeParse({ insertion: "N1", rotation: "90" }).success).toBe(false);
     expect(shiftPayloadSchema.safeParse({ insertion: "N1", rotation: 0, extra: 1 }).success).toBe(false);
     expect(shiftPayloadSchema.safeParse(null).success).toBe(false);
+  });
+});
+
+describe("botSeatPayloadSchema", () => {
+  it("accepts seats 1–4", () => {
+    expect(botSeatPayloadSchema.safeParse({ seat: 1 }).success).toBe(true);
+    expect(botSeatPayloadSchema.safeParse({ seat: 4 }).success).toBe(true);
+  });
+
+  it("rejects other seats, non-integers and extra fields", () => {
+    expect(botSeatPayloadSchema.safeParse({ seat: 0 }).success).toBe(false);
+    expect(botSeatPayloadSchema.safeParse({ seat: 5 }).success).toBe(false);
+    expect(botSeatPayloadSchema.safeParse({ seat: 2.5 }).success).toBe(false);
+    expect(botSeatPayloadSchema.safeParse({ seat: 2, name: "x" }).success).toBe(false);
+    expect(botSeatPayloadSchema.safeParse(null).success).toBe(false);
   });
 });
 

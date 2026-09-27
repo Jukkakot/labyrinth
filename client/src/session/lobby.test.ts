@@ -64,12 +64,15 @@ describe("lobby › Open games list", () => {
       listing("new", { createdAt: "2026-09-26T11:00:00.000Z", metadata: { host: "Pekka", open: true } }),
       listing("old", { createdAt: "2026-09-26T09:00:00.000Z" }),
       listing("full", { clients: 4 }),
+      listing("bots", { clients: 1, maxClients: 1, metadata: { host: "Olli", open: true, seated: 4 } }),
+      listing("oneBot", { createdAt: "2026-09-26T12:00:00.000Z", metadata: { host: "Liisa", open: true, seated: 2 } }),
       listing("locked", { locked: true }),
       listing("started", { metadata: { host: "Olli", open: false } }),
     ]);
     expect(games).toEqual([
-      { roomId: "old", host: "Maija", clients: 1 },
-      { roomId: "new", host: "Pekka", clients: 1 },
+      { roomId: "old", host: "Maija", seated: 1 },
+      { roomId: "new", host: "Pekka", seated: 1 },
+      { roomId: "oneBot", host: "Liisa", seated: 2 },
     ]);
   });
 
@@ -84,7 +87,7 @@ describe("lobby › Open games list", () => {
     push("rooms", []);
     expect(result.current).toEqual({ status: "ready", games: [] });
     push("+", ["brave-otters-sing", listing("brave-otters-sing")]);
-    expect(result.current.games).toEqual([{ roomId: "brave-otters-sing", host: "Maija", clients: 1 }]);
+    expect(result.current.games).toEqual([{ roomId: "brave-otters-sing", host: "Maija", seated: 1 }]);
     push("+", ["brave-otters-sing", listing("brave-otters-sing", { clients: 4, locked: true })]);
     expect(result.current.games).toEqual([]);
     push("+", ["calm-foxes-jump", listing("calm-foxes-jump")]);

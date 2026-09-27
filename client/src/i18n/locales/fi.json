@@ -126,7 +126,9 @@
     "NOT_KICKABLE": "Tätä pelaajaa ei voi poistaa nyt",
     "TURN_NOT_EXPIRED": "Pelaajan aika ei ole vielä loppunut",
     "NOT_HOST": "Vain pelin luoja voi aloittaa pelin",
-    "NOT_ENOUGH_PLAYERS": "Tarvitaan vähintään 2 pelaajaa"
+    "NOT_ENOUGH_PLAYERS": "Tarvitaan vähintään 2 pelaajaa",
+    "SEAT_TAKEN": "Paikka on jo varattu",
+    "NOT_A_BOT": "Paikalla ei ole bottia"
   },
   "move": {
     "hint": "Napauta korostettua ruutua",
@@ -141,7 +143,8 @@
     "home": "kotiruutu",
     "collected": "Löysit: {{name}}",
     "disconnected": "yhteys katkennut",
-    "left": "{{name}} poistui pelistä"
+    "left": "{{name}} poistui pelistä",
+    "bot": "botti"
   },
   "result": {
     "mine": "Voitit!",
@@ -171,7 +174,11 @@
     "waitingFor": "Odotetaan, että {{name}} aloittaa pelin",
     "leave": "Poistu",
     "leaveConfirm": "Peli suljetaan kaikilta. Poistutaanko?",
-    "cancel": "Peru"
+    "cancel": "Peru",
+    "bot": "botti",
+    "addBot": "Lisää botti",
+    "addBotLabel": "Lisää botti paikalle {{seat}}",
+    "removeBot": "Poista botti {{name}}"
   },
   "leave": {
     "button": "Poistu pelistä",

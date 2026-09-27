@@ -2,6 +2,8 @@ import { randomInt } from "node:crypto";
 import { StateView } from "@colyseus/schema";
 import { ErrorCode, ServerError, type Client, type CloseCode, type Deferred } from "colyseus";
 import {
+  BOT_NAMES,
+  botSeatPayloadSchema,
   CLOSE_CODES,
   joinOptionsSchema,
   kickPayloadSchema,
@@ -13,7 +15,11 @@ import {
   type TurnPhase,
 } from "@labyrinth/protocol";
 import {
+  allowedShifts,
+  botSeed,
+  chooseBotTurn,
   createBoard,
+  createRng,
   dealGame,
   MIN_SEATS,
   DISCONNECT_LIMIT_SECONDS,
@@ -31,13 +37,16 @@ import {
   tileSpec,
   TURN_TIME_LIMIT_SECONDS,
   type Board,
+  type BotStrategy,
+  type BotView,
+  type Rng,
   type Rotation,
   type Square,
   type Tile,
   type TreasureId,
 } from "@labyrinth/rules";
 import { log } from "../logging/logger.js";
-import { CommandRejection } from "./command.js";
+import { CommandRejection, type Actor } from "./command.js";
 import { LoggedRoom } from "./LoggedRoom.js";
 import { GameState, Player, TileState } from "./schema/GameState.js";
 
@@ -54,6 +63,8 @@ export interface GameMetadata {
   open: boolean;
   /** Matchmaking pool: "" for real players, set by E2E tests. */
   pool: string;
+  /** Seats taken by people and bots; the list shows it and hides a game with all 4 taken. */
+  seated: number;
 }
 
 /** Why the room was closed for everyone (`room.closed`). */
@@ -61,6 +72,17 @@ type CloseReason = "hostLeft";
 
 /** Why a player was taken out of the game (`player.removed`). */
 type RemovalReason = "left" | "kicked" | "timeout";
+
+/** Why a started game ended (`game.finished`). */
+type FinishReason = "home" | "lastPlayer" | "noPeople";
+
+/** A bot's key in `state.players`; it can never clash with a Colyseus sessionId. */
+const botKey = (seat: number) => `bot:${seat}`;
+const botActor = (seat: number): Actor => ({ sessionId: botKey(seat), bot: true });
+
+/** Default pauses of a bot's turn, so people can follow it (the move waits for the tile slide). */
+export const BOT_SHIFT_DELAY_MS = 1500;
+export const BOT_MOVE_DELAY_MS = 1000;
 
 const toTileState = (tile: Tile) => new TileState({ id: tile.id, rotation: tile.rotation });
 const toTile = (t: TileState): Tile => ({ id: t.id, kind: tileSpec(t.id).kind, rotation: t.rotation as Rotation });
@@ -95,6 +117,12 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   /** Draws the seed of the deal at the start; room tests replace it to fix the start seat. */
   drawDealSeed = () => randomInt(0, MAX_SEED + 1);
 
+  /** How bots choose their turns; replaceable (a smarter strategy, or a bad one in tests). */
+  botStrategy: BotStrategy = chooseBotTurn;
+  /** Pauses of a bot's turn; room tests shorten them. */
+  botShiftDelayMs = BOT_SHIFT_DELAY_MS;
+  botMoveDelayMs = BOT_MOVE_DELAY_MS;
+
   /** Server-only: never part of the synced state. */
   private seed = 0;
   /** Treasure stack of each seated seat, dealt when the game starts. */
@@ -104,6 +132,10 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   /** True once this room counts towards `openGames`. */
   private counted = false;
   private turnTimer?: { clear(): void };
+  /** The pending step of a bot's turn; at most one per room. */
+  private botTimer?: { clear(): void };
+  /** Each bot's rng, seeded from the deal seed and its seat, kept for the whole game. */
+  private botRngs = new Map<number, Rng>();
   /** Seat holds of dropped players, by sessionId; rejecting one removes that player at once. */
   private holds = new Map<string, Deferred<Client>>();
 
@@ -119,6 +151,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       const dealSeed = this.drawDealSeed();
       const { stacks, startSeat } = dealGame(dealSeed, seats);
       this.stacks = stacks;
+      this.botRngs = new Map(this.bots().map((p) => [p.seat, createRng(botSeed(dealSeed, p.seat))]));
       for (const p of this.state.players.values()) {
         const stack = stacks.get(p.seat)!;
         p.cards = stack.length;
@@ -128,6 +161,28 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       void this.setMetadata({ ...this.metadata, open: false });
       log.info("game.started", this.logCtx(undefined, { dealSeed, seats, startSeat }));
       this.setTurn(startSeat);
+    }),
+
+    addBot: this.command("addBot", botSeatPayloadSchema, (client, { seat }) => {
+      this.requireHostInWaitingRoom(client);
+      if (this.seatHolder(seat) || this.pendingSeats().includes(seat)) throw new CommandRejection("SEAT_TAKEN", { seat });
+
+      const used = new Set(this.bots().map((p) => p.name));
+      const name = BOT_NAMES.find((n) => !used.has(n))!; // four names for at most three bots
+      const corner = START_CORNERS[seat - 1]!;
+      this.state.players.set(botKey(seat), new Player({ seat, name, bot: true, row: corner.row, col: corner.col }));
+      log.info("bot.added", this.logCtx(undefined, { seat, name }));
+      this.syncSeats();
+    }),
+
+    removeBot: this.command("removeBot", botSeatPayloadSchema, (client, { seat }) => {
+      this.requireHostInWaitingRoom(client);
+      const bot = this.seatHolder(seat);
+      if (!bot?.bot) throw new CommandRejection("NOT_A_BOT", { seat });
+
+      this.state.players.delete(botKey(seat));
+      log.info("bot.removed", this.logCtx(undefined, { seat, name: bot.name }));
+      this.syncSeats();
     }),
 
     shift: this.command("shift", shiftPayloadSchema, (client, { insertion, rotation }) => {
@@ -190,6 +245,46 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     }),
   };
 
+  /** Rejects unless `actor` is the seated host and the game is still in its waiting room. Changes nothing. */
+  private requireHostInWaitingRoom(actor: Actor): void {
+    const player = this.state.players.get(actor.sessionId);
+    if (!player) throw new CommandRejection("NOT_SEATED");
+    if (player.seat !== this.state.hostSeat) throw new CommandRejection("NOT_HOST", { seat: player.seat });
+    if (this.state.phase !== "waiting") throw new CommandRejection("WRONG_PHASE", { expected: "waiting" });
+  }
+
+  /** The player (person or bot) in `seat`, if any. */
+  private seatHolder(seat: number): Player | undefined {
+    return [...this.state.players.values()].find((p) => p.seat === seat);
+  }
+
+  private bots(): Player[] {
+    return [...this.state.players.values()].filter((p) => p.bot);
+  }
+
+  /**
+   * The seats people who are joining right now will get: Colyseus reserves a seat before `onJoin`,
+   * which then takes the lowest free one, so with k pending joins the k lowest free seats are spoken for.
+   */
+  private pendingSeats(): number[] {
+    // Colyseus keeps reservations private; entry [3] is true for a dropped player's reconnection.
+    const reserved = (this as unknown as { _reservedSeats: Record<string, unknown[]> })._reservedSeats;
+    const pending = Object.entries(reserved).filter(([id, seat]) => !seat[3] && !this.state.players.has(id)).length;
+    const taken = new Set(this.seats());
+    const free = [1, 2, 3, 4].filter((seat) => !taken.has(seat));
+    return free.slice(0, pending);
+  }
+
+  /**
+   * Keeps matchmaking in step with the seats: in the waiting room bots take places people could
+   * join (Colyseus locks and unlocks the room by itself as it fills and frees), and the list
+   * shows people and bots together.
+   */
+  private syncSeats(): void {
+    if (this.state.phase === "waiting" && !this.closing) this.maxClients = MAX_SEATS - this.bots().length;
+    void this.setMetadata({ ...this.metadata, seated: this.state.players.size });
+  }
+
   protected commandStateFacts() {
     const current = [...this.state.players.values()].find((p) => p.seat === this.state.turnSeat);
     return {
@@ -210,11 +305,12 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     log.info("treasure.collected", this.logCtx(undefined, { seat: player.seat, treasure, found: player.found.length, cards: player.cards }));
   }
 
-  /** A win ends the game: no further turn, no clock, and quick play no longer joins this room. */
-  private finish(winner: number, reason: "home" | "lastPlayer"): void {
+  /** The end of the game (a win, or no person left: winner 0): no further turn, no clock, no joining. */
+  private finish(winner: number, reason: FinishReason): void {
     this.state.winnerSeat = winner;
     this.setPhase("finished");
     this.restartClock();
+    this.clearBotTimer();
     void this.lock();
     log.info("game.finished", this.logCtx(undefined, { winner, reason }));
   }
@@ -232,11 +328,14 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     log.info("player.removed", this.logCtx(undefined, { player: sessionId, seat, reason, ...(by !== undefined && { by }) }));
     if (this.state.phase === "waiting") {
       if (seat === this.state.hostSeat && !this.closing) this.closeRoom("hostLeft");
+      else this.syncSeats();
       return;
     }
     if (this.state.phase === "finished") return;
     const survivor = soleSurvivor(this.seats());
-    if (survivor !== undefined) this.finish(survivor, "lastPlayer");
+    // Bots never play on alone; a dropped person still in their hold counts as a person.
+    if (![...this.state.players.values()].some((p) => !p.bot)) this.finish(0, "noPeople");
+    else if (survivor !== undefined) this.finish(survivor, "lastPlayer");
     else if (seat === this.state.turnSeat) this.passTurn();
     else this.restartClock(true);
   }
@@ -267,9 +366,9 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     return createBoard({ squares: this.state.squares.map(toTile), spare: toTile(this.state.spare) });
   }
 
-  /** Rejects unless `client` is seated, holds the turn and the turn is in `phase`. Changes nothing. */
-  private requireTurn(client: Client, phase: string): void {
-    const player = this.state.players.get(client.sessionId);
+  /** Rejects unless `actor` is seated, holds the turn and the turn is in `phase`. Changes nothing. */
+  private requireTurn(actor: Actor, phase: string): void {
+    const player = this.state.players.get(actor.sessionId);
     if (!player) throw new CommandRejection("NOT_SEATED");
     // Nobody acts before the start or in a finished game, whoever's turn it was.
     if (this.state.phase === "waiting" || this.state.phase === "finished") throw new CommandRejection("WRONG_PHASE", { expected: phase });
@@ -289,6 +388,64 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     this.state.phase = "shift";
     log.info("turn.changed", this.logCtx(undefined, { from, to: seat }));
     this.restartClock();
+    this.clearBotTimer();
+    if (this.state.players.get(botKey(seat))) this.botTimer = this.clock.setTimeout(() => void this.playBotShift(seat), this.botShiftDelayMs);
+  }
+
+  private clearBotTimer(): void {
+    this.botTimer?.clear();
+    this.botTimer = undefined;
+  }
+
+  /** What bot `seat` may fairly know: everything public plus its own target, never anyone else's. */
+  private botView(seat: number): BotView {
+    const last = this.state.lastInsertion;
+    return {
+      board: this.board(),
+      seat,
+      seats: [...this.state.players.values()].map((p) => ({
+        seat: p.seat,
+        pawn: squareOf(p),
+        found: p.found.length,
+        cardsLeft: p.cards - p.found.length,
+      })),
+      lastInsertion: isInsertionId(last) ? last : undefined,
+      target: (this.state.players.get(botKey(seat))!.target || undefined) as TreasureId | undefined,
+    };
+  }
+
+  /**
+   * A bot's shift, through the same command path as a person's. The whole turn is chosen here; the
+   * move follows after a pause. A rejected choice falls back to an allowed shift and staying.
+   */
+  private async playBotShift(seat: number): Promise<void> {
+    this.botTimer = undefined;
+    const actor = botActor(seat);
+    const turn = this.botStrategy(this.botView(seat), this.botRngs.get(seat) ?? createRng(seat));
+    let to: Square | undefined = turn.to;
+    const result = await this.messages.shift(actor, { insertion: turn.insertion, rotation: turn.rotation });
+    if (!result.ok) {
+      log.error("bot.fallback", this.logCtx(actor, { cmd: "shift", code: result.code }));
+      const last = this.state.lastInsertion;
+      const fallback = allowedShifts(isInsertionId(last) ? last : undefined)[0]!;
+      const retry = await this.messages.shift(actor, { insertion: fallback.insertion, rotation: this.state.spare.rotation as Rotation });
+      if (!retry.ok) return; // nothing allowed (the turn changed meanwhile): the next setTurn takes over
+      to = undefined;
+    }
+    this.botTimer = this.clock.setTimeout(() => void this.playBotMove(seat, to), this.botMoveDelayMs);
+  }
+
+  /** A bot's move to `to`, or staying (always allowed) when there is none or it is rejected. */
+  private async playBotMove(seat: number, to: Square | undefined): Promise<void> {
+    this.botTimer = undefined;
+    const actor = botActor(seat);
+    const own = this.state.players.get(botKey(seat));
+    if (!own) return;
+    const result = await this.messages.move(actor, to ?? squareOf(own));
+    if (!result.ok && to) {
+      log.error("bot.fallback", this.logCtx(actor, { cmd: "move", code: result.code }));
+      await this.messages.move(actor, squareOf(own));
+    }
   }
 
   /**
@@ -335,7 +492,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
 
     await super.onCreate(options);
     if (parsed.data.private) await this.setPrivate(true);
-    await this.setMetadata({ host: "", open: true, pool: parsed.data.pool ?? "" });
+    await this.setMetadata({ host: "", open: true, pool: parsed.data.pool ?? "", seated: 0 });
     this.seed = randomInt(0, MAX_SEED + 1);
     const board = setupBoard(this.seed);
     this.state.squares.push(...board.squares.map(toTileState));
@@ -373,6 +530,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       this.state.hostSeat = seat;
       void this.setMetadata({ ...this.metadata, host: name });
     }
+    this.syncSeats();
   }
 
   /** Consented leave, or a dropped player's hold ran out (a kicked player is already gone). */
@@ -409,6 +567,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   onDispose() {
     super.onDispose();
     this.turnTimer?.clear();
+    this.clearBotTimer();
     if (this.counted) GameRoom.openGames--;
   }
 

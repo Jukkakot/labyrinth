@@ -3,6 +3,7 @@ import {
   INSERTION_IDS,
   nicknameIssue,
   ROTATION_VALUES,
+  type BotSeatPayload,
   type JoinOptions,
   type KickPayload,
   type MovePayload,
@@ -25,6 +26,10 @@ export const movePayloadSchema = z.strictObject({
 export const kickPayloadSchema = z.strictObject({
   seat: z.int().min(1).max(4),
 }) satisfies z.ZodType<KickPayload>;
+
+export const botSeatPayloadSchema = z.strictObject({
+  seat: z.int().min(1).max(4),
+}) satisfies z.ZodType<BotSeatPayload>;
 
 export const startPayloadSchema = z.strictObject({}) satisfies z.ZodType<StartPayload>;
 

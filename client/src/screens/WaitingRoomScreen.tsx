@@ -1,4 +1,4 @@
-import { IconWifiOff } from "@tabler/icons-react";
+import { IconRobot, IconWifiOff, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
@@ -27,18 +27,18 @@ const browserSharer = (): Sharer => ({
 
 export interface WaitingRoomScreenProps {
   view: Pick<GameView, "roomId" | "seats" | "hostSeat" | "mySeat">;
-  session: Pick<GameSession, "start" | "leave" | "pending" | "notice">;
+  session: Pick<GameSession, "start" | "addBot" | "removeBot" | "leave" | "pending" | "notice">;
   sharer?: Sharer;
 }
 
 /**
- * Before the start: who is seated (pawn, nickname, host and "you" marks), inviting others, and the
- * host's start. Guests wait for the host. Leaving is confirmed only for a host with others seated,
+ * Before the start: who is seated (pawn, nickname, host, "you" and bot marks), inviting others, and
+ * the host's start. The host fills free seats with bots and removes them again. Guests wait for the host. Leaving is confirmed only for a host with others seated,
  * because it closes the game for them.
  */
 export function WaitingRoomScreen({ view, session, sharer = browserSharer() }: WaitingRoomScreenProps) {
   const { t } = useTranslation();
-  const { start, leave, pending, notice } = session;
+  const { start, addBot, removeBot, leave, pending, notice } = session;
   const [confirming, setConfirming] = useState(false);
   const [shareNote, setShareNote] = useState<string>();
   const isHost = view.mySeat !== undefined && view.mySeat === view.hostSeat;
@@ -86,15 +86,28 @@ export function WaitingRoomScreen({ view, session, sharer = browserSharer() }: W
               <li key={seat} className={`${styles.seat} ${styles.free}`} data-seat={seat} data-free="">
                 <span className={styles.pawn} aria-hidden="true" />
                 <span>{t("waiting.freeSeat")}</span>
+                {isHost && (
+                  <Button
+                    variant="secondary"
+                    className={styles.seatAction}
+                    onClick={() => void addBot(seat)}
+                    disabled={pending}
+                    aria-label={t("waiting.addBotLabel", { seat })}
+                  >
+                    <IconRobot size={18} aria-hidden="true" />
+                    {t("waiting.addBot")}
+                  </Button>
+                )}
               </li>
             );
           }
-          const marks = [s.isMe && t("waiting.you"), s.seat === view.hostSeat && t("waiting.host")].filter(Boolean);
+          const marks = [s.isMe && t("waiting.you"), s.seat === view.hostSeat && t("waiting.host"), s.isBot && t("waiting.bot")].filter(Boolean);
           return (
             <li key={seat} className={[styles.seat, !s.connected && styles.offline].filter(Boolean).join(" ")} data-seat={seat}>
               <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
                 <Pawn seat={seat} isMe={s.isMe} />
               </svg>
+              {s.isBot && <IconRobot size={18} stroke={2} aria-hidden="true" className={styles.botIcon} />}
               <span className={styles.name}>{s.name}</span>
               {marks.map((m) => (
                 <span key={m as string} className={styles.badge}>
@@ -106,6 +119,18 @@ export function WaitingRoomScreen({ view, session, sharer = browserSharer() }: W
                   <IconWifiOff size={16} stroke={2} aria-hidden="true" className={styles.offlineIcon} />
                   <span className={styles.srOnly}>{t("waiting.disconnected")}</span>
                 </>
+              )}
+              {isHost && s.isBot && (
+                <Button
+                  variant="secondary"
+                  className={`${styles.seatAction} ${styles.iconAction}`}
+                  onClick={() => void removeBot(seat)}
+                  disabled={pending}
+                  aria-label={t("waiting.removeBot", { name: s.name })}
+                  title={t("waiting.removeBot", { name: s.name })}
+                >
+                  <IconX size={20} aria-hidden="true" />
+                </Button>
               )}
             </li>
           );

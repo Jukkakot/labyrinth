@@ -80,3 +80,8 @@
 .offlineIcon {
   flex: none;
 }
+
+.botIcon {
+  flex: none;
+  color: var(--muted);
+}

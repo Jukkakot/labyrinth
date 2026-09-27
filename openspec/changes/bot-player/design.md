@@ -42,7 +42,7 @@ would have to merge two collections.
 Robo, Pixel, Byte, Nova, the first one not used by another bot in the room. They read fine in
 Finnish and English, so `name` stays a plain synced string and every place that shows a name
 (turn line, result, departures) works as is. The client marks bots with a robot icon (tabler
-`IconRobot`) and a "Botti"/"Bot" badge in the waiting room.
+`IconRobot`) and a "botti"/"bot" badge (lower case like "sinä" and "isäntä") in the waiting room.
 *Alternative:* localized "Botti 2" built on the client. Rejected: every name display would need a
 bot branch.
 
@@ -108,7 +108,7 @@ last-player-standing rule; a person alone with bots plays on against them.
 ### 8. Client
 - View model: `SeatView.isBot`; bots are always `connected`.
 - Waiting room: free seat row → "Lisää botti" button (host only, ≥ 44 px); bot row → robot icon,
-  "Botti" badge, and for the host an icon button "Poista botti". Both use the session's pending
+  "botti" badge (lower case like the other marks), and for the host an icon button "Poista botti". Both use the session's pending
   state like "Aloita peli".
 - Player strip: robot icon next to a bot's name. No other screen changes.
 - Session: `addBot(seat)`, `removeBot(seat)`; fi/en strings, including `errors.SEAT_TAKEN` and

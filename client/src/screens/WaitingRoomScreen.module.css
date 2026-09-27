@@ -15,7 +15,8 @@
 }
 
 .seat {
-  min-height: var(--tap-min);
+  /* Room for the host's 44 px bot button inside the row, the same height for every seat. */
+  min-height: calc(var(--tap-min) + 2 * var(--space-1));
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -62,6 +63,25 @@
 
 .offline .pawn {
   opacity: 0.45;
+}
+
+.botIcon {
+  flex: none;
+  color: var(--muted);
+}
+
+/* The host's add/remove bot button at the end of a seat row. */
+.seatAction {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  font-size: var(--text-s);
+}
+
+.iconAction {
+  padding: 0;
 }
 
 .offlineIcon {

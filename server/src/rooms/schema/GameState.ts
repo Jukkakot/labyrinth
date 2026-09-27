@@ -8,6 +8,8 @@ export const TileState = schema({
 export type TileState = SchemaType<typeof TileState>;
 
 export const Player = schema({
+  /** True for a computer-controlled seat (keyed `bot:<seat>`); a bot is always connected. */
+  bot: t.boolean().default(false),
   /** False while the player's connection is dropped and awaiting reconnection. */
   connected: t.boolean().default(true),
   /** 1–4, clockwise from the top-left start corner. */
@@ -27,7 +29,7 @@ export const Player = schema({
 export type Player = SchemaType<typeof Player>;
 
 export const GameState = schema({
-  /** Keyed by Colyseus sessionId. */
+  /** Keyed by Colyseus sessionId, or `bot:<seat>` for a bot. */
   players: t.map(Player),
   /** 49 squares, row-major. */
   squares: t.array(TileState),

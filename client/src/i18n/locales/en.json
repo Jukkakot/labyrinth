@@ -126,7 +126,9 @@
     "NOT_KICKABLE": "That player can't be removed now",
     "TURN_NOT_EXPIRED": "Their time isn't up yet",
     "NOT_HOST": "Only the game's creator can start it",
-    "NOT_ENOUGH_PLAYERS": "At least 2 players are needed"
+    "NOT_ENOUGH_PLAYERS": "At least 2 players are needed",
+    "SEAT_TAKEN": "That seat is already taken",
+    "NOT_A_BOT": "There is no bot in that seat"
   },
   "move": {
     "hint": "Tap a highlighted square",
@@ -141,7 +143,8 @@
     "home": "home square",
     "collected": "You found: {{name}}",
     "disconnected": "connection lost",
-    "left": "{{name}} left the game"
+    "left": "{{name}} left the game",
+    "bot": "bot"
   },
   "result": {
     "mine": "You won!",
@@ -171,7 +174,11 @@
     "waitingFor": "Waiting for {{name}} to start the game",
     "leave": "Leave",
     "leaveConfirm": "The game closes for everyone. Leave?",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "bot": "bot",
+    "addBot": "Add a bot",
+    "addBotLabel": "Add a bot to seat {{seat}}",
+    "removeBot": "Remove bot {{name}}"
   },
   "leave": {
     "button": "Leave the game",

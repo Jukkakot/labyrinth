@@ -20,6 +20,8 @@ export const GAME_ERROR_CODES = [
   "TURN_NOT_EXPIRED",
   "NOT_HOST",
   "NOT_ENOUGH_PLAYERS",
+  "SEAT_TAKEN",
+  "NOT_A_BOT",
 ] as const;
 export type GameErrorCode = (typeof GAME_ERROR_CODES)[number];
 
@@ -43,6 +45,14 @@ export interface MovePayload {
 
 /** The `start` command has no fields: only the host sends it, in the waiting room. */
 export type StartPayload = Record<string, never>;
+
+/** Seat for the host's `addBot` / `removeBot` commands in the waiting room. */
+export interface BotSeatPayload {
+  seat: number;
+}
+
+/** Bot names, language-neutral; a new bot gets the first one no other bot in the game has. */
+export const BOT_NAMES = ["Robo", "Pixel", "Byte", "Nova"] as const;
 
 /** Nickname length in code points, after trimming. */
 export const NICKNAME_MIN_LENGTH = 2;

@@ -35,7 +35,7 @@ NOT be listed.
 ### Requirement: Waiting room
 A new game SHALL start in its waiting room. The player who created the game is its host. The
 waiting room MUST show the seated players in seat order with their nickname and pawn shape and
-colour, mark the host, mark the viewer, and mark bots with a robot icon and the label "Botti". It
+colour, mark the host, mark the viewer, and mark bots with a robot icon and the label "botti" (lower case like the other marks). It
 MUST offer "Kutsu pelaajia", which shares the game's invite link through the device's share sheet
 where available and otherwise copies it and says so ("Linkki kopioitu"). The host MUST see an
 "Lisää botti" action in every free seat and a remove action ("Poista botti") on every bot; other

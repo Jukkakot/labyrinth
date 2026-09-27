@@ -86,11 +86,13 @@ timestamp. Read them in the Render dashboard (service → Logs) or with Render M
 | `game.setup` | a new game's seed |
 | `game.started` | the host started the game, `{ dealSeed, seats, startSeat }` (reproduces the deal and who began; seed never synced) |
 | `treasure.collected` | a player collects their target, `{ seat, treasure, found, cards }` |
-| `game.finished` | someone won, `{ winner, reason }` (seat; `home` or `lastPlayer`) |
+| `game.finished` | the game ended, `{ winner, reason }` (seat; `home` or `lastPlayer`; `noPeople` with winner 0 when only bots were left) |
+| `bot.added` / `bot.removed` | the host seated or removed a bot in the waiting room, `{ seat, name }` |
+| `bot.fallback` | error: a bot's chosen command was rejected, `{ cmd, code }`; it made an allowed shift and stayed instead (a bug in the bot strategy) |
 | `turn.changed` | every turn change, `{ from, to }` seats (0 = nobody) |
 | `turn.expired` | the current turn's 60 s ran out, `{ seat }`; from now on the others may kick |
 | `phase.changed` | the step within a turn changes, `{ from, to, turnSeat }` (`shift` → `move`, `move` → `finished`) |
-| `cmd.accepted` / `cmd.rejected` / `cmd.failed` | every room command, exactly once, with code and state facts |
+| `cmd.accepted` / `cmd.rejected` / `cmd.failed` | every room command, exactly once, with code and state facts; a bot's commands carry `player: "bot:<seat>"` and `bot: true` |
 | `framework.log` | Colyseus's own messages |
 | `server.started` / `server.shutdown`, `process.*` | process lifecycle and fatal errors |
 | `client.*` | client warnings/errors, crashes, key events (connection, rejections) |

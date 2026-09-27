@@ -12,6 +12,7 @@ const seat = (n: number, name: string, extra: Partial<SeatView> = {}): SeatView 
   name,
   connected: true,
   isMe: false,
+  isBot: false,
   square: { row: 0, col: 0 },
   cards: 0,
   found: [],
@@ -21,6 +22,8 @@ const seat = (n: number, name: string, extra: Partial<SeatView> = {}): SeatView 
 function setup(seats: SeatView[], mySeat: number, session: Partial<GameSession> = {}, sharer?: Sharer) {
   const start = vi.fn<GameSession["start"]>(async () => ({ ok: true }));
   const leave = vi.fn<GameSession["leave"]>();
+  const addBot = vi.fn<GameSession["addBot"]>(async () => ({ ok: true }));
+  const removeBot = vi.fn<GameSession["removeBot"]>(async () => ({ ok: true }));
   const view: WaitingRoomScreenProps["view"] = {
     roomId: "brave-otters-sing",
     hostSeat: 1,
@@ -29,9 +32,9 @@ function setup(seats: SeatView[], mySeat: number, session: Partial<GameSession> 
   };
   const copy = vi.fn(async (_text: string) => {});
   const utils = render(
-    <WaitingRoomScreen view={view} session={{ start, leave, pending: false, ...session }} sharer={sharer ?? { copy }} />,
+    <WaitingRoomScreen view={view} session={{ start, addBot, removeBot, leave, pending: false, ...session }} sharer={sharer ?? { copy }} />,
   );
-  return { start, leave, copy, ...utils };
+  return { start, addBot, removeBot, leave, copy, ...utils };
 }
 
 const button = (name: string) => screen.getByRole("button", { name }) as HTMLButtonElement;
@@ -68,6 +71,23 @@ describe("lobby › Waiting room", () => {
     expect(screen.getByText("Odotetaan, että Maija aloittaa pelin")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Aloita peli" })).toBeNull();
     expect(container.querySelector("[data-seat='2']")!.textContent).toContain("sinä");
+  });
+
+  it("Solo game with a bot: the host adds and removes bots; bots are marked; Aloita peli enabled", () => {
+    const { container, addBot, removeBot } = setup([seat(1, "Maija"), seat(3, "Robo", { isBot: true })], 1);
+    expect(screen.getAllByRole("button", { name: /^Lisää botti paikalle/ })).toHaveLength(2);
+    fireEvent.click(button("Lisää botti paikalle 2"));
+    expect(addBot).toHaveBeenCalledWith(2);
+    expect(container.querySelector("[data-seat='3']")!.textContent).toContain("botti");
+    fireEvent.click(button("Poista botti Robo"));
+    expect(removeBot).toHaveBeenCalledWith(3);
+    expect(button("Aloita peli").disabled).toBe(false);
+  });
+
+  it("Guest view with a bot: the bot is marked, and no bot actions", () => {
+    const { container } = setup([seat(1, "Maija"), seat(2, "Pekka"), seat(3, "Robo", { isBot: true })], 2);
+    expect(container.querySelector("[data-seat='3']")!.textContent).toContain("botti");
+    expect(screen.queryByRole("button", { name: /botti/i })).toBeNull();
   });
 
   it("a dropped player is shown as disconnected", () => {

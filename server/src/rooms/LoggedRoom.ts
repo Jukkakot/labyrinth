@@ -1,7 +1,7 @@
 import { Room, type Client, type CloseCode, type Deferred, type RoomException, type RoomOptions } from "colyseus";
 import type { z } from "zod";
 import { log, type LogFields } from "../logging/logger.js";
-import { defineCommand } from "./command.js";
+import { defineCommand, type Actor } from "./command.js";
 import { uniqueRoomId } from "./roomId.js";
 
 /**
@@ -9,9 +9,9 @@ import { uniqueRoomId } from "./roomId.js";
  * of uncaught exceptions. Subclasses overriding a hook must call `super`.
  */
 export abstract class LoggedRoom<T extends RoomOptions = RoomOptions> extends Room<T> {
-  /** Context fields for log lines about this room and, optionally, a client. */
-  protected logCtx(client?: Client, extra?: LogFields): LogFields {
-    return { room: this.roomId, ...(client && { player: client.sessionId }), ...extra };
+  /** Context fields for log lines about this room and, optionally, a client or bot. */
+  protected logCtx(actor?: Actor, extra?: LogFields): LogFields {
+    return { room: this.roomId, ...(actor && { player: actor.sessionId }), ...(actor?.bot && { bot: true }), ...extra };
   }
 
   /**
@@ -22,10 +22,10 @@ export abstract class LoggedRoom<T extends RoomOptions = RoomOptions> extends Ro
   protected command<S extends z.ZodType>(
     name: string,
     schema: S,
-    handler: (client: Client, payload: z.infer<S>) => void | Promise<void>,
+    handler: (actor: Actor, payload: z.infer<S>) => void | Promise<void>,
   ) {
     return defineCommand(
-      { logCtx: (client, extra) => this.logCtx(client, extra), stateFacts: () => this.commandStateFacts() },
+      { logCtx: (actor, extra) => this.logCtx(actor, extra), stateFacts: () => this.commandStateFacts() },
       name,
       schema,
       handler,

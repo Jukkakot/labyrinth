@@ -196,7 +196,7 @@ describe("lobby › Nickname", () => {
   });
 
   it("Too short: every join and create action is disabled and a hint says 2–16 characters", () => {
-    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "ready", games: [{ roomId: "a-b-c", host: "Liisa", clients: 1 }] }} />);
+    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "ready", games: [{ roomId: "a-b-c", host: "Liisa", seated: 1 }] }} />);
     fireEvent.change(field(), { target: { value: "M" } });
     expect(button("Pelaa").disabled).toBe(true);
     expect(button("Luo yksityinen peli").disabled).toBe(true);
@@ -213,7 +213,7 @@ describe("lobby › Nickname", () => {
 });
 
 describe("lobby › Open games list and private game", () => {
-  const games = { status: "ready" as const, games: [{ roomId: "brave-otters-sing", host: "Liisa", clients: 2 }] };
+  const games = { status: "ready" as const, games: [{ roomId: "brave-otters-sing", host: "Liisa", seated: 2 }] };
 
   it("Join from the list: an entry shows the host and seats, and tapping it joins that game", () => {
     const joinById = vi.fn();

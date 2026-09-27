@@ -59,12 +59,15 @@ delivered by that roadmap change.
   unexpected exception becomes `INTERNAL_ERROR` and the room keeps running.
 - A handler rejects by throwing `CommandRejection(code, facts)` **before changing state**. State
   facts (phase, turn, host …) are added to rejection lines via `commandStateFacts()`.
+- Handlers take an `Actor { sessionId, bot? }`, not a Colyseus `Client` (a client fits). A bot
+  calls the same wrapped handler (`this.messages.shift(botActor, payload)`), so its commands get
+  the same checks and audit line, marked `bot: true`.
 - **Adding a command:** (1) codes/types in `protocol/src/game-codes.ts`, payload schema in
   `game-schema.ts`; (2) `GameRoom.messages` entry; phase and turn checks first, then rule
   preconditions via `@labyrinth/rules`, then write state; (3) a `useGameSession` method, and
   `errors.<CODE>` strings in fi/en.
 
-## Game flow — Implemented (bots Planned)
+## Game flow — Implemented
 
 Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasures`.
 
@@ -80,7 +83,8 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 - **Waiting room:** `phase = "waiting"`, no turn, no cards, no clock. The first joiner is the host
   (`hostSeat`). A guest leaving frees the seat; the host leaving (or a dropped host's hold running
   out) closes the room for everyone (`closeRoom`, close code `HOST_LEFT` 4101). Private rooms
-  (`setPrivate`) are never listed or quick-matched; metadata `{ host, open, pool }` feeds the list.
+  (`setPrivate`) are never listed or quick-matched; metadata `{ host, open, pool, seated }` feeds
+  the list (`seated` = people + bots).
 - **Start** (host only, ≥ 2 seated): `dealGame(dealSeed, seats)` deals 24/n cards and draws the
   start seat from one seeded RNG, so `game.started { dealSeed, seats, startSeat }` reproduces the
   opening. The room locks: nobody joins a started game.
@@ -92,12 +96,21 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 - **Removal** (`removePlayer`: left, kicked, or a 5-minute drop hold ran out) is the single way
   out: pawn, stack and seat go; then the last player standing wins, or the turn passes.
 - **Finished:** `winnerSeat` set, clock stopped, room locked; players may stay and look.
-- **Planned (`bot-player`):** bots take an ordinary seat, added by the host in the waiting room;
-  the decision is a pure rules function submitted through the same command wrapper.
+- **Bots** (spec `bots`): the host's `addBot` / `removeBot { seat }` in the waiting room. A bot is
+  an ordinary `Player` with `bot = true`, keyed `bot:<seat>`, named from Robo, Pixel, Byte, Nova;
+  every seat-based rule works unchanged. While waiting, `maxClients = 4 − bots` (Colyseus locks and
+  unlocks the room itself), and a seat reserved by a person who is joining right now counts as
+  taken (`SEAT_TAKEN`). On its turn `setTurn` schedules the bot: after 1.5 s the room builds a fair
+  `BotView` (no one else's target), asks `botStrategy` (default `chooseBotTurn`, rng seeded from
+  the deal seed and seat) and sends the shift; 1 s later the move. A rejected choice logs
+  `bot.fallback` and the bot makes an allowed shift and stays. One `botTimer` per room, cleared
+  on every turn change, finish and dispose.
+- **No people left:** when the last person is removed from a started game it finishes with
+  `winnerSeat = 0` (reason `noPeople`); bots never play on alone.
 
 ## State sync — Implemented
 
-- Synced (`server/src/rooms/schema/GameState.ts`): players (seat, nickname, connected, pawn
+- Synced (`server/src/rooms/schema/GameState.ts`): players (seat, nickname, `bot`, connected, pawn
   square, card count, found treasures, and the **view-filtered** current target), the 49 squares
   and the spare as `{ id, rotation }`, `phase`, `turnSeat`, `hostSeat`, `winnerSeat`,
   `lastInsertion`, `turnDeadline`, `turnExpired`.
@@ -113,7 +126,9 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 `board` (validated board, fixed squares, connections), `tileSet` (static 50-tile catalogue with
 the 24 treasures), `rng` + `setup` (seeded board; draw order pinned by a golden test), `shift`
 (`shiftBoard`, insertion ids, reverse rule), `move` (reachability, shortest path), `treasures`
-(deals, collect and win), `turns` (next seat, kick rule, clock limits). Test fixtures in
+(deals, collect and win), `turns` (next seat, kick rule, clock limits), `bot` (the replaceable
+`BotStrategy` over a fair `BotView`, the greedy `chooseBotTurn`, `botSeed`; a whole-game bot
+simulation test takes the strategy as a parameter, to compare smarter ones later). Test fixtures in
 `@labyrinth/rules/testing` (`boardFromRows`, `boardToText`). Board coordinates: `(row, col)`
 0–6 from the top-left; tile ids never change, which is what the client animates by.
 

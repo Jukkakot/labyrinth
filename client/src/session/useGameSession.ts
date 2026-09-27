@@ -2,6 +2,7 @@ import { Client } from "@colyseus/sdk";
 import {
   CLOSE_CODES,
   GAME_ERROR_CODES,
+  type BotSeatPayload,
   type CommandResult,
   type GameErrorCode,
   type JoinErrorCode,
@@ -109,7 +110,7 @@ export function noticeKey(code: string): NoticeKey {
   return (GAME_ERROR_CODES as readonly string[]).includes(code) ? `errors.${code as GameErrorCode}` : "errors.generic";
 }
 
-type Command = "start" | "shift" | "move" | "kick";
+type Command = "start" | "addBot" | "removeBot" | "shift" | "move" | "kick";
 
 export interface GameSession {
   status: SessionStatus;
@@ -126,6 +127,10 @@ export interface GameSession {
   retry(): void;
   /** The host starts the game from the waiting room. Resolves undefined without sending while another command is pending. */
   start(): Promise<CommandResult | undefined>;
+  /** The host seats a bot in a free seat of the waiting room. Resolves undefined without sending while another command is pending. */
+  addBot(seat: number): Promise<CommandResult | undefined>;
+  /** The host removes the bot in `seat` from the waiting room. Resolves undefined without sending while another command is pending. */
+  removeBot(seat: number): Promise<CommandResult | undefined>;
   /** Sends a shift. Resolves undefined without sending while another command is pending. */
   shift(insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]): Promise<CommandResult | undefined>;
   /** Sends a move (the own square = stay). Resolves undefined without sending while another command is pending. */
@@ -266,7 +271,7 @@ export function useGameSession(connector?: Connector): GameSession {
   }, [notice]);
 
   /** Sends one command at a time; a rejection becomes a notice. */
-  const send = useCallback(async (cmd: Command, payload: StartPayload | ShiftPayload | MovePayload | KickPayload) => {
+  const send = useCallback(async (cmd: Command, payload: StartPayload | BotSeatPayload | ShiftPayload | MovePayload | KickPayload) => {
     const room = roomRef.current;
     if (!room || pendingRef.current) return undefined;
     pendingRef.current = true;
@@ -291,6 +296,8 @@ export function useGameSession(connector?: Connector): GameSession {
   }, []);
 
   const start = useCallback(() => send("start", {}), [send]);
+  const addBot = useCallback((seat: number) => send("addBot", { seat }), [send]);
+  const removeBot = useCallback((seat: number) => send("removeBot", { seat }), [send]);
   const shift = useCallback(
     (insertion: ShiftPayload["insertion"], rotation: ShiftPayload["rotation"]) => send("shift", { insertion, rotation }),
     [send],
@@ -322,6 +329,8 @@ export function useGameSession(connector?: Connector): GameSession {
     joinById,
     retry,
     start,
+    addBot,
+    removeBot,
     shift,
     move,
     kick,
