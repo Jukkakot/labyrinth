@@ -1,7 +1,8 @@
 # how-to-play Specification
 
 ## Purpose
-TBD - created by archiving change how-to-play. Update Purpose after archive.
+The "Näin pelaat" rules screen: where it opens from and what it must explain (goal, push, walk,
+treasures, return home, daily puzzle).
 
 ## Requirements
 
