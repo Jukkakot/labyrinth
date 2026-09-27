@@ -52,6 +52,7 @@ environment.
 | `NODE_ENV=production` | `render.yaml` env | Disables `/monitor` and `/playground` |
 | `PORT` | set by Render | Server listen port |
 | `AXIOM_DATASET` | `render.yaml` env (`labyrinth`) | Axiom dataset the production server ships its log lines to |
+| `AXIOM_EDGE` | `render.yaml` env | Edge domain of the dataset's region (`eu-central-1.aws.edge.axiom.co`); Axiom refuses ingest through `api.axiom.co` for EU datasets |
 | `AXIOM_TOKEN` | Render dashboard (secret, `sync: false`) | Axiom API token, **ingest-only** for `labyrinth`; without it nothing is shipped |
 
 ## Logs — Implemented

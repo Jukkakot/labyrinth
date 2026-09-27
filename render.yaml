@@ -20,5 +20,8 @@ services:
       # Central log store (docs/operations.md → Logs). The ingest token is set in the dashboard.
       - key: AXIOM_DATASET
         value: labyrinth
+      # The dataset lives in Axiom's EU region; ingest must go to its edge domain.
+      - key: AXIOM_EDGE
+        value: eu-central-1.aws.edge.axiom.co
       - key: AXIOM_TOKEN
         sync: false

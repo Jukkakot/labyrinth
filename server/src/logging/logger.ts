@@ -9,10 +9,12 @@ export type LogFields = { room?: string; player?: string; err?: unknown } & Reco
 
 type Mode = "production" | "development" | "test";
 
-/** Where shipped lines go: the Axiom dataset and an ingest token. */
+/** Where shipped lines go: the Axiom dataset, an ingest token and the dataset's edge region. */
 export interface AxiomOptions {
   dataset: string;
   token: string;
+  /** Edge domain of the dataset's region (e.g. `eu-central-1.aws.edge.axiom.co`); Axiom refuses ingest elsewhere. */
+  edge?: string;
 }
 
 export interface LoggerOptions {
@@ -28,8 +30,9 @@ const axiomTransport = (options: AxiomOptions): DestinationStream => pino.transp
 
 /** Axiom settings when the production server should ship its lines; never in development or tests. */
 export function axiomOptionsOf(env: NodeJS.ProcessEnv): AxiomOptions | undefined {
-  const { AXIOM_TOKEN: token, AXIOM_DATASET: dataset } = env;
-  return modeOf(env) === "production" && token && dataset ? { dataset, token } : undefined;
+  const { AXIOM_TOKEN: token, AXIOM_DATASET: dataset, AXIOM_EDGE: edge } = env;
+  if (modeOf(env) !== "production" || !token || !dataset) return undefined;
+  return edge ? { dataset, token, edge } : { dataset, token };
 }
 
 const DEV_LOG_FILE = fileURLToPath(new URL("../../../logs/dev.log", import.meta.url));

@@ -76,6 +76,7 @@ describe("observability › Central log store", () => {
     expect(axiomOptionsOf({ ...shipping, NODE_ENV: "development" })).toBeUndefined();
     expect(axiomOptionsOf({ ...shipping, NODE_ENV: "test" })).toBeUndefined();
     expect(axiomOptionsOf(shipping)).toEqual({ dataset: "labyrinth", token: "xaat-test" });
+    expect(axiomOptionsOf({ ...shipping, AXIOM_EDGE: "eu-central-1.aws.edge.axiom.co" })).toMatchObject({ edge: "eu-central-1.aws.edge.axiom.co" });
   });
 });
 
