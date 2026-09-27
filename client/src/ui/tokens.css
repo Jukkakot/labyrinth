@@ -56,8 +56,12 @@
   color-scheme: light dark;
 }
 
+/*
+ * Dark scheme: follows the device unless the player forced light, or is forced by the player
+ * (settings → theme sets data-theme on <html>). The two blocks must stay identical.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #141a17;
     --surface: #1d2521;
     --text: #e8ece9;
@@ -78,4 +82,31 @@
     --hint-halo: var(--bg);
     --pawn-outline: #141a17;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #141a17;
+  --surface: #1d2521;
+  --text: #e8ece9;
+  --muted: #9aa8a0;
+  --accent: #8fc9a8;
+  --accent-contrast: #141a17;
+  --border: #34403a;
+  --danger: #f19999;
+
+  --tile: #26302b;
+  --tile-fixed: #303c35;
+  --tile-mark: #56675d;
+  --corridor: #8fc9a8;
+  --corridor-icon: #141a17;
+  --highlight: #f0a060;
+  --target: #c79bff;
+  --target-contrast: #141a17;
+  --hint-halo: var(--bg);
+  --pawn-outline: #141a17;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }

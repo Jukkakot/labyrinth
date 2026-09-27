@@ -156,7 +156,8 @@
     "hint": "Napauta korostettua ruutua",
     "stay": "Jää paikalleen",
     "to": "Siirry ruutuun: rivi {{row}}, sarake {{col}}",
-    "stayHere": "Oma ruutu – jää paikalleen"
+    "stayHere": "Oma ruutu – jää paikalleen",
+    "go": "Kävele tänne"
   },
   "hint": {
     "button": "Vihje",
@@ -266,5 +267,33 @@
     "handOver": "Anna botin pelata",
     "takeBack": "Ota vuoro takaisin",
     "playing": "Botti pelaa puolestasi. Voit ottaa vuoron takaisin milloin vain."
+  },
+  "turnAlert": {
+    "title": "● Sinun vuorosi – {{title}}"
+  },
+  "settings": {
+    "open": "Asetukset",
+    "title": "Asetukset",
+    "back": "Takaisin",
+    "confirmations": "Vahvistukset",
+    "confirmShift": "Vahvista työntö",
+    "confirmShiftNote": "Nuolen napautus näyttää ensin esikatselun, toinen napautus työntää.",
+    "confirmMove": "Vahvista siirto",
+    "confirmMoveNote": "Ruudun napautus valitsee sen, toinen napautus kävelee sinne.",
+    "theme": "Teema",
+    "themes": {
+      "system": "Laite",
+      "light": "Vaalea",
+      "dark": "Tumma"
+    },
+    "feedback": "Äänet ja vuoroilmoitus",
+    "sounds": "Äänet",
+    "soundsNote": "Lyhyt äänimerkki, kun vuorosi alkaa tai löydät aarteen.",
+    "turnTitle": "Välilehden otsikko",
+    "turnTitleNote": "Kun peli on taustalla, välilehden otsikko kertoo vuorosi alkaneen.",
+    "vibration": "Värinä",
+    "vibrationNote": "Lyhyt värinä, kun vuorosi alkaa.",
+    "vibrationUnsupported": "Tämä laite ei tue värinää.",
+    "deviceOnly": "Asetukset tallentuvat vain tähän laitteeseen."
   }
 }

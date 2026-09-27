@@ -7,7 +7,10 @@ import App from "./App.tsx";
 import { CrashBoundary } from "./CrashBoundary.tsx";
 import { installGlobalErrorHandlers } from "./logging/globalHandlers.ts";
 import { startLogShipping } from "./logging/logger.ts";
+import { startTheme } from "./settings/theme.ts";
 
+// Before the first render, so a forced theme does not flash the device's scheme.
+startTheme();
 installGlobalErrorHandlers();
 startLogShipping();
 

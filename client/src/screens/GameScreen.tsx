@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BotSpeed } from "@labyrinth/protocol";
-import { reachableSquares, reverseOf, rotate, shiftBoard, type BotTurn, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
+import { reachableSquares, reverseOf, rotate, sameSquare, shiftBoard, type BotTurn, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
@@ -22,6 +22,9 @@ import { TurnLine } from "../game/TurnLine.tsx";
 import { nextTrace } from "../game/turnTrace.ts";
 import { NOTICE_MS, type GameSession } from "../session/useGameSession.ts";
 import type { GameView } from "../session/viewModel.ts";
+import { playSound } from "../settings/feedback.ts";
+import { useSettings } from "../settings/settings.ts";
+import { useTurnAlert } from "../settings/turnAlert.ts";
 import { FirstGameTips } from "../tips/FirstGameTips.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
 import { Notice } from "../ui/Notice.tsx";
@@ -57,6 +60,10 @@ export function GameScreen({ view, session }: GameScreenProps) {
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const { confirmShift, confirmMove } = useSettings();
+  // Confirm move on: the tapped square waiting for a second tap or "Kävele tänne".
+  const [chosen, setChosen] = useState<Square>();
+  useTurnAlert(view);
 
   // A new synced board (someone shifted, the turn moved) drops the preview and the local rotation.
   const boardKey = `${view.board.spare.id}|${view.lastInsertion ?? ""}|${view.turnSeat}|${view.step}`;
@@ -65,6 +72,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
     setSeenKey(boardKey);
     setSelected(undefined);
     setTurns(0);
+    setChosen(undefined);
   }
 
   const spare = rotate(view.board.spare, turns);
@@ -132,12 +140,16 @@ export function GameScreen({ view, session }: GameScreenProps) {
 
   const select = (insertion: InsertionId) => {
     if (!canAct || insertion === forbidden) return;
-    if (insertion === selected) void confirm(insertion);
+    if (insertion === selected || !confirmShift) void confirm(insertion);
     else setSelected(insertion);
   };
 
   const moveTo = (target: Square) => {
     if (!pending) void move(target);
+  };
+  const choose = (target: Square) => {
+    if (!confirmMove || (chosen && sameSquare(chosen, target))) moveTo(target);
+    else if (!pending) setChosen(target);
   };
   const me = view.seats.find((s) => s.isMe);
 
@@ -163,6 +175,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
   }
   useEffect(() => {
     if (!collected) return;
+    playSound("treasure");
     const timer = setTimeout(() => setCollected(undefined), NOTICE_MS);
     return () => clearTimeout(timer);
   }, [collected]);
@@ -219,7 +232,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
         reach={reach}
         hint={hintSquare}
         shiftTargets={shifting ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
-        moveTargets={view.reachable ? { reachable: view.reachable, busy: pending, onSelect: moveTo } : undefined}
+        moveTargets={view.reachable ? { reachable: view.reachable, busy: pending, selected: chosen, onSelect: choose } : undefined}
       />
       {view.finished ? (
         view.spectating ? (
@@ -266,6 +279,9 @@ export function GameScreen({ view, session }: GameScreenProps) {
           enabled={view.isMyTurn}
           pending={pending}
           onStay={() => me && moveTo(me.square)}
+          chosen={chosen !== undefined}
+          onGo={() => chosen && moveTo(chosen)}
+          onCancelChoice={() => setChosen(undefined)}
           onHint={showHint}
           onUndo={view.daily ? () => void undo?.() : undefined}
           canUndo={view.undoable}
