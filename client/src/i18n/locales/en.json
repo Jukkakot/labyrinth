@@ -108,6 +108,8 @@
     "idLabel": "Game {{id}}. Tap to copy.",
     "copyLine": "Game {{id}} · {{date}} {{time}} · v {{ver}}",
     "copied": "Copied",
+    "localLabel": "Own game",
+    "localIdLabel": "{{label}}. Tap to copy the game id.",
     "copyFallback": "Copy this line into your bug report:"
   },
   "turn": {

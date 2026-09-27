@@ -147,7 +147,10 @@ server and client together.
 
 ## Investigating a reported bug
 
-Report shape: "around 14:30 in game brave-otters-sing, X happened".
+Report shape: "around 14:30 in game brave-otters-sing, X happened". Games on the device show
+"Päivän pulma" / "Oma peli" in the badge, but the copied line carries their full `local-…` id;
+they have no server room, so only client logs can have it (`client.local.*` / `client.daily.*`
+info lines ship only with `?debug=1`).
 
 1. Convert the reported local time (Europe/Helsinki) to UTC.
 2. Query Axiom (Axiom MCP `queryApl`): `['labyrinth'] | where room == "<game id>" | sort by _time

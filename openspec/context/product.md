@@ -53,7 +53,8 @@ Agreed before any capability was specified. Once a capability has a spec under
 - The player's own target tile is always highlighted on the board.
 - During a game the room's readable id (e.g. `brave-otters-sing`) is shown small in
   the top area. Tapping it copies "game id · local date and time · app version"
-  to the clipboard for bug reports.
+  to the clipboard for bug reports. Games on the device show "Päivän pulma" / "Oma peli"
+  there instead of their long `local-…` id (the copied line keeps the full id).
 - Treasures and all UI icons come from Tabler Icons (line style). Board tiles use
   the corridor style: plain tile, corridor drawn in the accent colour, treasure
   icon on the corridor. Comparison page: https://claude.ai/artifact/UffuCoPpjAtHTYcBJJgCjz

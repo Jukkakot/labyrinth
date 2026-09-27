@@ -108,6 +108,8 @@
     "idLabel": "Peli {{id}}. Napauta kopioidaksesi.",
     "copyLine": "Peli {{id}} · {{date}} {{time}} · v {{ver}}",
     "copied": "Kopioitu",
+    "localLabel": "Oma peli",
+    "localIdLabel": "{{label}}. Napauta kopioidaksesi pelin tunnus.",
     "copyFallback": "Kopioi tämä rivi bugiraporttiin:"
   },
   "turn": {

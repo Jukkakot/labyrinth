@@ -5,6 +5,11 @@
   gap: var(--space-1) var(--space-2);
 }
 
+/* One line at phone width: the label never wraps inside the badge. */
+.label {
+  white-space: nowrap;
+}
+
 .status {
   font-size: var(--text-s);
   color: var(--accent);
