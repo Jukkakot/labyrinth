@@ -55,6 +55,11 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
 Ideas for existing features, picked up after the roadmap items above or when a change touches the
 same area. Each becomes its own change (or joins a related one) when picked up.
 
+- **Bots rule out found treasures** (from `smarter-bots`, left because the job could not touch
+  `GameRoom.ts`): the room passes each opponent's public found list to the bot, so the look-ahead
+  bot drops those treasures from an opponent's possible targets. Still fair (found treasures are
+  public). Small; fits with `hint` (18), which uses the same bot.
+
 - **Server wake-up progress** (start screen, spec `game-session` → early wake-up; suggested
   2026-09-27): while "Herätetään palvelinta…" is shown, count the seconds waited so far ("0:23"),
   and show a loading animation, so the player sees that something is waiting and progressing
