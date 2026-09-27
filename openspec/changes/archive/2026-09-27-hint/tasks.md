@@ -25,7 +25,7 @@
 ## 4. Docs
 
 - [x] 4.1 Wiki: `architecture.md` (bots: found treasures; client: hint)
-- [ ] 4.2 Roadmap item 18 and the backlog item marked done (coordinator, at archive); server
+- [x] 4.2 Roadmap item 18 and the backlog item marked done (coordinator, at archive); server
       passes found lists to its bots (coordinator)
 
 Note: UI check (mobile portrait: button row fits, ring readable in both themes) left to the coordinator; this job ran no dev servers.

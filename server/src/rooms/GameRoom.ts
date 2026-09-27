@@ -529,6 +529,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
         pawn: squareOf(p),
         found: p.found.length,
         cardsLeft: p.cards - p.found.length,
+        foundTreasures: [...p.found] as TreasureId[],
       })),
       lastInsertion: isInsertionId(last) ? last : undefined,
       target: (this.state.players.get(botKey(seat))!.target || undefined) as TreasureId | undefined,

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import { matchMaker } from "colyseus";
 import type { CommandResult } from "@labyrinth/protocol";
-import { chooseBotTurn, type BotStrategy } from "@labyrinth/rules";
+import { chooseBotTurn, type BotStrategy, type BotView } from "@labyrinth/rules";
 import appConfig from "../src/app.config.js";
 import { configureLogger } from "../src/logging/logger.js";
 import type { GameRoom } from "../src/rooms/GameRoom.js";
@@ -195,6 +195,25 @@ describe("bots in a room", () => {
       }
       expect(logs.byEvt("cmd.accepted").filter((l) => l.bot === true && l.cmd === "move").length).toBeGreaterThanOrEqual(2);
       expect(logs.byEvt("bot.fallback")).toHaveLength(0);
+    });
+
+    it("the bot's view carries every seat's public found treasures, and no other seat's target", async () => {
+      const { room: r, clients } = await room(1);
+      await addBot(clients[0]!, 2);
+      const views: BotView[] = [];
+      r.botStrategy = (view, rng) => {
+        views.push(view);
+        return chooseBotTurn(view, rng);
+      };
+      forceStartSeat(r, 1);
+      await clients[0]!.request("start", {});
+      const me = r.state.players.get(clients[0]!.sessionId)!;
+      me.found.push("crown");
+      await clients[0]!.request("shift", { insertion: "N1", rotation: 0 });
+      await clients[0]!.request("move", { row: me.row, col: me.col });
+      await vi.waitFor(() => expect(views.length).toBeGreaterThan(0));
+      expect(views[0]!.seats.find((s) => s.seat === 1)).toMatchObject({ found: 1, foundTreasures: ["crown"] });
+      expect(views[0]!.seats.find((s) => s.seat === 2)?.foundTreasures).toEqual([]);
     });
 
     it("Fallback: a rejected choice logs bot.fallback, then the bot shifts as allowed and stays", async () => {

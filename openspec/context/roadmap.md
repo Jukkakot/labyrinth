@@ -26,8 +26,8 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
     user: nobody reads it). (b) While a shift is previewed (tile placed at an arrow, not yet
     confirmed), already highlight the squares the player could reach after it, computed in the
     client with `packages/rules`
-14. `resume-game`: the start screen offers "Jatka peliä" when the app was closed mid-game and the
-    seat is still held
+14. ~~`resume-game`~~ (done): "Jatka peliä" on the start screen within the 5-minute seat hold
+    after the app was closed mid-game; the wake-up wait counts seconds with a spinner
 15. `local-play-and-pwa`: new games vs bots run in the browser with `packages/rules` (no server,
     no wake-up wait, works offline) and the app installs to the home screen as a PWA. Multiplayer
     and watching stay on the server. An online game never switches to local play by itself
@@ -39,8 +39,8 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
     its own target reachable; a bot tournament (simulation of many games) compares strategies by
     win rate. Fair: no knowledge of others' targets. To watch: it must stay fun to play against,
     not so strong or so blocking that it feels annoying
-18. `hint`: a "Vihje" button shows the move the best bot would make for you (the shift and where
-    to walk), computed in the client from your own information only. Builds on `smarter-bots`
+18. ~~`hint`~~ (done): "Vihje" previews the look-ahead bot's shift and rings the square to walk to,
+    computed in the client from your own information; bots (and the hint) skip found treasures
 19. `daily-puzzle`: one seed per day for everyone, solo with no opponents: reach the treasure in as
     few turns as possible; result shareable as text (Wordle style). Builds on local play
 20. `autoplay` (requested 2026-09-27): a player can hand their seat to the bot for a while and take
@@ -55,12 +55,7 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
 Ideas for existing features, picked up after the roadmap items above or when a change touches the
 same area. Each becomes its own change (or joins a related one) when picked up.
 
-- **Bots rule out found treasures** (from `smarter-bots`, left because the job could not touch
-  `GameRoom.ts`): the room passes each opponent's public found list to the bot, so the look-ahead
-  bot drops those treasures from an opponent's possible targets. Still fair (found treasures are
-  public). Small; fits with `hint` (18), which uses the same bot.
-
-- **Server wake-up progress** (start screen, spec `game-session` → early wake-up; suggested
-  2026-09-27): while "Herätetään palvelinta…" is shown, count the seconds waited so far ("0:23"),
-  and show a loading animation, so the player sees that something is waiting and progressing
-  rather than stuck. Honour reduced motion.
+- **Hint ring stands out** (from `hint`, seen in the UI check 2026-09-27): the hint's double ring
+  uses the same orange as the reach circles in the shift preview, so it is only moderately easy to
+  spot. Give it its own look (e.g. a pulsing or differently coloured ring, static under reduced
+  motion).
