@@ -23,15 +23,53 @@
   stroke-width: 4;
 }
 
-/* Hint: a thick solid ring on a light halo, unlike the thin reach rings and the dashed move outline. */
+/*
+ * Hint: a thick solid ring in a colour of its own (Okabe–Ito yellow, like the "Vihje" bulb) on a dark
+ * halo, unlike the thin orange reach rings and the dashed move outline; it breathes gently.
+ * Local tokens: tokens.css is the eventual home.
+ */
+.hintMark {
+  --hint: #f0e442;
+  --hint-halo: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  .hintMark {
+    --hint-halo: var(--bg);
+  }
+}
+
 .hintHalo {
   fill: none;
-  stroke: var(--surface);
+  stroke: var(--hint-halo);
   stroke-width: 13;
+  animation: breatheHalo 1.2s ease-in-out infinite alternate;
 }
 
 .hint {
   fill: none;
-  stroke: var(--highlight);
+  stroke: var(--hint);
   stroke-width: 7;
+  animation: breathe 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes breathe {
+  to {
+    stroke-width: 11;
+    stroke-opacity: 0.7;
+  }
+}
+
+@keyframes breatheHalo {
+  to {
+    stroke-width: 17;
+    stroke-opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hintHalo,
+  .hint {
+    animation: none;
+  }
 }

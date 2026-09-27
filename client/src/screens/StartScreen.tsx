@@ -7,6 +7,7 @@ import { checkNickname, loadNickname, randomNickname } from "../session/nickname
 import type { ServerWake } from "../session/serverWake.ts";
 import type { OpenGames } from "../session/useOpenGames.ts";
 import type { GameSession } from "../session/useGameSession.ts";
+import { TipsReset } from "../tips/TipsReset.tsx";
 import { Button } from "../ui/Button.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
 import { Message } from "../ui/Message.tsx";
@@ -290,6 +291,7 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
         <>
           <div>{t("footer.rulesVersion", { version: RULES_VERSION })}</div>
           <BuildInfo wake={wake} />
+          <TipsReset />
         </>
       }
     >
