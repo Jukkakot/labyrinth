@@ -38,6 +38,8 @@ jobs:
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
           VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
+      - name: Version file for the production smoke
+        run: echo "{\"version\":\"${GITHUB_SHA::7}\"}" > client/dist/version.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: client/dist

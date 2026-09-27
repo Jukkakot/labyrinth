@@ -15,5 +15,19 @@
       "Bash(npx tsc --noEmit)",
       "Bash(npx oxlint)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-edited.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }

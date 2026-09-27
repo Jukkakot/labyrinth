@@ -17,7 +17,10 @@
 ## Release flow — Implemented
 
 commit → push to `main` (Claude pushes before each summary) → CI (lint, typecheck, tests, build, bundle
-size, E2E smoke) → Pages deploy (client) and Render deploy hook (server, CI's `deploy-server` job after green checks). No staging
+size, E2E smoke) → Pages deploy (client) and Render deploy hook (server, CI's `deploy-server` job after green checks) →
+**production smoke** (`prod-smoke.yml`: waits until the live server's `/health` version and the
+client's `version.json` carry this commit's code, then `npm run e2e:prod -w @labyrinth/e2e` plays a
+1v1 quick game on the live site and leaves; also daily at 05:17 UTC and by hand). No staging
 environment.
 
 ### After a deploy (manual checks)
@@ -35,12 +38,9 @@ environment.
 5. In Render logs (`list_logs`, text = the game id) find `game.setup`; its seed reproduces the
    starting board: `boardToText(setupBoard(seed))`. `game.started` has the `dealSeed`, seats and
    start seat. Each `cmd.accepted` `shift` line then replays one shift with `shiftBoard`.
-6. **Leave through the Render proxy:** in one tab tap the door icon → "Poistu". The tab is on the
-   start screen at once and the other tab wins. In the logs for the game id, look for how the
-   leave arrived: `player.left` with `code: 4000` (consented, removed at once, as intended) or
-   `player.dropped` followed 5 minutes later by `player.removed { reason: "timeout" }` (the proxy
-   turned the leave into a drop; the other player then waits for the removal). Record the result
-   here.
+6. **Leave through the Render proxy** — checked 2026-09-27: a leave arrives as `player.left`
+   `code: 4000` (consented) and the player is removed at once; the production smoke repeats the
+   leave on every deploy.
 
 ## Configuration — Implemented
 

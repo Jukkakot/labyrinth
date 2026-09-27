@@ -48,11 +48,18 @@ npm run e2e   # smoke test, when UI or connection code changed
   uploads them as the `playwright-report` artifact. Check `logs/dev.log` for the `client.error`
   line — that is how the empty-state bug was found.
 - Scope: smoke only. Feature behaviour belongs in unit and room tests.
+- **Production smoke:** `npm run e2e:prod -w @labyrinth/e2e` runs `e2e/tests/prod.spec.ts` against
+  the live site (`PROD_URL`, default the Pages address) with `playwright.prod.config.ts`; CI runs
+  it after every deploy (see operations → Release flow).
 
 ## Debugging — Implemented
 
 - **VS Code**: Run and Debug → "Server" (tsx with the `source` condition, so breakpoints in
   `packages/rules` work), "Client" (Chrome + Vite), or "Full stack".
+- **Dev shortcut:** `http://localhost:5173/?dev=1v3` (1v1–1v3) starts a quick game against bots
+  as soon as the server is awake; development builds only.
+- **Lint hook** (for Claude): `.claude/hooks/lint-edited.mjs` runs oxlint on every `.ts`/`.tsx`
+  file Claude edits and hands problems back at once.
 - **Playwright MCP** (for Claude): `playwright-mobile` = Galaxy S24 (default for UI checks),
   `playwright-ios` = iPhone 15, `playwright` = desktop; all headless and isolated.
 - **Render MCP** (for Claude): deploys, service details, production logs. See

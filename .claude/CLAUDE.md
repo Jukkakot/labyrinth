@@ -64,7 +64,8 @@ everything works and is final.
   extra work just to produce it; skip it when nothing user-visible changed.
 - Bug reports ("around 14:30 in game brave-otters-sing, X happened"): follow
   [docs/operations.md → Investigating a reported bug](../docs/operations.md#investigating-a-reported-bug).
-- UI checks: Playwright MCP `playwright-mobile` (Galaxy S24), **portrait only** by default. Check
+- UI checks: Playwright MCP `playwright-mobile` (Galaxy S24), **portrait only** by default. To
+  reach a running bot game directly, open `/?dev=1v3` (1v1–1v3; development only). Check
   landscape and a narrow desktop only when a change reshapes a layout (new screen, new layout
   structure). This overrides the global "test every UI change in three sizes" rule for this
   project. Check facts with snapshots or DOM queries; screenshot only where the look needs judging. Save screenshots under `.playwright-mcp/` (git-ignored) and close the tabs you opened

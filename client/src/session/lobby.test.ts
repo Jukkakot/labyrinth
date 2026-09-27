@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { devBotCount } from "./devShortcut.ts";
 import { dropInviteFromUrl, inviteFromUrl, inviteUrl } from "./inviteLink.ts";
 import { checkNickname, loadNickname, NAME_LANGUAGES, nameWords, randomNickname, saveNickname } from "./nickname.ts";
 import { toOpenGames, useOpenGames, type LobbyRoomLike, type RoomListing } from "./useOpenGames.ts";
@@ -133,6 +134,16 @@ describe("lobby › Open games list", () => {
     const connect = vi.fn(async () => Promise.reject(new Error("offline")));
     const { result } = renderHook(() => useOpenGames("", true, connect));
     await waitFor(() => expect(result.current.status).toBe("failed"));
+  });
+});
+
+describe("development shortcut ?dev=1vN", () => {
+  it("reads 1v1–1v3 in development only", () => {
+    expect(devBotCount("?dev=1v3", true)).toBe(3);
+    expect(devBotCount("?pool=x&dev=1v1", true)).toBe(1);
+    expect(devBotCount("?dev=1v4", true)).toBeUndefined();
+    expect(devBotCount("", true)).toBeUndefined();
+    expect(devBotCount("?dev=1v2", false)).toBeUndefined();
   });
 });
 

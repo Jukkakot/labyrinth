@@ -8,6 +8,8 @@ const CI = !!process.env.CI;
  */
 export default defineConfig({
   testDir: "./tests",
+  // The production smoke has its own config (playwright.prod.config.ts).
+  testIgnore: /prod\.spec\.ts$/,
   timeout: 30_000,
   expect: { timeout: 10_000 },
   retries: CI ? 1 : 0,
