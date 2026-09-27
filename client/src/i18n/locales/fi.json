@@ -217,5 +217,14 @@
     "speed": "Bottien nopeus",
     "lateInvite": "Peli oli jo alkanut – katsot sitä",
     "newBotGame": "Uusi bottipeli"
+  },
+  "tips": {
+    "target": "Kohteesi näkyy pelaajalistassa, ja sen laatta on merkitty laudalle violetilla.",
+    "push": "Aloita työntämällä vapaa laatta sisään: napauta nuolta laudan reunalla.",
+    "walk": "Kävele napauttamalla korostettua ruutua – tai jää paikallesi.",
+    "home": "Kaikki aarteet löydetty! Palaa lähtöruutuusi voittaaksesi.",
+    "close": "Sulje vinkki",
+    "reset": "Näytä vinkit uudelleen",
+    "resetDone": "Vinkit näytetään seuraavassa pelissä."
   }
 }

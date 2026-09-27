@@ -217,5 +217,14 @@
     "speed": "Bot speed",
     "lateInvite": "The game had already started – you are watching it",
     "newBotGame": "New bot game"
+  },
+  "tips": {
+    "target": "Your target is shown in the player list, and its tile is marked in purple on the board.",
+    "push": "Start by pushing the spare tile in: tap an arrow on the board's edge.",
+    "walk": "Walk by tapping a highlighted square – or stay where you are.",
+    "home": "All treasures found! Return to your start corner to win.",
+    "close": "Close tip",
+    "reset": "Show tips again",
+    "resetDone": "Tips will show in the next game."
   }
 }

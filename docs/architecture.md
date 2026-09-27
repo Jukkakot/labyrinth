@@ -166,6 +166,7 @@ client/src/
   session/      useGameSession (join, rejoin, commands, local-first leave), viewModel
                 (state → GameView), useOpenGames, serverWake, nickname, inviteLink, sessionToken
   game/         board SVG and its layers, turn line, player strip, step/kick/leave controls
+  tips/         first-game tips (pure pick + localStorage) and the start screen's reset link
   ui/           tokens.css and shared components (Screen, Message, Button, Badge, Notice, …)
   logging/ i18n/ config.ts CrashBoundary.tsx
 ```
@@ -182,6 +183,9 @@ client/src/
   newly opened app offers "Jatka peliä" within the server's 5-minute seat hold. `leave()` is local-first: the start
   screen shows at once, then `room.leave()`. Close codes 4100/4101 and join failures become a
   start-screen notice.
+- **First-game tips:** which one-time tips were seen is kept in localStorage
+  (`labyrinth.tips.seen`); the tips take plain props from the game screen, so they do not depend on
+  the session or its transport.
 - **Early wake-up:** the start screen fetches `/health` once per page load (retries up to 90 s) so
   a sleeping Render server wakes while the player types; join actions wait for it, and the screen
   counts the seconds waited.
