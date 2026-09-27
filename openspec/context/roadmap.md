@@ -33,7 +33,7 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
     and watching stay on the server. An online game never switches to local play by itself
 16. `first-game-tips`: 3–4 hints during the first game (push a row from an arrow, walk to a
     highlighted square, your target, return home); shown once, can be reset
-17. `smarter-bots` (**parallel candidate**: `packages/rules` only): replaces the bot with the
+17. ~~`smarter-bots`~~ (done): look-ahead bot that blocks every opponent (leader 1.25x), 1-in-5 selfish turns so games never lock; tournament 90/61/42 % vs 1/2/3 greedy bots. Originally: replaces the bot with the
     best one we can make; no difficulty levels (the user: nobody wants to pick a bot). Look-ahead;
     it blocks **all** opponents evenly, the leader with a slightly higher priority, while keeping
     its own target reachable; a bot tournament (simulation of many games) compares strategies by
