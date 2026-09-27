@@ -1,0 +1,114 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: Private game and invite link`
+- TO: `### Requirement: Invite link`
+
+## MODIFIED Requirements
+
+### Requirement: Nickname
+Every player SHALL have a nickname before joining or creating a game. The start screen MUST have a
+nickname field ("Nimimerkki"). A nickname is valid when, after trimming, it is 2–16 characters long
+and contains no control characters. Play, the quick bot games, joining from the list and
+"Liity peliin" MUST be disabled while the nickname is invalid, and a short hint MUST say what is
+wrong. The browser MUST remember the last nickname used and prefill the field with it; the
+nickname MUST NOT be stored anywhere else in the browser. When no nickname is remembered, the field
+MUST be prefilled with a random valid name, an adjective and an animal in the UI language (for
+example "Rohkea Ilves"), drawn from lists long enough that two players rarely get the same one.
+Next to the field a dice button ("Arvo uusi nimi") MUST replace the field's content with a new
+random name. A random name is remembered only once the player joins with it. The server MUST
+refuse to seat a player whose nickname is invalid. Nicknames need not be unique: players are still
+told apart by pawn shape and colour.
+
+#### Scenario: Valid nickname
+- **WHEN** a player types "  Maija  " into the nickname field
+- **THEN** the actions become available, and in the game they are called "Maija"
+
+#### Scenario: Too short
+- **WHEN** the nickname field holds "M"
+- **THEN** every join and create action is disabled and a hint says the nickname needs 2–16 characters
+
+#### Scenario: Remembered nickname
+- **WHEN** a player who played as "Maija" opens the start screen again later in the same browser
+- **THEN** the nickname field already says "Maija"
+
+#### Scenario: Random name for a new player
+- **WHEN** a player opens the start screen for the first time in a browser
+- **THEN** the nickname field already holds a random name such as "Rohkea Ilves", and Play can be tapped at once
+
+#### Scenario: Another random name
+- **WHEN** the player taps the dice button
+- **THEN** the field holds a new random name
+
+#### Scenario: Server refuses an invalid nickname
+- **WHEN** a join arrives at the server with a whitespace-only nickname
+- **THEN** the join is refused and no seat is taken
+
+#### Scenario: Same nickname twice
+- **WHEN** two players both call themselves "Maija"
+- **THEN** both are seated, told apart by their pawns
+
+### Requirement: Open games list
+The start screen SHALL list the games on the server that are still in their waiting room and have a
+free seat. Each entry MUST show the host's nickname and how many of the 4 seats are taken, bots
+included (for example "Maija · 2/4"). The list MUST update by itself while the start screen is
+open: new games appear, and games that fill up (with people or bots), start or close disappear.
+Tapping an entry MUST join that game's waiting room. If the game can no longer be joined, the
+player MUST stay on the start screen and see a calm message that the game is no longer open ("Peli
+ei ole enää avoinna"). With no open games, the list MUST say so briefly. Started games MUST NOT be
+listed.
+
+#### Scenario: A game appears
+- **WHEN** another player creates a game while the viewer is on the start screen
+- **THEN** it appears in the viewer's list with the host's nickname and 1/4, without reloading
+
+#### Scenario: Bots count as taken seats
+- **WHEN** the host of a listed game adds a bot
+- **THEN** its entry changes from 1/4 to 2/4, and after the host fills every free seat with bots it disappears from the list
+
+#### Scenario: Join from the list
+- **WHEN** the viewer taps "Maija · 2/4"
+- **THEN** the viewer is seated in Maija's waiting room
+
+#### Scenario: Game started meanwhile
+- **WHEN** the viewer taps an entry just after that game started
+- **THEN** the viewer stays on the start screen and sees "Peli ei ole enää avoinna"
+
+#### Scenario: Started and private games hidden
+- **WHEN** a listed game starts
+- **THEN** it is no longer in the list (there are no private games to hide)
+
+### Requirement: Invite link
+Every game on the server SHALL have an invite link that contains its game id; the waiting room's
+"Kutsu pelaajia" shares it. The start screen MUST NOT offer a way to create a private game, and the
+server MUST NOT create a game that is hidden from the list or from quick play. Opening an invite
+link MUST show the start screen in invite mode: it says the player has been invited to a game,
+shows the nickname field and a "Liity peliin" action, and offers a way back to the normal start
+screen. "Liity peliin" MUST seat the player in that game's waiting room. If the game does not exist
+any more, is full or has started, the player MUST see "Peli ei ole enää avoinna" and the normal
+start screen. After the invite link has been used, a reload MUST NOT use the link again.
+
+#### Scenario: Create a private game
+- **WHEN** a player looks at the start screen
+- **THEN** there is no "Luo yksityinen peli" action
+
+#### Scenario: Join by invite link
+- **WHEN** a friend opens the invite link of Maija's game, enters a nickname and taps "Liity peliin"
+- **THEN** they are seated in the same waiting room
+
+#### Scenario: Stale invite link
+- **WHEN** someone opens an invite link after that game has started
+- **THEN** they see "Peli ei ole enää avoinna" and the normal start screen
+
+#### Scenario: Quick play skips private games
+- **WHEN** Maija's game is in its waiting room with a free seat and another player taps Play
+- **THEN** the player is seated in Maija's game (no game on the server is hidden from quick play)
+
+### Requirement: Game limit
+The server SHALL keep at most a fixed number of games open at a time. When that many games exist,
+creating a new game, including by quick play when no game has a free seat, MUST be refused, and the
+player MUST see a calm message that the server is full and to try again later ("Palvelin on täynnä –
+yritä hetken päästä uudelleen"). Joining an existing game MUST still work.
+
+#### Scenario: Server full
+- **WHEN** the game limit is reached and a player taps Play while no game has a free seat
+- **THEN** no game is created and the player sees the server-full message
