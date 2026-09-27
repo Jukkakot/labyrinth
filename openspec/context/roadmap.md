@@ -14,7 +14,8 @@ One OpenSpec change at a time, in this order. Adjust as we learn.
 9. ~~`lobby`~~ (done): nickname, open games list, private games and invite links, waiting room with host start (24/n cards, random start seat), host leaving closes the room, game cap, local-first leave with a leave button in the game
 10. ~~`bot-player`~~ (done): host adds/removes bots in the waiting room, greedy bots behind a replaceable `BotStrategy`, bot turns through the normal command path, game ends when no person is left
 11. ~~`quick-play-vs-bots`~~ (done): start screen "Pikapeli botteja vastaan" 1v1/1v2/1v3, a private game started at once against 1–3 bots
-12. `spectators-and-rematch`: includes **bot-only games to watch** (requested 2026-09-27): start a
+12. ~~`spectators-and-rematch`~~ (done): running public games and invite links to watch, bot-only
+    games to watch at 1×/2×/4×, eye count for players, rematch with the same settings. Originally: **bot-only games to watch** (requested 2026-09-27): start a
     game of 2–4 bots and follow it as a spectator, maybe with a speed choice. A watched game then
     ends when its last spectator leaves, not "when no person is seated". Also useful for comparing
     bot strategies by eye

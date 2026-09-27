@@ -124,7 +124,7 @@ describe("board-view › Player progress shown › disconnected", () => {
       cards: 6,
       found: [],
     });
-    const { container } = render(<PlayerStrip view={{ seats: [seat(1, true), seat(2, false)], myTarget: undefined }} />);
+    const { container } = render(<PlayerStrip view={{ seats: [seat(1, true), seat(2, false)] }} />);
     const chip = container.querySelector("[data-seat='2']")!;
     expect(chip.hasAttribute("data-offline")).toBe(true);
     expect(chip.querySelector("svg.tabler-icon-wifi-off")).not.toBeNull();
@@ -138,7 +138,7 @@ describe("board-view › Player progress shown › names", () => {
   const four = long.map((name, i) => seatView(i + 1, name));
 
   it("Long nickname: the full names are in the accessible text, the visible name is its own ellipsis span", () => {
-    const { container } = render(<PlayerStrip view={{ seats: four, myTarget: undefined }} />);
+    const { container } = render(<PlayerStrip view={{ seats: four }} />);
     long.forEach((name, i) => {
       const chip = container.querySelector(`[data-seat='${i + 1}']`)!;
       expect(chip.textContent).toContain(name);

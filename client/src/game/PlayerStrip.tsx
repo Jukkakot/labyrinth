@@ -8,17 +8,19 @@ import { TREASURE_ICONS } from "./treasureIcons.ts";
 /**
  * One chip per seat: pawn shape and colour, the nickname (shortened with an ellipsis; the full name is
  * in the accessible text), treasures found out of cards, and a dimmed chip with an icon when
- * disconnected. A bot's chip has a robot icon. The viewer's chip also shows their target.
+ * disconnected. A bot's chip has a robot icon. A chip also shows the seat's target when the viewer
+ * knows it: their own, or every one for a spectator.
  */
-export function PlayerStrip({ view }: { view: Pick<GameView, "seats" | "myTarget"> }) {
+export function PlayerStrip({ view }: { view: Pick<GameView, "seats"> }) {
   const { t } = useTranslation();
-  const { seats, myTarget } = view;
-  const targetName = myTarget === "home" ? t("progress.home") : myTarget ? t(`treasures.${myTarget}`) : undefined;
-  const TargetIcon = myTarget === "home" ? IconHome : myTarget ? TREASURE_ICONS[myTarget] : undefined;
+  const { seats } = view;
   return (
     <ul className={styles.strip} aria-label={t("progress.label")}>
       {seats.map((s) => {
-        const showTarget = s.isMe && TargetIcon && targetName;
+        const target = s.target;
+        const targetName = target === "home" ? t("progress.home") : target ? t(`treasures.${target}`) : undefined;
+        const TargetIcon = target === "home" ? IconHome : target ? TREASURE_ICONS[target] : undefined;
+        const showTarget = TargetIcon && targetName;
         const summary = [
           t(s.isMe ? "board.pawnMe" : "board.pawn", { name: s.name }),
           s.isBot ? t("progress.bot") : undefined,
@@ -44,7 +46,7 @@ export function PlayerStrip({ view }: { view: Pick<GameView, "seats" | "myTarget
             </span>
             {!s.connected && <IconWifiOff size={16} stroke={2} aria-hidden="true" className={styles.offlineIcon} />}
             {showTarget && (
-              <span className={styles.target} data-target={myTarget} aria-hidden="true" title={targetName}>
+              <span className={styles.target} data-target={target} aria-hidden="true" title={targetName}>
                 <TargetIcon size={20} stroke={2} />
               </span>
             )}

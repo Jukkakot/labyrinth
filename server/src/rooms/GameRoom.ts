@@ -1,14 +1,17 @@
 import { randomInt } from "node:crypto";
 import { StateView } from "@colyseus/schema";
-import { ErrorCode, ServerError, type Client, type CloseCode, type Deferred } from "colyseus";
+import { ErrorCode, matchMaker, ServerError, type Client, type CloseCode, type Deferred } from "colyseus";
 import {
   BOT_NAMES,
   botSeatPayloadSchema,
   CLOSE_CODES,
   joinOptionsSchema,
   kickPayloadSchema,
+  MAX_SPECTATORS,
   movePayloadSchema,
+  rematchPayloadSchema,
   shiftPayloadSchema,
+  speedPayloadSchema,
   startPayloadSchema,
   type JoinErrorCode,
   type JoinOptions,
@@ -66,6 +69,8 @@ export interface GameMetadata {
   pool: string;
   /** Seats taken by people and bots; the list shows it and hides a game with all 4 taken. */
   seated: number;
+  /** True while the game runs and has room for another spectator: the start screen lists it to watch. */
+  watchable: boolean;
 }
 
 /** Why the room was closed for everyone (`room.closed`). */
@@ -136,6 +141,16 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   private closing = false;
   /** Bots of a quick bot game (0 = an ordinary game): seated and started when the creator joins. */
   private quickBots = 0;
+  /** A game of bots only, created by its first spectator. */
+  private watchGame = false;
+  /** The creation settings a rematch copies. */
+  private settings: { private: boolean; pool: string } = { private: false, pool: "" };
+  /** Seats that held a bot when the game started (a rematch seats bots there again). */
+  private startBotSeats: number[] = [];
+  /** Spectators by sessionId, dropped ones in their hold included. */
+  private spectators = new Set<string>();
+  /** The rematch game being created; a second request waits for the same one. */
+  private rematchPending?: Promise<void>;
   /** True once this room counts towards `openGames`. */
   private counted = false;
   private turnTimer?: { clear(): void };
@@ -207,6 +222,22 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       else this.passTurn();
     }),
 
+    setSpeed: this.command("setSpeed", speedPayloadSchema, (client, { speed }) => {
+      if (!this.spectators.has(client.sessionId)) throw new CommandRejection("NOT_SPECTATOR");
+      if (!this.running()) throw new CommandRejection("WRONG_PHASE", { expected: "shift|move" });
+      if (this.people().length > 0) throw new CommandRejection("PEOPLE_PLAYING", { people: this.people().length });
+      this.state.botSpeed = speed;
+    }),
+
+    rematch: this.command("rematch", rematchPayloadSchema, async (client) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player) throw new CommandRejection("NOT_SEATED");
+      if (this.state.phase !== "finished") throw new CommandRejection("WRONG_PHASE", { expected: "finished" });
+      if (this.state.rematchRoomId) return;
+      this.rematchPending ??= this.createRematch(player.name).finally(() => (this.rematchPending = undefined));
+      await this.rematchPending;
+    }),
+
     kick: this.command("kick", kickPayloadSchema, (client, { seat }) => {
       const kicker = this.state.players.get(client.sessionId);
       if (!kicker) throw new CommandRejection("NOT_SEATED");
@@ -239,6 +270,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
    */
   private startGame(): void {
     const seats = this.seats();
+    this.startBotSeats = this.bots().map((p) => p.seat).sort((a, b) => a - b);
     const dealSeed = this.drawDealSeed();
     const { stacks, startSeat } = dealGame(dealSeed, seats);
     this.stacks = stacks;
@@ -249,9 +281,53 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       p.target = stack[0]!;
     }
     void this.lock();
-    void this.setMetadata({ ...this.metadata, open: false });
-    log.info("game.started", this.logCtx(undefined, { dealSeed, seats, startSeat, ...(this.quickBots > 0 && { quick: true }) }));
+    // Locked for players; the room admits spectators itself (through the watch route).
+    this.maxClients = MAX_SEATS + MAX_SPECTATORS;
+    for (const client of this.clients) if (this.spectators.has(client.sessionId)) this.showAllPlayers(client);
+    log.info(
+      "game.started",
+      this.logCtx(undefined, { dealSeed, seats, startSeat, ...(this.quickBots > 0 && { quick: true }), ...(this.watchGame && { watch: true }) }),
+    );
     this.setTurn(startSeat);
+    this.syncListing({ open: false });
+  }
+
+  /**
+   * Creates the rematch game with this game's settings: the requester's nickname (they join it
+   * first and host it), the same privacy and pool, and the bots of the start (or a quick game's).
+   */
+  private async createRematch(nickname: string): Promise<void> {
+    const options: JoinOptions = {
+      nickname,
+      ...(this.settings.pool && { pool: this.settings.pool }),
+      ...(this.settings.private && { private: true }),
+      ...(this.quickBots > 0 ? { bots: this.quickBots } : { botSeats: this.startBotSeats }),
+    };
+    let roomId: string;
+    try {
+      ({ roomId } = await matchMaker.createRoom("game", options));
+    } catch (err) {
+      if (err instanceof Error && err.message === "SERVER_FULL") throw new CommandRejection("SERVER_FULL");
+      throw err;
+    }
+    this.state.rematchRoomId = roomId;
+    log.info("game.rematch", this.logCtx(undefined, { rematchRoom: roomId }));
+  }
+
+  /** True while turns are being played (not in the waiting room, not finished). */
+  private running(): boolean {
+    return this.state.phase === "shift" || this.state.phase === "move";
+  }
+
+  /** The seated people (dropped ones in their hold included). */
+  private people(): Player[] {
+    return [...this.state.players.values()].filter((p) => !p.bot);
+  }
+
+  /** Listing metadata: `extra` fields plus whether a spectator can come in now. */
+  private syncListing(extra: Partial<GameMetadata> = {}): void {
+    const watchable = this.running() && !this.closing && this.spectators.size < MAX_SPECTATORS;
+    void this.setMetadata({ ...this.metadata, ...extra, watchable });
   }
 
   /** Seats a bot with the first free bot name on its seat's start corner. */
@@ -337,6 +413,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     this.restartClock();
     this.clearBotTimer();
     void this.lock();
+    this.syncListing();
     log.info("game.finished", this.logCtx(undefined, { winner, reason }));
   }
 
@@ -358,11 +435,25 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     }
     if (this.state.phase === "finished") return;
     const survivor = soleSurvivor(this.seats());
-    // Bots never play on alone; a dropped person still in their hold counts as a person.
-    if (![...this.state.players.values()].some((p) => !p.bot)) this.finish(0, "noPeople");
+    // Bots never play on alone, only for someone watching; dropped people and spectators in their hold count.
+    if (this.nobodyLeft()) this.finish(0, "noPeople");
     else if (survivor !== undefined) this.finish(survivor, "lastPlayer");
     else if (seat === this.state.turnSeat) this.passTurn();
     else this.restartClock(true);
+  }
+
+  /** No person is seated and nobody watches: bots must not play on. */
+  private nobodyLeft(): boolean {
+    return this.people().length === 0 && this.spectators.size === 0;
+  }
+
+  /** A spectator left, or their hold ran out; a game nobody is left in ends. */
+  private removeSpectator(sessionId: string): void {
+    if (!this.spectators.delete(sessionId)) return;
+    this.state.spectators = this.spectators.size;
+    log.info("spectator.left", this.logCtx(undefined, { player: sessionId, spectators: this.spectators.size }));
+    this.syncListing();
+    if (this.running() && this.nobodyLeft()) this.finish(0, "noPeople");
   }
 
   /**
@@ -372,7 +463,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   private closeRoom(reason: CloseReason): void {
     this.closing = true;
     void this.lock();
-    void this.setMetadata({ ...this.metadata, open: false });
+    this.syncListing({ open: false });
     log.info("room.closed", this.logCtx(undefined, { reason }));
     for (const client of this.clients) client.leave(CLOSE_CODES.HOST_LEFT);
     for (const [sessionId, hold] of this.holds) {
@@ -414,7 +505,12 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     log.info("turn.changed", this.logCtx(undefined, { from, to: seat }));
     this.restartClock();
     this.clearBotTimer();
-    if (this.state.players.get(botKey(seat))) this.botTimer = this.clock.setTimeout(() => void this.playBotShift(seat), this.botShiftDelayMs);
+    if (this.state.players.get(botKey(seat))) this.botTimer = this.clock.setTimeout(() => void this.playBotShift(seat), this.botDelay(this.botShiftDelayMs));
+  }
+
+  /** A bot pause at the current speed. */
+  private botDelay(ms: number): number {
+    return ms / this.state.botSpeed;
   }
 
   private clearBotTimer(): void {
@@ -457,7 +553,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       if (!retry.ok) return; // nothing allowed (the turn changed meanwhile): the next setTurn takes over
       to = undefined;
     }
-    this.botTimer = this.clock.setTimeout(() => void this.playBotMove(seat, to), this.botMoveDelayMs);
+    this.botTimer = this.clock.setTimeout(() => void this.playBotMove(seat, to), this.botDelay(this.botMoveDelayMs));
   }
 
   /** A bot's move to `to`, or staying (always allowed) when there is none or it is rejected. */
@@ -509,6 +605,11 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       log.info("room.refused", { reason });
       throw refuse(reason === "nickname" ? "INVALID_NICKNAME" : "INVALID_OPTIONS");
     }
+    // Watching needs bots to watch: a spectator of a running game joins, never creates.
+    if (parsed.data.watch && !parsed.data.bots) {
+      log.info("room.refused", { reason: "options" });
+      throw refuse("INVALID_OPTIONS");
+    }
     if (GameRoom.openGames >= GameRoom.maxOpenGames) {
       log.warn("room.refused", { reason: "cap", open: GameRoom.openGames });
       throw refuse("SERVER_FULL");
@@ -517,14 +618,20 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     this.counted = true;
 
     await super.onCreate(options);
-    this.quickBots = parsed.data.bots ?? 0;
-    if (parsed.data.private || this.quickBots > 0) await this.setPrivate(true);
-    await this.setMetadata({ host: "", open: true, pool: parsed.data.pool ?? "", seated: 0 });
+    const { data } = parsed;
+    this.quickBots = data.bots ?? 0;
+    this.watchGame = data.watch ?? false;
+    this.settings = { private: data.private ?? false, pool: data.pool ?? "" };
+    if (data.speed) this.state.botSpeed = data.speed;
+    if (data.private || this.quickBots > 0) await this.setPrivate(true);
+    await this.setMetadata({ host: "", open: true, pool: data.pool ?? "", seated: 0, watchable: false });
     this.seed = randomInt(0, MAX_SEED + 1);
     const board = setupBoard(this.seed);
     this.state.squares.push(...board.squares.map(toTileState));
     this.state.spare = toTileState(board.spare);
-    log.info("game.setup", this.logCtx(undefined, { seed: this.seed, private: parsed.data.private ?? false }));
+    log.info("game.setup", this.logCtx(undefined, { seed: this.seed, private: data.private ?? false }));
+    // A rematch keeps the finished game's bots in their seats.
+    for (const seat of data.botSeats ?? []) this.seatBot(seat);
   }
 
   /** Checks the join options before a seat is taken: a player needs a valid nickname (and valid options). */
@@ -548,6 +655,10 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   /** Seats the player in the waiting room (joining is closed once the game starts); the first one hosts. */
   onJoin(client: Client, _options?: unknown, auth?: JoinOptions) {
     const name = auth!.nickname;
+    if (auth!.watch) {
+      this.addSpectator(client, name);
+      return;
+    }
     super.onJoin(client, undefined, undefined, { name });
     const seat = this.freeSeat();
     const corner = START_CORNERS[seat - 1]!;
@@ -565,11 +676,38 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     }
   }
 
+  /**
+   * A spectator comes in: the creator of a bot-only game (who then gets the bots and the start), or
+   * anyone while the game runs and has room. Anything else is refused (a race with the watch route).
+   */
+  private addSpectator(client: Client, name: string): void {
+    const creator = this.watchGame && this.state.phase === "waiting" && this.spectators.size === 0;
+    if (!creator && !(this.running() && this.spectators.size < MAX_SPECTATORS)) {
+      log.info("room.refused", this.logCtx(client, { reason: "notWatchable" }));
+      throw refuse("NOT_WATCHABLE");
+    }
+    super.onJoin(client, undefined, undefined, { name, spectator: true });
+    this.spectators.add(client.sessionId);
+    this.state.spectators = this.spectators.size;
+    this.showAllPlayers(client);
+    log.info("spectator.joined", this.logCtx(client, { spectators: this.spectators.size }));
+    if (creator) {
+      for (let seat = 1; seat <= this.quickBots; seat++) this.seatBot(seat);
+      this.startGame();
+    } else {
+      this.syncListing();
+    }
+  }
+
   /** Consented leave, or a dropped player's hold ran out (a kicked player is already gone). */
   onLeave(client: Client, code?: CloseCode) {
     super.onLeave(client, code);
     this.holds.delete(client.sessionId);
     client.view?.dispose();
+    if (this.spectators.has(client.sessionId)) {
+      this.removeSpectator(client.sessionId);
+      return;
+    }
     const player = this.state.players.get(client.sessionId);
     if (player) this.removePlayer(client.sessionId, player.connected ? "left" : "timeout");
   }
@@ -579,6 +717,10 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
    * the SDK can reconnect into the same session.
    */
   onDrop(client: Client, code?: CloseCode) {
+    if (this.spectators.has(client.sessionId)) {
+      if (!this.closing) this.holds.set(client.sessionId, this.holdSeat(client, code, this.disconnectLimitSeconds));
+      return;
+    }
     const player = this.state.players.get(client.sessionId);
     // Already removed (kicked), or the room is closing: nothing to hold; onLeave follows.
     if (!player || this.closing) return;
@@ -589,6 +731,10 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   onReconnect(client: Client) {
     super.onReconnect(client);
     this.holds.delete(client.sessionId);
+    if (this.spectators.has(client.sessionId)) {
+      this.showAllPlayers(client);
+      return;
+    }
     const player = this.state.players.get(client.sessionId);
     if (player) {
       player.connected = true;
@@ -607,5 +753,11 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   private showOwnPlayer(client: Client, player: Player): void {
     client.view ??= new StateView();
     client.view.add(player);
+  }
+
+  /** A spectator's view holds every player, so they see every current target. */
+  private showAllPlayers(client: Client): void {
+    client.view ??= new StateView();
+    for (const player of this.state.players.values()) client.view.add(player);
   }
 }

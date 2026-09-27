@@ -14,7 +14,10 @@ import { BuildInfo } from "./BuildInfo.tsx";
 import styles from "./StartScreen.module.css";
 
 export interface StartScreenProps {
-  session: Pick<GameSession, "status" | "slow" | "play" | "createPrivate" | "joinById" | "playBots" | "retry" | "startNotice">;
+  session: Pick<
+    GameSession,
+    "status" | "slow" | "play" | "createPrivate" | "joinById" | "playBots" | "joinInvite" | "watch" | "watchBots" | "retry" | "startNotice"
+  >;
   /** The early server wake-up: the join actions stay disabled until it is over. */
   wake: ServerWake;
   /** The live list of open public games. */
@@ -25,19 +28,21 @@ export interface StartScreenProps {
   onInviteDone?(): void;
 }
 
-const NO_GAMES: OpenGames = { status: "off", games: [] };
+const NO_GAMES: OpenGames = { status: "off", games: [], running: [] };
 
 /** Quick games against bots: the player against 1, 2 or 3 bots. */
 const BOT_COUNTS = [1, 2, 3] as const;
+/** Games of bots only to watch: 2, 3 or 4 bots. */
+const WATCH_COUNTS = [2, 3, 4] as const;
 
 /**
  * Before a game: the nickname field and the ways in (quick play, a private game, a quick game
- * against bots, the open games list, or the invite in invite mode), then the connecting and
- * join-error states.
+ * against bots, a game of bots to watch, the open games list, the running games to watch, or the
+ * invite in invite mode), then the connecting and join-error states.
  */
 export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInviteDone }: StartScreenProps) {
   const { t, i18n } = useTranslation();
-  const { status, slow, play, createPrivate, joinById, playBots, retry, startNotice } = session;
+  const { status, slow, play, createPrivate, joinById, playBots, joinInvite, watch, watchBots, retry, startNotice } = session;
   // A new player gets a random name, so they can start at once; it is remembered only once used.
   const [input, setInput] = useState(() => loadNickname() || randomNickname(i18n.language));
   const [touched, setTouched] = useState(false);
@@ -61,9 +66,9 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
     const disabled = waking || !nickname.ok;
     const name = nickname.ok ? nickname.nickname : "";
     const showHint = !nickname.ok && (touched || input !== "");
-    const joinInvite = () => {
+    const acceptInvite = () => {
       if (!invite) return;
-      joinById(invite, name);
+      joinInvite(invite, name);
       onInviteDone?.();
     };
     content = (
@@ -77,7 +82,7 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
           onSubmit={(e) => {
             e.preventDefault();
             if (disabled) return;
-            if (invite) joinInvite();
+            if (invite) acceptInvite();
             else play(name);
           }}
         >
@@ -148,6 +153,22 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
                     </Button>
                   ))}
                 </div>
+                <div className={styles.bots} role="group" aria-labelledby="watch-bots">
+                  <p id="watch-bots" className={styles.botsTitle}>
+                    {t("start.watchBots")}
+                  </p>
+                  {WATCH_COUNTS.map((bots) => (
+                    <Button
+                      key={bots}
+                      variant="secondary"
+                      disabled={disabled}
+                      onClick={() => watchBots(name, bots)}
+                      aria-label={t("start.watchBotsLabel", { count: bots })}
+                    >
+                      {bots}
+                    </Button>
+                  ))}
+                </div>
               </>
             )}
           </div>
@@ -187,6 +208,31 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
             ) : (
               <p className={styles.empty}>{openGames.status === "failed" ? t("start.listUnavailable") : t("start.noGames")}</p>
             )}
+          </section>
+        )}
+
+        {!invite && openGames.running.length > 0 && (
+          <section className={styles.games} aria-labelledby="running-games">
+            <h2 id="running-games" className={styles.gamesTitle}>
+              {t("start.runningGames")}
+            </h2>
+            <ul className={styles.list}>
+              {openGames.running.map((g) => (
+                <li key={g.roomId}>
+                  <button
+                    type="button"
+                    className={styles.game}
+                    disabled={disabled}
+                    onClick={() => watch(g.roomId, name)}
+                    aria-label={t("start.runningEntryLabel", { host: g.host, count: g.seated })}
+                    data-room={g.roomId}
+                  >
+                    <span className={styles.gameHost}>{g.host}</span>
+                    <span className={styles.gameCount}>· {t("start.runningCount", { count: g.seated })}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
       </>

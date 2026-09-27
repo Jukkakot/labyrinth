@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { GameScreen } from "./screens/GameScreen.tsx";
 import { StartScreen } from "./screens/StartScreen.tsx";
 import { WaitingRoomScreen } from "./screens/WaitingRoomScreen.tsx";
-import { devBotCount, dropDevShortcut } from "./session/devShortcut.ts";
+import { devBotCount, devWatchCount, dropDevShortcut } from "./session/devShortcut.ts";
 import { dropInviteFromUrl, inviteFromUrl } from "./session/inviteLink.ts";
 import { loadNickname, randomNickname } from "./session/nickname.ts";
 import { useServerWake } from "./session/serverWake.ts";
@@ -19,8 +19,9 @@ function initialInvite(): string | undefined {
 }
 
 const pool = quickPlayPool() ?? "";
-/** Development shortcut `?dev=1v3`; read once at load. */
+/** Development shortcuts `?dev=1v3` (play) and `?dev=0v3` (watch); read once at load. */
 const devBots = loadToken() ? undefined : devBotCount();
+const devWatch = loadToken() ? undefined : devWatchCount();
 
 export default function App() {
   // Started before anything else, so a sleeping server wakes while the player reads the start screen.
@@ -30,15 +31,17 @@ export default function App() {
   const inGame = session.status === "playing" && session.view !== undefined;
   const openGames = useOpenGames(pool, !inGame && !invite && wake.state !== "waking");
   const { i18n } = useTranslation();
-  const { playBots, status } = session;
+  const { playBots, watchBots, status } = session;
   const devUsed = useRef(false);
 
   useEffect(() => {
-    if (devBots === undefined || devUsed.current || wake.state === "waking" || status !== "idle") return;
+    if ((devBots ?? devWatch) === undefined || devUsed.current || wake.state === "waking" || status !== "idle") return;
     devUsed.current = true;
     dropDevShortcut();
-    playBots(loadNickname() || randomNickname(i18n.language), devBots);
-  }, [wake.state, status, playBots, i18n.language]);
+    const nickname = loadNickname() || randomNickname(i18n.language);
+    if (devBots !== undefined) playBots(nickname, devBots);
+    else watchBots(nickname, devWatch!);
+  }, [wake.state, status, playBots, watchBots, i18n.language]);
 
   if (inGame && session.view!.phase === "waiting") return <WaitingRoomScreen view={session.view!} session={session} />;
   if (inGame) return <GameScreen view={session.view!} session={session} />;

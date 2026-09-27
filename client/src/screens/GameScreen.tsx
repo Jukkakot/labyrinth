@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { BotSpeed } from "@labyrinth/protocol";
 import { reverseOf, rotate, shiftBoard, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
@@ -9,6 +10,7 @@ import { LeaveButton, LeaveConfirm } from "../game/LeaveControls.tsx";
 import { MoveControls } from "../game/MoveControls.tsx";
 import { PlayerStrip } from "../game/PlayerStrip.tsx";
 import { ShiftControls } from "../game/ShiftControls.tsx";
+import { SpectatorCount, SpectatorPanel } from "../game/SpectatorControls.tsx";
 import type { TargetMark } from "../game/target.ts";
 import { TurnLine } from "../game/TurnLine.tsx";
 import { NOTICE_MS, type GameSession } from "../session/useGameSession.ts";
@@ -19,7 +21,10 @@ import { Screen } from "../ui/Screen.tsx";
 
 export interface GameScreenProps {
   view: GameView;
-  session: Pick<GameSession, "shift" | "move" | "kick" | "leave" | "pending" | "notice">;
+  session: Pick<
+    GameSession,
+    "shift" | "move" | "kick" | "leave" | "pending" | "notice" | "setSpeed" | "rematch" | "rematching" | "watchBots" | "nickname"
+  >;
 }
 
 /**
@@ -27,15 +32,16 @@ export interface GameScreenProps {
  * Shift step: tapping an edge arrow previews the shift (with the same rule the
  * server uses); tapping it again or "Työnnä" sends it. Move step: tapping a
  * highlighted square moves there at once; "Jää paikalleen" stays. The viewer's
- * target is marked wherever its tile is; a finished game shows the result and
- * "Uusi peli". Once the current player's time is up, the others get the kick
+ * target is marked wherever its tile is; a finished game shows the result with
+ * "Pelaa uudelleen" and "Alkuun". A spectator gets no step controls: "Katsot peliä", the bots'
+ * speed while only bots play, every player's target, and "Uusi bottipeli" after a bot-only game. Once the current player's time is up, the others get the kick
  * control instead of the (disabled) step controls, and anyone leaving is announced by nickname.
  * The top bar's leave action asks first in a running game (in place of the controls) and leaves a
  * finished game at once.
  */
 export function GameScreen({ view, session }: GameScreenProps) {
   const { t } = useTranslation();
-  const { shift, move, kick, leave, pending, notice } = session;
+  const { shift, move, kick, leave, pending, notice, setSpeed, rematch, rematching, watchBots, nickname } = session;
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
   const [leaving, setLeaving] = useState(false);
@@ -77,7 +83,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
   };
   const me = view.seats.find((s) => s.isMe);
   const target: TargetMark | undefined =
-    view.targetTileId === undefined ? undefined : { tileId: view.targetTileId, home: view.myTarget === "home" };
+    view.targetTileId === undefined ? undefined : { tileId: view.targetTileId, home: view.targetHome };
 
   // Announce the viewer's own collected treasure (derived from their growing found list).
   const found = me?.found ?? [];
@@ -121,7 +127,8 @@ export function GameScreen({ view, session }: GameScreenProps) {
       start={<GameIdBadge roomId={view.roomId} />}
       end={
         <>
-          <LeaveButton onClick={view.finished ? leave : () => setLeaving(true)} />
+          <SpectatorCount count={view.spectators} />
+          <LeaveButton onClick={view.finished || view.spectating ? leave : () => setLeaving(true)} />
           <LanguageSwitcher />
         </>
       }
@@ -137,7 +144,20 @@ export function GameScreen({ view, session }: GameScreenProps) {
         moveTargets={view.reachable ? { reachable: view.reachable, busy: pending, onSelect: moveTo } : undefined}
       />
       {view.finished ? (
-        <GameOverControls onNewGame={leave} />
+        view.spectating ? (
+          <GameOverControls
+            onHome={leave}
+            onNewBotGame={
+              view.botOnly && view.seats.length >= 2
+                ? () => watchBots(nickname(), view.seats.length, view.botSpeed as BotSpeed)
+                : undefined
+            }
+          />
+        ) : (
+          <GameOverControls onHome={leave} onRematch={rematch} rematching={rematching} />
+        )
+      ) : view.spectating ? (
+        <SpectatorPanel botOnly={view.botOnly} speed={view.botSpeed} pending={pending} onSpeed={(speed) => void setSpeed(speed)} />
       ) : leaving ? (
         <LeaveConfirm onLeave={leave} onCancel={() => setLeaving(false)} />
       ) : view.canKick ? (

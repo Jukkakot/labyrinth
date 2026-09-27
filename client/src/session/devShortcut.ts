@@ -9,6 +9,13 @@ export function devBotCount(search = globalThis.location?.search ?? "", isDev = 
   return match ? Number(match[1]) : undefined;
 }
 
+/** Development only: `?dev=0v3` starts watching a game of 3 bots (2–4). */
+export function devWatchCount(search = globalThis.location?.search ?? "", isDev = import.meta.env.DEV): number | undefined {
+  if (!isDev) return undefined;
+  const match = /^0v([2-4])$/.exec(new URLSearchParams(search).get("dev") ?? "");
+  return match ? Number(match[1]) : undefined;
+}
+
 /** Removes `?dev=…` from the address, so leaving the game or reloading does not start another one. */
 export function dropDevShortcut(): void {
   const url = new URL(globalThis.location.href);

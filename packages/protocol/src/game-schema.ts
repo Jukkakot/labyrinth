@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  BOT_SPEEDS,
   INSERTION_IDS,
   nicknameIssue,
   ROTATION_VALUES,
@@ -7,7 +8,10 @@ import {
   type JoinOptions,
   type KickPayload,
   type MovePayload,
+  type RematchPayload,
   type ShiftPayload,
+  type SpeedPayload,
+  type WatchRequest,
   type StartPayload,
 } from "./game-codes.js";
 
@@ -31,6 +35,12 @@ export const botSeatPayloadSchema = z.strictObject({
   seat: z.int().min(1).max(4),
 }) satisfies z.ZodType<BotSeatPayload>;
 
+export const speedPayloadSchema = z.strictObject({
+  speed: z.literal(BOT_SPEEDS),
+}) satisfies z.ZodType<SpeedPayload>;
+
+export const rematchPayloadSchema = z.strictObject({}) satisfies z.ZodType<RematchPayload>;
+
 export const startPayloadSchema = z.strictObject({}) satisfies z.ZodType<StartPayload>;
 
 /** A nickname: trimmed, 2–16 code points, no control characters. Parses to the trimmed name; the issue message is a `NicknameIssue`. */
@@ -42,9 +52,33 @@ export const nicknameSchema = z
     if (issue) ctx.addIssue({ code: "custom", message: issue });
   });
 
-export const joinOptionsSchema = z.object({
+const seat = z.int().min(1).max(4);
+
+/**
+ * Join options. `bots` is 1–3 for a quick game against bots, 2–4 with `watch` for a game of bots
+ * only (`watch` alone is a spectator joining a running game through the watch route); `speed`
+ * only with `watch`; `botSeats` are distinct and leave at least one seat free.
+ */
+export const joinOptionsSchema = z
+  .object({
+    nickname: nicknameSchema,
+    pool: z.string().max(64).optional(),
+    private: z.boolean().optional(),
+    bots: z.int().min(1).max(4).optional(),
+    watch: z.boolean().optional(),
+    speed: z.literal(BOT_SPEEDS).optional(),
+    botSeats: z.array(seat).max(3).optional(),
+  })
+  .superRefine((o, ctx) => {
+    const bots = o.bots ?? 0;
+    if (o.watch && o.bots !== undefined && bots < 2) ctx.addIssue({ code: "custom", path: ["watch"], message: "watching needs 2–4 bots" });
+    if (!o.watch && bots > 3) ctx.addIssue({ code: "custom", path: ["bots"], message: "at most 3 bots against a person" });
+    if (o.speed !== undefined && !o.watch) ctx.addIssue({ code: "custom", path: ["speed"], message: "speed only when watching" });
+    if (o.botSeats && new Set(o.botSeats).size !== o.botSeats.length) ctx.addIssue({ code: "custom", path: ["botSeats"], message: "seats repeat" });
+    if (o.botSeats?.length && (o.bots || o.watch)) ctx.addIssue({ code: "custom", path: ["botSeats"], message: "not with a quick game" });
+  }) satisfies z.ZodType<JoinOptions, unknown>;
+
+export const watchRequestSchema = z.object({
+  roomId: z.string().min(1).max(64),
   nickname: nicknameSchema,
-  pool: z.string().max(64).optional(),
-  private: z.boolean().optional(),
-  bots: z.int().min(1).max(3).optional(),
-}) satisfies z.ZodType<JoinOptions, unknown>;
+}) satisfies z.ZodType<WatchRequest, unknown>;

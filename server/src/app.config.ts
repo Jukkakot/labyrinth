@@ -7,6 +7,7 @@ import { mountClientLogs } from "./logging/clientLogs.js";
 import { attachHttpAudit } from "./logging/httpAudit.js";
 import { serverVersion } from "./logging/logger.js";
 import { GameRoom } from "./rooms/GameRoom.js";
+import { mountWatch } from "./watch.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 /** Read once: which build is running (shown on the start screen, doubles as the wake-up request). */
@@ -30,6 +31,7 @@ const server = defineServer({
     // Render sits behind one proxy; needed for per-client rate limits.
     app.set("trust proxy", 1);
     mountClientLogs(app);
+    mountWatch(app);
 
     app.get("/health", (_req, res) => {
       res.json({ status: "ok", rulesVersion: RULES_VERSION, version: serverVersion(), builtAt });

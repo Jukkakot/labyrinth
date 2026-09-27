@@ -19,6 +19,9 @@ function sessionOf(overrides: Partial<StartScreenProps["session"]> = {}): StartS
     createPrivate: vi.fn(),
     joinById: vi.fn(),
     playBots: vi.fn(),
+    joinInvite: vi.fn(),
+    watch: vi.fn(),
+    watchBots: vi.fn(),
     retry: vi.fn(),
     ...overrides,
   };
@@ -213,7 +216,7 @@ describe("lobby › Nickname", () => {
   });
 
   it("Too short: every join and create action is disabled and a hint says 2–16 characters", () => {
-    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "ready", games: [{ roomId: "a-b-c", host: "Liisa", seated: 1 }] }} />);
+    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "ready", games: [{ roomId: "a-b-c", host: "Liisa", seated: 1 }], running: [] }} />);
     fireEvent.change(field(), { target: { value: "M" } });
     expect(button("Pelaa").disabled).toBe(true);
     expect(button("Luo yksityinen peli").disabled).toBe(true);
@@ -240,7 +243,7 @@ describe("lobby › Nickname", () => {
 });
 
 describe("lobby › Open games list and private game", () => {
-  const games = { status: "ready" as const, games: [{ roomId: "brave-otters-sing", host: "Liisa", seated: 2 }] };
+  const games = { status: "ready" as const, games: [{ roomId: "brave-otters-sing", host: "Liisa", seated: 2 }], running: [] };
 
   it("Join from the list: an entry shows the host and seats, and tapping it joins that game", () => {
     const joinById = vi.fn();
@@ -252,12 +255,12 @@ describe("lobby › Open games list and private game", () => {
   });
 
   it("no open games: says so briefly", () => {
-    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "ready", games: [] }} />);
+    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "ready", games: [], running: [] }} />);
     expect(screen.getByText("Ei avoimia pelejä juuri nyt")).toBeTruthy();
   });
 
   it("the list could not be loaded: a quiet note, Play still works", () => {
-    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "failed", games: [] }} />);
+    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "failed", games: [], running: [] }} />);
     expect(screen.getByText(/Pelilistaa ei saatu/)).toBeTruthy();
     expect((screen.getByRole("button", { name: "Pelaa" }) as HTMLButtonElement).disabled).toBe(false);
   });
@@ -279,16 +282,41 @@ describe("lobby › Open games list and private game", () => {
   });
 });
 
+describe("spectators › start screen", () => {
+  it("Watch from the list: a running game shows host and players, and tapping it watches that game", () => {
+    const watch = vi.fn();
+    const openGames = { status: "ready" as const, games: [], running: [{ roomId: "calm-foxes-jump", host: "Maija", seated: 3 }] };
+    render(<StartScreen session={sessionOf({ watch })} wake={ready} openGames={openGames} />);
+    expect(screen.getByText("Käynnissä olevat pelit")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Katso peliä: Maija, 3 pelaajaa" }));
+    expect(watch).toHaveBeenCalledExactlyOnceWith("calm-foxes-jump", "Maija");
+  });
+
+  it("no running games: no section", () => {
+    render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "ready", games: [], running: [] }} />);
+    expect(screen.queryByText("Käynnissä olevat pelit")).toBeNull();
+  });
+
+  it("Watch three bots: the 3 button starts watching a game of 3 bots; disabled while waking", () => {
+    const watchBots = vi.fn();
+    const { rerender } = render(<StartScreen session={sessionOf({ watchBots })} wake={ready} />);
+    fireEvent.click(screen.getByRole("button", { name: "Katso 3 botin peliä" }));
+    expect(watchBots).toHaveBeenCalledExactlyOnceWith("Maija", 3);
+    rerender(<StartScreen session={sessionOf({ watchBots })} wake={{ state: "waking", slow: false }} />);
+    expect((screen.getByRole("button", { name: "Katso 4 botin peliä" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
 describe("lobby › Invite mode", () => {
-  it("Join by invite link: the invite message, Liity peliin joins that game, and the invite is done", () => {
-    const joinById = vi.fn();
+  it("Join by invite link: the invite message, Liity peliin joins that game (or watches it), and the invite is done", () => {
+    const joinInvite = vi.fn();
     const onInviteDone = vi.fn();
-    render(<StartScreen session={sessionOf({ joinById })} wake={ready} invite="calm-foxes-jump" onInviteDone={onInviteDone} />);
+    render(<StartScreen session={sessionOf({ joinInvite })} wake={ready} invite="calm-foxes-jump" onInviteDone={onInviteDone} />);
     expect(screen.getByText("Sinut on kutsuttu peliin")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Pelaa" })).toBeNull();
     expect(screen.queryByText("Avoimet pelit")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Liity peliin" }));
-    expect(joinById).toHaveBeenCalledExactlyOnceWith("calm-foxes-jump", "Maija");
+    expect(joinInvite).toHaveBeenCalledExactlyOnceWith("calm-foxes-jump", "Maija");
     expect(onInviteDone).toHaveBeenCalledTimes(1);
   });
 

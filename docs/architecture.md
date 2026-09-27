@@ -46,7 +46,8 @@ delivered by that roadmap change.
   every log line), lifecycle logging, `this.command()` for commands, `holdSeat()` for drops.
 - Rooms: `game` → `GameRoom` (one game; `filterBy(["pool"])`, realtime listing on) and `lobby` →
   Colyseus' built-in `LobbyRoom` (pushes the game listing to start screens).
-- HTTP: `GET /health` (`{ status, rulesVersion, version, builtAt }`; Render's health check and the
+- HTTP: `POST /watch` (`server/src/watch.ts`: a seat reservation for a spectator, see below),
+  `GET /health` (`{ status, rulesVersion, version, builtAt }`; Render's health check and the
   client's wake-up request), `POST /client-logs`. Development only: `/monitor`, `/playground`.
 - CORS restricted to `ALLOWED_ORIGINS` (`server/src/cors.ts`).
 
@@ -108,19 +109,33 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 - **Quick bot game:** creating a room with `bots: 1–3` makes it private; when the creator joins,
   `onJoin` seats the bots in the next seats and calls the same `startGame()` as the host's `start`
   (`game.started { quick: true }`), so the client lands straight on the board.
-- **No people left:** when the last person is removed from a started game it finishes with
-  `winnerSeat = 0` (reason `noPeople`); bots never play on alone.
+- **Nobody left:** when no person is seated and nobody watches (held drops count), a started game
+  finishes with `winnerSeat = 0` (reason `noPeople`); bots play on only for spectators.
+- **Spectators** (spec `spectators`): a started room stays locked, so `joinById` refuses everyone;
+  `POST /watch { roomId, nickname }` checks the listing's `watchable` (running, < 8 spectators) and
+  calls `matchMaker.reserveSeatFor` with `watch: true` in the auth, and the client consumes the
+  reservation. `onJoin` keeps spectators in a set (not in `players`), syncs their count and gives
+  their `StateView` every player (so they see all targets); drops are held like players'. A bot-only
+  game is created with `{ watch: true, bots: 2–4, speed? }`: private, its creator becomes the
+  spectator, bots take seats 1..n and it starts. `setSpeed` (spectator, no person seated) sets
+  `botSpeed`; bot pauses are divided by it. After the start `maxClients` = 4 + 8.
+- **Rematch:** `rematch` (seated, finished) creates one new room through `matchMaker.createRoom`
+  with the requester's nickname, the same `private`/`pool`, and `botSeats` (bots of the start) or
+  the quick game's `bots`; concurrent requests share one pending creation. The id is synced as
+  `rematchRoomId`; clients that tapped "Pelaa uudelleen" leave and `joinById` it (the requester
+  first, so they host).
 
 ## State sync — Implemented
 
 - Synced (`server/src/rooms/schema/GameState.ts`): players (seat, nickname, `bot`, connected, pawn
   square, card count, found treasures, and the **view-filtered** current target), the 49 squares
   and the spare as `{ id, rotation }`, `phase`, `turnSeat`, `hostSeat`, `winnerSeat`,
-  `lastInsertion`, `turnDeadline`, `turnExpired`.
+  `lastInsertion`, `turnDeadline`, `turnExpired`, `spectators` (count), `botSpeed`, `rematchRoomId`.
 - Never synced: seeds, treasure stacks, tile kinds and treasures (static per tile id). The client
   rebuilds a rules `Board` from ids and derives everything else with `@labyrinth/rules`.
-- **Hidden information:** `Player.target` is `.view()`-tagged; each client's `StateView` holds only
-  its own player. A room test decodes another client's state to prove nothing leaks.
+- **Hidden information:** `Player.target` is `.view()`-tagged; each player's `StateView` holds only
+  its own player, a spectator's holds all. A room test decodes another client's state to prove
+  nothing leaks.
 - UI-only state (shift preview, local rotation) never crosses the network.
 
 ## Rules package — Implemented

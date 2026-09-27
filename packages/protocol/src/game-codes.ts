@@ -22,6 +22,9 @@ export const GAME_ERROR_CODES = [
   "NOT_ENOUGH_PLAYERS",
   "SEAT_TAKEN",
   "NOT_A_BOT",
+  "NOT_SPECTATOR",
+  "PEOPLE_PLAYING",
+  "SERVER_FULL",
 ] as const;
 export type GameErrorCode = (typeof GAME_ERROR_CODES)[number];
 
@@ -51,6 +54,21 @@ export interface BotSeatPayload {
   seat: number;
 }
 
+/** Bot speeds a spectator can choose while only bots play: every pause of a bot's turn is divided by it. */
+export const BOT_SPEEDS = [1, 2, 4] as const;
+export type BotSpeed = (typeof BOT_SPEEDS)[number];
+
+/** A spectator's `setSpeed` command. */
+export interface SpeedPayload {
+  speed: BotSpeed;
+}
+
+/** The `rematch` command has no fields: a seated player sends it in a finished game. */
+export type RematchPayload = Record<string, never>;
+
+/** At most this many spectators watch one game. */
+export const MAX_SPECTATORS = 8;
+
 /** Bot names, language-neutral; a new bot gets the first one no other bot in the game has. */
 export const BOT_NAMES = ["Robo", "Pixel", "Byte", "Nova"] as const;
 
@@ -79,12 +97,27 @@ export interface JoinOptions {
   pool?: string;
   /** Create a private game: never listed and never picked by quick play. */
   private?: boolean;
-  /** Quick game against 1–3 bots: the room is created private and starts as soon as its creator joins. */
+  /**
+   * Quick game against 1–3 bots, or with `watch` a game of 2–4 bots only: the room is created
+   * private and starts as soon as its creator joins.
+   */
   bots?: number;
+  /** The joiner watches instead of taking a seat (a bot-only game they create, or a running game). */
+  watch?: boolean;
+  /** Starting bot speed of a watched bot-only game. */
+  speed?: BotSpeed;
+  /** Seats that get a bot as soon as the room is created (a rematch keeps the finished game's bots). */
+  botSeats?: number[];
+}
+
+/** Body of `POST /watch`: join a running game as a spectator. */
+export interface WatchRequest {
+  roomId: string;
+  nickname: string;
 }
 
 /** Codes the server refuses a join or a room creation with (as the join error's message). */
-export const JOIN_ERROR_CODES = ["INVALID_NICKNAME", "INVALID_OPTIONS", "SERVER_FULL"] as const;
+export const JOIN_ERROR_CODES = ["INVALID_NICKNAME", "INVALID_OPTIONS", "SERVER_FULL", "NOT_WATCHABLE"] as const;
 export type JoinErrorCode = (typeof JOIN_ERROR_CODES)[number];
 
 /** Seat to kick: only the current player, once their turn time is up. */

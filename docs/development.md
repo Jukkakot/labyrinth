@@ -56,8 +56,9 @@ npm run e2e   # smoke test, when UI or connection code changed
 
 - **VS Code**: Run and Debug → "Server" (tsx with the `source` condition, so breakpoints in
   `packages/rules` work), "Client" (Chrome + Vite), or "Full stack".
-- **Dev shortcut:** `http://localhost:5173/?dev=1v3` (1v1–1v3) starts a quick game against bots
-  as soon as the server is awake; development builds only.
+- **Dev shortcut:** `http://localhost:5173/?dev=1v3` (1v1–1v3) starts a quick game against bots,
+  `?dev=0v3` (0v2–0v4) a game of bots to watch, as soon as the server is awake; development builds
+  only.
 - **Lint hook** (for Claude): `.claude/hooks/lint-edited.mjs` runs oxlint on every `.ts`/`.tsx`
   file Claude edits and hands problems back at once.
 - **Playwright MCP** (for Claude): `playwright-mobile` = Galaxy S24 (default for UI checks),

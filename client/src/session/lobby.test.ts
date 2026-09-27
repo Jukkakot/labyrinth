@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { devBotCount } from "./devShortcut.ts";
+import { devBotCount, devWatchCount } from "./devShortcut.ts";
 import { dropInviteFromUrl, inviteFromUrl, inviteUrl } from "./inviteLink.ts";
 import { checkNickname, loadNickname, NAME_LANGUAGES, nameWords, randomNickname, saveNickname } from "./nickname.ts";
-import { toOpenGames, useOpenGames, type LobbyRoomLike, type RoomListing } from "./useOpenGames.ts";
+import { toOpenGames, toRunningGames, useOpenGames, type LobbyRoomLike, type RoomListing } from "./useOpenGames.ts";
 
 const listing = (roomId: string, extra: Partial<RoomListing> = {}): RoomListing => ({
   roomId,
@@ -103,7 +103,7 @@ describe("lobby › Open games list", () => {
     expect(connect).toHaveBeenCalledWith("");
 
     push("rooms", []);
-    expect(result.current).toEqual({ status: "ready", games: [] });
+    expect(result.current).toEqual({ status: "ready", games: [], running: [] });
     push("+", ["brave-otters-sing", listing("brave-otters-sing")]);
     expect(result.current.games).toEqual([{ roomId: "brave-otters-sing", host: "Maija", seated: 1 }]);
     push("+", ["brave-otters-sing", listing("brave-otters-sing", { clients: 4, locked: true })]);
@@ -134,6 +134,29 @@ describe("lobby › Open games list", () => {
     const connect = vi.fn(async () => Promise.reject(new Error("offline")));
     const { result } = renderHook(() => useOpenGames("", true, connect));
     await waitFor(() => expect(result.current.status).toBe("failed"));
+  });
+});
+
+describe("spectators › running games", () => {
+  it("lists public watchable games apart from the open ones; a rematch game without its host yet is hidden", () => {
+    const rooms = [
+      listing("open-game"),
+      listing("running-game", { locked: true, metadata: { host: "Pekka", open: false, pool: "", seated: 3, watchable: true } }),
+      listing("full-of-spectators", { locked: true, metadata: { host: "Liisa", open: false, pool: "", seated: 2, watchable: false } }),
+      listing("private-running", { private: true, locked: true, metadata: { host: "Olli", open: false, pool: "", watchable: true } }),
+      listing("rematch-no-host", { metadata: { host: "", open: true, pool: "", seated: 1 } }),
+    ];
+    expect(toOpenGames(rooms).map((g) => g.roomId)).toEqual(["open-game"]);
+    expect(toRunningGames(rooms)).toEqual([{ roomId: "running-game", host: "Pekka", seated: 3 }]);
+  });
+});
+
+describe("development shortcut ?dev=0vN", () => {
+  it("reads 0v2–0v4 in development only", () => {
+    expect(devWatchCount("?dev=0v3", true)).toBe(3);
+    expect(devWatchCount("?dev=0v1", true)).toBeUndefined();
+    expect(devWatchCount("?dev=1v3", true)).toBeUndefined();
+    expect(devWatchCount("?dev=0v2", false)).toBeUndefined();
   });
 });
 

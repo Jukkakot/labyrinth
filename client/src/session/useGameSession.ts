@@ -3,6 +3,7 @@ import {
   CLOSE_CODES,
   GAME_ERROR_CODES,
   type BotSeatPayload,
+  type BotSpeed,
   type CommandResult,
   type GameErrorCode,
   type JoinErrorCode,
@@ -10,12 +11,14 @@ import {
   type KickPayload,
   type MovePayload,
   type ShiftPayload,
+  type SpeedPayload,
   type StartPayload,
+  type WatchRequest,
 } from "@labyrinth/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { serverUrl } from "../config.ts";
 import { log, setLogContext } from "../logging/logger.ts";
-import { saveNickname } from "./nickname.ts";
+import { loadNickname, randomNickname, saveNickname } from "./nickname.ts";
 import { clearToken, loadToken, saveToken } from "./sessionToken.ts";
 import { toGameView, type GameView, type SyncedState } from "./viewModel.ts";
 
@@ -49,6 +52,10 @@ export interface Connector {
   createBotGame(options: JoinRequest & { bots: number }): Promise<GameRoomLike>;
   /** One particular game, from the list or an invite link. */
   joinById(roomId: string, options: JoinRequest): Promise<GameRoomLike>;
+  /** Watch a running game as a spectator (through the server's watch route). */
+  watch(roomId: string, options: JoinRequest): Promise<GameRoomLike>;
+  /** A new game of 2–4 bots only, watched by the caller. */
+  createBotWatch(options: JoinRequest & { bots: number; speed: BotSpeed }): Promise<GameRoomLike>;
   reconnect(token: string): Promise<GameRoomLike>;
 }
 
@@ -78,6 +85,18 @@ export function createConnector(): Connector {
     createBotGame: ({ bots, ...options }) =>
       sdkClient().create("game", { ...withPool(options), bots, private: true }) as unknown as Promise<GameRoomLike>,
     joinById: (roomId, options) => sdkClient().joinById(roomId, withPool(options)) as unknown as Promise<GameRoomLike>,
+    watch: async (roomId, { nickname }) => {
+      // JSON as text/plain: no CORS preflight.
+      const res = await fetch(`${serverUrl()}/watch`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ roomId, nickname } satisfies WatchRequest),
+      });
+      if (!res.ok) throw new Error(res.status === 400 ? "INVALID_OPTIONS" : ("NOT_WATCHABLE" satisfies JoinErrorCode));
+      return sdkClient().consumeSeatReservation(await res.json()) as unknown as Promise<GameRoomLike>;
+    },
+    createBotWatch: ({ bots, speed, ...options }) =>
+      sdkClient().create("game", { ...withPool(options), watch: true, bots, speed, private: true }) as unknown as Promise<GameRoomLike>,
     reconnect: (token) => sdkClient().reconnect(token) as unknown as Promise<GameRoomLike>,
   };
 }
@@ -97,24 +116,36 @@ const NOT_OPEN_CODES: readonly unknown[] = [522, 524];
 export function joinFailure(err: unknown): StartNotice | undefined {
   const { message, code } = (err ?? {}) as { message?: unknown; code?: unknown };
   if (message === ("SERVER_FULL" satisfies JoinErrorCode)) return "serverFull";
+  if (message === ("NOT_WATCHABLE" satisfies JoinErrorCode)) return "notOpen";
   if (NOT_OPEN_CODES.includes(code)) return "notOpen";
   return undefined;
+}
+
+/** Leaves `room` on the server without anything coming back from it. */
+function quit(room: GameRoomLike): void {
+  room.removeAllListeners();
+  room.leave().catch((err: unknown) => {
+    log.warn("client.warn", { kind: "leave" }, err instanceof Error ? err.message : String(err));
+  });
 }
 
 /** After this long in "connecting" the UI explains that the server may be waking up. */
 export const SLOW_CONNECT_MS = 5_000;
 
+/** How long "Pelaa uudelleen" waits for the new game's id to arrive. */
+const REMATCH_WAIT_MS = 10_000;
+
 /** How long a rejection message stays on screen. */
 export const NOTICE_MS = 4_000;
 
-export type NoticeKey = `errors.${GameErrorCode}` | "errors.generic";
+export type NoticeKey = `errors.${GameErrorCode}` | "errors.generic" | "spectate.lateInvite";
 
 /** i18n key for a rejection code: `errors.<CODE>` for known game codes, else `errors.generic`. */
 export function noticeKey(code: string): NoticeKey {
   return (GAME_ERROR_CODES as readonly string[]).includes(code) ? `errors.${code as GameErrorCode}` : "errors.generic";
 }
 
-type Command = "start" | "addBot" | "removeBot" | "shift" | "move" | "kick";
+type Command = "start" | "addBot" | "removeBot" | "shift" | "move" | "kick" | "setSpeed" | "rematch";
 
 export interface GameSession {
   status: SessionStatus;
@@ -129,6 +160,20 @@ export interface GameSession {
   joinById(roomId: string, nickname: string): void;
   /** A quick game against 1–3 bots, straight into the game. */
   playBots(nickname: string, bots: number): void;
+  /** Joins an invited game; if it has already started, watches it instead. */
+  joinInvite(roomId: string, nickname: string): void;
+  /** Watches a running game. */
+  watch(roomId: string, nickname: string): void;
+  /** Watches a new game of 2–4 bots (leaving the current game, if any). */
+  watchBots(nickname: string, bots: number, speed?: BotSpeed): void;
+  /** A spectator sets the bots' speed. Resolves undefined without sending while another command is pending. */
+  setSpeed(speed: BotSpeed): Promise<CommandResult | undefined>;
+  /** In a finished game: asks for the rematch game (if nobody has yet) and moves there. */
+  rematch(): void;
+  /** True from tapping "Pelaa uudelleen" until the move to the new game begins. */
+  rematching: boolean;
+  /** The nickname to use for the next game: the last one used, else a random one. */
+  nickname(): string;
   /** Repeats the last join attempt after the generic join error. */
   retry(): void;
   /** The host starts the game from the waiting room. Resolves undefined without sending while another command is pending. */
@@ -169,6 +214,9 @@ export function useGameSession(connector?: Connector): GameSession {
   const [notice, setNotice] = useState<NoticeKey>();
   const [startNotice, setStartNotice] = useState<StartNotice>();
   const lastAttempt = useRef<{ run: () => Promise<GameRoomLike>; nickname: string }>(undefined);
+  /** A message to show once the join under way has succeeded. */
+  const joinNotice = useRef<NoticeKey>(undefined);
+  const [rematching, setRematching] = useState(false);
 
   const getConnector = () => (connectorRef.current ??= createConnector());
 
@@ -178,8 +226,10 @@ export function useGameSession(connector?: Connector): GameSession {
     clearToken();
     setLogContext({});
     setView(undefined);
+    setRematching(false);
     setStatus("idle");
   }, []);
+
 
   const attach = useCallback(
     (room: GameRoomLike) => {
@@ -232,9 +282,17 @@ export function useGameSession(connector?: Connector): GameSession {
     return () => clearTimeout(timer);
   }, [status]);
 
-  /** Runs one join attempt: success remembers the nickname; a failure becomes a start notice or the error state. */
+  /**
+   * Runs one join attempt, leaving the current game first (rematch, another bot game): success
+   * remembers the nickname; a failure becomes a start notice or the error state.
+   */
   const connect = useCallback(
     (run: () => Promise<GameRoomLike>, nickname: string) => {
+      const current = roomRef.current;
+      if (current) {
+        detach();
+        quit(current);
+      }
       lastAttempt.current = { run, nickname };
       setSlow(false);
       setStartNotice(undefined);
@@ -243,16 +301,19 @@ export function useGameSession(connector?: Connector): GameSession {
         .then((room) => {
           saveNickname(nickname);
           attach(room);
+          if (joinNotice.current) setNotice(joinNotice.current);
+          joinNotice.current = undefined;
         })
         .catch((err: unknown) => {
           const failure = joinFailure(err);
           const message = err instanceof Error ? err.message : String(err);
           log.warn("client.warn", { kind: "join", reason: failure ?? "error" }, message);
+          joinNotice.current = undefined;
           setStartNotice(failure);
           setStatus(failure ? "idle" : "error");
         });
     },
-    [attach],
+    [attach, detach],
   );
 
   const play = useCallback((nickname: string) => connect(() => getConnector().joinOrCreate({ nickname }), nickname), [connect]);
@@ -268,6 +329,31 @@ export function useGameSession(connector?: Connector): GameSession {
     (roomId: string, nickname: string) => connect(() => getConnector().joinById(roomId, { nickname }), nickname),
     [connect],
   );
+  const watch = useCallback(
+    (roomId: string, nickname: string) => connect(() => getConnector().watch(roomId, { nickname }), nickname),
+    [connect],
+  );
+  const watchBots = useCallback(
+    (nickname: string, bots: number, speed: BotSpeed = 1) =>
+      connect(() => getConnector().createBotWatch({ nickname, bots, speed }), nickname),
+    [connect],
+  );
+  const joinInvite = useCallback(
+    (roomId: string, nickname: string) =>
+      connect(async () => {
+        try {
+          return await getConnector().joinById(roomId, { nickname });
+        } catch (err) {
+          // Started already: watch it instead, and say so once.
+          if (joinFailure(err) !== "notOpen") throw err;
+          const room = await getConnector().watch(roomId, { nickname });
+          joinNotice.current = "spectate.lateInvite";
+          return room;
+        }
+      }, nickname),
+    [connect],
+  );
+  const nickname = useCallback(() => lastAttempt.current?.nickname || loadNickname() || randomNickname("fi"), []);
   const retry = useCallback(() => {
     const attempt = lastAttempt.current;
     if (attempt) connect(attempt.run, attempt.nickname);
@@ -281,7 +367,7 @@ export function useGameSession(connector?: Connector): GameSession {
   }, [notice]);
 
   /** Sends one command at a time; a rejection becomes a notice. */
-  const send = useCallback(async (cmd: Command, payload: StartPayload | BotSeatPayload | ShiftPayload | MovePayload | KickPayload) => {
+  const send = useCallback(async (cmd: Command, payload: StartPayload | BotSeatPayload | ShiftPayload | MovePayload | KickPayload | SpeedPayload) => {
     const room = roomRef.current;
     if (!room || pendingRef.current) return undefined;
     pendingRef.current = true;
@@ -314,6 +400,46 @@ export function useGameSession(connector?: Connector): GameSession {
   );
   const move = useCallback(({ row, col }: MovePayload) => send("move", { row, col }), [send]);
   const kick = useCallback((seat: number) => send("kick", { seat }), [send]);
+  const setSpeed = useCallback((speed: BotSpeed) => send("setSpeed", { speed }), [send]);
+
+  /**
+   * Moves to the rematch game once its id is synced: asks for it first if nobody has, then waits for
+   * the id (up to REMATCH_WAIT_MS) and joins it under the player's name in this game.
+   */
+  const rematch = useCallback(() => {
+    const room = roomRef.current;
+    if (!room || rematching) return;
+    setRematching(true);
+    let name = "";
+    room.state.players?.forEach((p, id) => {
+      if (id === room.sessionId) name = p.name ?? "";
+    });
+    const nick = name || nickname();
+    /** Joins the rematch game if its id has arrived; true once done (or this room is gone). */
+    const go = () => {
+      if (roomRef.current !== room) return true;
+      const id = room.state.rematchRoomId;
+      if (!id) return false;
+      connect(() => getConnector().joinById(id, { nickname: nick }), nick);
+      return true;
+    };
+    if (go()) return;
+    void send("rematch", {}).then((result) => {
+      if (roomRef.current !== room) return;
+      if (!result?.ok) {
+        setRematching(false);
+        return;
+      }
+      const since = Date.now();
+      const timer = setInterval(() => {
+        if (go()) clearInterval(timer);
+        else if (Date.now() - since > REMATCH_WAIT_MS) {
+          clearInterval(timer);
+          setRematching(false);
+        }
+      }, 100);
+    });
+  }, [rematching, send, nickname, connect]);
 
   /**
    * Leaves locally first: the start screen shows at once, and no late callback or reconnect
@@ -324,10 +450,7 @@ export function useGameSession(connector?: Connector): GameSession {
     if (!room) return;
     detach();
     setStartNotice(undefined);
-    room.removeAllListeners();
-    room.leave().catch((err: unknown) => {
-      log.warn("client.warn", { kind: "leave" }, err instanceof Error ? err.message : String(err));
-    });
+    quit(room);
   }, [detach]);
 
   return {
@@ -338,6 +461,13 @@ export function useGameSession(connector?: Connector): GameSession {
     createPrivate,
     joinById,
     playBots,
+    joinInvite,
+    watch,
+    watchBots,
+    setSpeed,
+    rematch,
+    rematching,
+    nickname,
     retry,
     start,
     addBot,

@@ -90,7 +90,12 @@
     "botGames": "Quick game against bots",
     "botGameLabel_one": "Quick game: you and {{count}} bot",
     "botGameLabel_other": "Quick game: you and {{count}} bots",
-    "randomName": "Draw a new name"
+    "randomName": "Draw a new name",
+    "runningGames": "Games in progress",
+    "runningEntryLabel": "Watch game: {{host}}, {{count}} players",
+    "runningCount": "{{count}} players",
+    "watchBots": "Watch bots play",
+    "watchBotsLabel": "Watch a game of {{count}} bots"
   },
   "game": {
     "idLabel": "Game {{id}}. Tap to copy.",
@@ -132,7 +137,10 @@
     "NOT_HOST": "Only the game's creator can start it",
     "NOT_ENOUGH_PLAYERS": "At least 2 players are needed",
     "SEAT_TAKEN": "That seat is already taken",
-    "NOT_A_BOT": "There is no bot in that seat"
+    "NOT_A_BOT": "There is no bot in that seat",
+    "NOT_SPECTATOR": "Only a spectator can change the speed",
+    "PEOPLE_PLAYING": "The speed can only be changed while only bots play",
+    "SERVER_FULL": "The server is full – try again in a moment"
   },
   "move": {
     "hint": "Tap a highlighted square",
@@ -153,7 +161,8 @@
   "result": {
     "mine": "You won!",
     "other": "{{name}} won",
-    "newGame": "New game"
+    "rematch": "Play again",
+    "home": "Start screen"
   },
   "kick": {
     "timeUp": "{{name}} – time is up",
@@ -189,5 +198,12 @@
     "confirm": "Leave the game? Your pawn and treasures leave the game.",
     "yes": "Leave",
     "cancel": "Cancel"
+  },
+  "spectate": {
+    "watching": "You are watching",
+    "count": "Spectators: {{count}}",
+    "speed": "Bot speed",
+    "lateInvite": "The game had already started – you are watching it",
+    "newBotGame": "New bot game"
   }
 }

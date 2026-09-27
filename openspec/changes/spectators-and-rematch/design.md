@@ -57,9 +57,10 @@ closing finished games after 10 minutes (nfr, separate); spectator nicknames sho
    bots and settings. The new room's bots are seated in `onCreate`; people take the lowest free
    seat; the first person to join is the host (the requester, who joins as soon as the id arrives;
    Colyseus keeps an unjoined new room for the seat-reservation time, 15 s).
-8. **Rematch on the client.** `rematch()` sends the command (if no id yet), waits for
-   `view.rematchRoomId`, then leaves the finished room locally and `joinById`s the new one through
-   the normal `connect()` path (so failures become "notOpen"/retry as usual).
+8. **Rematch on the client.** `rematch()` sends the command (if no id yet), then checks the room
+   state for `rematchRoomId` (every 100 ms, up to 10 s; an event handler, not an effect), then
+   leaves the finished room and `joinById`s the new one through the normal `connect()` path, which
+   now leaves any current room first (so failures become "notOpen"/retry as usual).
 9. **Spectator UI.** `GameView` gets `spectating`, `spectators`, `botSpeed`, `botOnly` (no person
    seated), `rematchRoomId`; for a spectator `myTarget` is unset, every seat gets its `target`, and
    `targetTileId` follows the current player's target. The bottom slot shows `SpectatorPanel`

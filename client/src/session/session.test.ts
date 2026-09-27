@@ -39,7 +39,16 @@ function fakeRoom(overrides: Partial<GameRoomLike> = {}): GameRoomLike {
 }
 
 function connectorWith(overrides: Partial<Connector>): Connector {
-  return { joinOrCreate: vi.fn(), createPrivate: vi.fn(), createBotGame: vi.fn(), joinById: vi.fn(), reconnect: vi.fn(), ...overrides };
+  return {
+    joinOrCreate: vi.fn(),
+    createPrivate: vi.fn(),
+    createBotGame: vi.fn(),
+    joinById: vi.fn(),
+    watch: vi.fn(),
+    createBotWatch: vi.fn(),
+    reconnect: vi.fn(),
+    ...overrides,
+  };
 }
 
 /** A room whose onLeave callback the test can fire. */
@@ -525,5 +534,168 @@ describe("game-session › kick", () => {
     await waitFor(() => expect(result.current.status).toBe("playing"));
     act(() => onLeave(4000));
     expect(result.current.startNotice).toBeUndefined();
+  });
+});
+
+describe("spectators › view model", () => {
+  const watched = (turn: Partial<SyncedState> = {}, bots = false) => {
+    const state = syncedState({}, { phase: "shift", turnSeat: 2, spectators: 2, botSpeed: 2, ...turn });
+    state.players = new Map([
+      ["a", { seat: 1, connected: true, bot: bots, cards: 6, found: [], target: "dragon" }],
+      ["b", { seat: 2, connected: true, bot: bots, cards: 6, found: [], target: "key" }],
+    ]);
+    return toGameView(state, "r", "me")!;
+  };
+
+  it("All targets visible: every seat has its target, the board highlights the current player's", () => {
+    const view = watched();
+    expect(view).toMatchObject({ spectating: true, spectators: 2, botSpeed: 2, botOnly: false, myTarget: undefined, isMyTurn: false, canKick: false });
+    expect(view.seats.map((s) => s.target)).toEqual(["dragon", "key"]);
+    expect(view.targetTileId).toBe(tileOfTreasure("key"));
+    expect(view.targetHome).toBe(false);
+  });
+
+  it("only bots seated: botOnly; a seated player is not spectating and sees only their own target", () => {
+    expect(watched({}, true).botOnly).toBe(true);
+    const state = syncedState({ me: 1, other: 2 }, { spectators: 1 });
+    const view = toGameView(state, "r", "me")!;
+    expect(view).toMatchObject({ spectating: false, spectators: 1, rematchRoomId: undefined });
+    expect(view.seats.map((s) => s.target)).toEqual([undefined, undefined]);
+  });
+
+  it("the rematch id comes through once set", () => {
+    expect(toGameView(syncedState({ me: 1 }, { rematchRoomId: "calm-foxes-jump" }), "r", "me")!.rematchRoomId).toBe("calm-foxes-jump");
+  });
+});
+
+describe("spectators › session", () => {
+  it("watch joins through the watch route under the nickname", async () => {
+    const connector = connectorWith({ watch: vi.fn(async () => fakeRoom({ state: syncedState({ other: 2 }) })) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.watch("calm-foxes-jump", "Maija"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    expect(connector.watch).toHaveBeenCalledWith("calm-foxes-jump", { nickname: "Maija" });
+    expect(result.current.view?.spectating).toBe(true);
+  });
+
+  it("a game that cannot be watched gives the not-open notice", async () => {
+    const connector = connectorWith({ watch: vi.fn(async () => Promise.reject(new Error("NOT_WATCHABLE"))) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.watch("x", "Maija"));
+    await waitFor(() => expect(result.current.startNotice).toBe("notOpen"));
+  });
+
+  it("watchBots creates a watched bot game with count and speed, leaving the current game first", async () => {
+    const first = fakeRoom();
+    const createBotWatch = vi.fn(async () => fakeRoom({ roomId: "second" }));
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => first), createBotWatch });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play("Maija"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    act(() => result.current.watchBots("Maija", 3, 2));
+    await waitFor(() => expect(result.current.view?.roomId).toBe("second"));
+    expect(createBotWatch).toHaveBeenCalledWith({ nickname: "Maija", bots: 3, speed: 2 });
+    expect(first.leave).toHaveBeenCalledTimes(1);
+  });
+
+  it("Invite to a running game: joining fails as not open, so it watches and says so once", async () => {
+    const connector = connectorWith({
+      joinById: vi.fn(async () => Promise.reject(matchMakeError("room is locked", 522))),
+      watch: vi.fn(async () => fakeRoom({ state: syncedState({ other: 2 }) })),
+    });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.joinInvite("calm-foxes-jump", "Pekka"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    expect(connector.watch).toHaveBeenCalledWith("calm-foxes-jump", { nickname: "Pekka" });
+    expect(result.current.notice).toBe("spectate.lateInvite");
+  });
+
+  it("Invite to a finished game: not open when watching fails too", async () => {
+    const connector = connectorWith({
+      joinById: vi.fn(async () => Promise.reject(matchMakeError("room is locked", 522))),
+      watch: vi.fn(async () => Promise.reject(new Error("NOT_WATCHABLE"))),
+    });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.joinInvite("x", "Pekka"));
+    await waitFor(() => expect(result.current.startNotice).toBe("notOpen"));
+  });
+
+  it("setSpeed sends the speed", async () => {
+    const room = fakeRoom();
+    const { result } = await playingWith(room);
+    await act(() => result.current.setSpeed(4));
+    expect(room.request).toHaveBeenCalledWith("setSpeed", { speed: 4 });
+  });
+});
+
+describe("game-session › Rematch", () => {
+  /** A finished game the test can push state changes into. */
+  function finishedRoom() {
+    let push: (state: SyncedState) => void = () => {};
+    const state = syncedState({ me: 1, other: 2 }, { phase: "finished", winnerSeat: 1 });
+    (state.players as Map<string, object>).set("me", { seat: 1, connected: true, name: "Maija" });
+    const room = fakeRoom({ state, onStateChange: vi.fn((cb: (s: SyncedState) => void) => (push = cb)) });
+    return {
+      room,
+      state,
+      push: (next: Partial<SyncedState>) =>
+        act(() => {
+          Object.assign(state, next);
+          push(state);
+        }),
+    };
+  }
+
+  it("First player asks for a rematch: sends it, then joins the new game under the same name", async () => {
+    const { room, push } = finishedRoom();
+    const next = fakeRoom({ roomId: "calm-foxes-jump" });
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => room), joinById: vi.fn(async () => next) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play("Maija"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    act(() => result.current.rematch());
+    expect(result.current.rematching).toBe(true);
+    await waitFor(() => expect(room.request).toHaveBeenCalledWith("rematch", {}));
+    push({ rematchRoomId: "calm-foxes-jump" });
+    await waitFor(() => expect(result.current.view?.roomId).toBe("calm-foxes-jump"));
+    expect(connector.joinById).toHaveBeenCalledWith("calm-foxes-jump", { nickname: "Maija" });
+    expect(room.leave).toHaveBeenCalledTimes(1);
+    expect(result.current.rematching).toBe(false);
+  });
+
+  it("Second player follows: the id is known, so no command is sent", async () => {
+    const { room } = finishedRoom();
+    room.state.rematchRoomId = "calm-foxes-jump";
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => room), joinById: vi.fn(async () => fakeRoom({ roomId: "calm-foxes-jump" })) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play("Maija"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    act(() => result.current.rematch());
+    await waitFor(() => expect(result.current.view?.roomId).toBe("calm-foxes-jump"));
+    expect(room.request).not.toHaveBeenCalled();
+  });
+
+  it("Rematch already started: not open on the start screen", async () => {
+    const { room } = finishedRoom();
+    room.state.rematchRoomId = "calm-foxes-jump";
+    const connector = connectorWith({
+      joinOrCreate: vi.fn(async () => room),
+      joinById: vi.fn(async () => Promise.reject(matchMakeError("room is locked", 522))),
+    });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.play("Maija"));
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    act(() => result.current.rematch());
+    await waitFor(() => expect(result.current.startNotice).toBe("notOpen"));
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("a rejected rematch gives its notice and can be tried again", async () => {
+    const { room } = finishedRoom();
+    room.request = vi.fn(async () => ({ ok: false, code: "SERVER_FULL" }));
+    const { result } = await playingWith(room);
+    act(() => result.current.rematch());
+    await waitFor(() => expect(result.current.notice).toBe("errors.SERVER_FULL"));
+    expect(result.current.rematching).toBe(false);
   });
 });

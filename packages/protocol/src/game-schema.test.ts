@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { botSeatPayloadSchema, joinOptionsSchema, kickPayloadSchema, movePayloadSchema, nicknameSchema, shiftPayloadSchema, startPayloadSchema } from "./game-schema.js";
+import {
+  botSeatPayloadSchema,
+  joinOptionsSchema,
+  kickPayloadSchema,
+  movePayloadSchema,
+  nicknameSchema,
+  rematchPayloadSchema,
+  shiftPayloadSchema,
+  speedPayloadSchema,
+  startPayloadSchema,
+  watchRequestSchema,
+} from "./game-schema.js";
 
 describe("shiftPayloadSchema", () => {
   it("accepts every insertion point and rotation", () => {
@@ -113,6 +124,43 @@ describe("joinOptionsSchema", () => {
     expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots: 1 }).success).toBe(true);
     expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots: 3 }).success).toBe(true);
     for (const bots of [0, 4, 1.5, "2"]) expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots }).success).toBe(false);
+  });
+
+  it("accepts 2–4 bots to watch, with an optional speed", () => {
+    const ok = (o: object) => joinOptionsSchema.safeParse({ nickname: "Pekka", ...o }).success;
+    expect(ok({ watch: true, bots: 2 })).toBe(true);
+    expect(ok({ watch: true, bots: 4, speed: 4 })).toBe(true);
+    expect(ok({ watch: true, bots: 1 })).toBe(false);
+    expect(ok({ watch: true })).toBe(true); // a spectator of a running game
+    expect(ok({ watch: true, bots: 3, speed: 3 })).toBe(false);
+    expect(ok({ bots: 2, speed: 2 })).toBe(false);
+  });
+
+  it("accepts distinct bot seats for a rematch, not with a quick game", () => {
+    const ok = (o: object) => joinOptionsSchema.safeParse({ nickname: "Pekka", ...o }).success;
+    expect(ok({ botSeats: [2, 4] })).toBe(true);
+    expect(ok({ botSeats: [] })).toBe(true);
+    expect(ok({ botSeats: [2, 2] })).toBe(false);
+    expect(ok({ botSeats: [1, 2, 3, 4] })).toBe(false);
+    expect(ok({ botSeats: [5] })).toBe(false);
+    expect(ok({ botSeats: [2], bots: 1 })).toBe(false);
+  });
+});
+
+describe("speedPayloadSchema and rematchPayloadSchema", () => {
+  it("accepts the three speeds and an empty rematch", () => {
+    for (const speed of [1, 2, 4]) expect(speedPayloadSchema.safeParse({ speed }).success).toBe(true);
+    for (const speed of [0, 3, 8, "2"]) expect(speedPayloadSchema.safeParse({ speed }).success).toBe(false);
+    expect(rematchPayloadSchema.safeParse({}).success).toBe(true);
+    expect(rematchPayloadSchema.safeParse({ x: 1 }).success).toBe(false);
+  });
+});
+
+describe("watchRequestSchema", () => {
+  it("needs a room id and a valid nickname", () => {
+    expect(watchRequestSchema.parse({ roomId: "brave-otters-sing", nickname: " Maija " })).toEqual({ roomId: "brave-otters-sing", nickname: "Maija" });
+    expect(watchRequestSchema.safeParse({ roomId: "", nickname: "Maija" }).success).toBe(false);
+    expect(watchRequestSchema.safeParse({ roomId: "x", nickname: "M" }).success).toBe(false);
   });
 });
 

@@ -114,13 +114,15 @@ emails (the user's choice for a hobby project): errors are found on the dashboar
 | `http.request` | every HTTP request incl. matchmaking (`/health` only at debug) |
 | `room.created` / `room.disposed` / `room.error` | room lifecycle, uncaught room exceptions |
 | `room.closed` | the host left the waiting room, so the game closed for everyone, `{ reason: "hostLeft" }` |
-| `room.refused` | a join or creation refused, `{ reason }`: `nickname` (invalid), `options` (another invalid join option, e.g. `bots`) or `cap` (`open` games at the limit) |
+| `room.refused` | a join or creation refused, `{ reason }`: `nickname` (invalid), `options` (another invalid join option, e.g. `bots`), `cap` (`open` games at the limit) or `notWatchable` (a spectator for a game not running) |
 | `player.joined` / `left` / `dropped` / `reconnected` | connection changes (a dropped seat is held 5 min); `joined` carries the nickname `name` |
 | `player.removed` | a player is taken out of a game, `{ seat, reason, by? }` (`left`, `kicked` by seat `by`, `timeout` after 5 min disconnected) |
 | `game.setup` | a new game's seed |
-| `game.started` | the game started, `{ dealSeed, seats, startSeat, quick? }` (reproduces the deal and who began; seed never synced; `quick: true` for a quick game against bots) |
+| `game.started` | the game started, `{ dealSeed, seats, startSeat, quick?, watch? }` (reproduces the deal and who began; seed never synced; `quick: true` for a quick game against bots, `watch: true` for a bot-only game created to watch) |
 | `treasure.collected` | a player collects their target, `{ seat, treasure, found, cards }` |
-| `game.finished` | the game ended, `{ winner, reason }` (seat; `home` or `lastPlayer`; `noPeople` with winner 0 when only bots were left) |
+| `game.finished` | the game ended, `{ winner, reason }` (seat; `home` or `lastPlayer`; `noPeople` with winner 0 when only bots were left and nobody watched) |
+| `game.rematch` | a finished game created its rematch game, `{ rematchRoom }` (follow the group into that room) |
+| `spectator.joined` / `spectator.left` | a spectator came or went (left, or the 5-min drop hold ran out), `{ spectators }` = count after; their connection lines are `player.joined` with `spectator: true` etc. |
 | `bot.added` / `bot.removed` | the host seated or removed a bot in the waiting room, `{ seat, name }` |
 | `bot.fallback` | error: a bot's chosen command was rejected, `{ cmd, code }`; it made an allowed shift and stayed instead (a bug in the bot strategy) |
 | `turn.changed` | every turn change, `{ from, to }` seats (0 = nobody) |

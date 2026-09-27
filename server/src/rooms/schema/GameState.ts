@@ -48,5 +48,11 @@ export const GameState = schema({
   turnDeadline: t.float64().default(0),
   /** True once the current turn's time is up: from then on the other players may kick. */
   turnExpired: t.boolean().default(false),
+  /** How many spectators watch (dropped ones still in their hold included). */
+  spectators: t.uint8().default(0),
+  /** Bot speed 1, 2 or 4: every pause of a bot's turn is divided by it. */
+  botSpeed: t.uint8().default(1),
+  /** Id of the rematch game created from this finished game; "" until someone asks for one. */
+  rematchRoomId: t.string().default(""),
 });
 export type GameState = SchemaType<typeof GameState>;

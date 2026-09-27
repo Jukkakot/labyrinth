@@ -15,6 +15,8 @@ export interface OpenGames {
   /** "loading" until the first list arrived; "failed" when the lobby could not be reached. */
   status: "off" | "loading" | "ready" | "failed";
   games: OpenGame[];
+  /** Public games being played, to watch (`seated` = players, people and bots). */
+  running: OpenGame[];
 }
 
 /** A room as the built-in lobby lists it (the fields used here). */
@@ -25,7 +27,7 @@ export interface RoomListing {
   locked?: boolean;
   private?: boolean;
   createdAt?: string | number | Date;
-  metadata?: { host?: unknown; open?: unknown; pool?: unknown; seated?: unknown };
+  metadata?: { host?: unknown; open?: unknown; pool?: unknown; seated?: unknown; watchable?: unknown };
 }
 
 /** The parts of the SDK's lobby room this hook uses. */
@@ -38,21 +40,35 @@ export interface LobbyRoomLike {
 
 export type LobbyConnector = (pool: string) => Promise<LobbyRoomLike>;
 
-/** Joins the server's `lobby` room, which pushes the open games of `pool` (the server filters by metadata). */
+/** Joins the server's `lobby` room, which pushes the public games of `pool`, open or running (the server filters by metadata). */
 export const connectLobby: LobbyConnector = (pool) =>
-  sdkClient().joinOrCreate("lobby", { filter: { name: "game", metadata: { open: true, pool } } }) as unknown as Promise<LobbyRoomLike>;
+  sdkClient().joinOrCreate("lobby", { filter: { name: "game", metadata: { pool } } }) as unknown as Promise<LobbyRoomLike>;
 
 const time = (r: RoomListing) => (r.createdAt === undefined ? 0 : new Date(r.createdAt).getTime() || 0);
 
 /** Seats taken: people and bots from the metadata, or the connected people from an older server. */
 const seatedOf = (r: RoomListing) => (typeof r.metadata?.seated === "number" ? r.metadata.seated : r.clients);
 
-/** Joinable entries, oldest first: the server lists locked and full rooms too. */
+const hostOf = (r: RoomListing) => (typeof r.metadata?.host === "string" ? r.metadata.host : "");
+const toEntry = (r: RoomListing): OpenGame => ({ roomId: r.roomId, host: hostOf(r), seated: seatedOf(r) });
+
+/**
+ * Joinable entries, oldest first: the server lists locked and full rooms too. A game whose host has
+ * not joined yet (a rematch game, for a moment) is left out.
+ */
 export function toOpenGames(rooms: Iterable<RoomListing>): OpenGame[] {
   return [...rooms]
-    .filter((r) => !r.locked && !r.private && r.clients < r.maxClients && seatedOf(r) < 4 && r.metadata?.open === true)
+    .filter((r) => !r.locked && !r.private && r.clients < r.maxClients && seatedOf(r) < 4 && r.metadata?.open === true && hostOf(r) !== "")
     .sort((a, b) => time(a) - time(b))
-    .map((r) => ({ roomId: r.roomId, host: typeof r.metadata?.host === "string" ? r.metadata.host : "", seated: seatedOf(r) }));
+    .map(toEntry);
+}
+
+/** Running public games that take another spectator, oldest first. */
+export function toRunningGames(rooms: Iterable<RoomListing>): OpenGame[] {
+  return [...rooms]
+    .filter((r) => !r.private && r.metadata?.watchable === true)
+    .sort((a, b) => time(a) - time(b))
+    .map(toEntry);
 }
 
 /**
@@ -69,7 +85,7 @@ export function useOpenGames(pool: string, enabled: boolean, connect: LobbyConne
     let lobby: LobbyRoomLike | undefined;
     const rooms = new Map<string, RoomListing>();
     const publish = (state: OpenGames) => active && setLoaded({ pool, state });
-    const publishRooms = () => publish({ status: "ready", games: toOpenGames(rooms.values()) });
+    const publishRooms = () => publish({ status: "ready", games: toOpenGames(rooms.values()), running: toRunningGames(rooms.values()) });
 
     connect(pool)
       .then((room) => {
@@ -94,7 +110,7 @@ export function useOpenGames(pool: string, enabled: boolean, connect: LobbyConne
       })
       .catch((err: unknown) => {
         log.warn("client.warn", { kind: "lobby" }, err instanceof Error ? err.message : String(err));
-        publish({ status: "failed", games: [] });
+        publish({ status: "failed", games: [], running: [] });
       });
 
     return () => {
@@ -108,5 +124,5 @@ export function useOpenGames(pool: string, enabled: boolean, connect: LobbyConne
   return loaded?.pool === pool ? loaded.state : LOADING;
 }
 
-const OFF: OpenGames = { status: "off", games: [] };
-const LOADING: OpenGames = { status: "loading", games: [] };
+const OFF: OpenGames = { status: "off", games: [], running: [] };
+const LOADING: OpenGames = { status: "loading", games: [], running: [] };
