@@ -2,7 +2,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dropInviteFromUrl, inviteFromUrl, inviteUrl } from "./inviteLink.ts";
-import { checkNickname, loadNickname, saveNickname } from "./nickname.ts";
+import { checkNickname, loadNickname, NAME_LANGUAGES, nameWords, randomNickname, saveNickname } from "./nickname.ts";
 import { toOpenGames, useOpenGames, type LobbyRoomLike, type RoomListing } from "./useOpenGames.ts";
 
 const listing = (roomId: string, extra: Partial<RoomListing> = {}): RoomListing => ({
@@ -55,6 +55,23 @@ describe("lobby › Nickname store and rule", () => {
     expect(checkNickname("   ")).toEqual({ ok: false, issue: "length" });
     expect(checkNickname("x".repeat(17))).toEqual({ ok: false, issue: "length" });
     expect(checkNickname("Ma\tija")).toEqual({ ok: false, issue: "characters" });
+  });
+});
+
+describe("lobby › Random name for a new player", () => {
+  it("every adjective and animal pair passes the nickname rule, in every language", () => {
+    for (const language of NAME_LANGUAGES) {
+      const { adjectives, animals } = nameWords(language);
+      expect(adjectives.length * animals.length).toBeGreaterThanOrEqual(500);
+      for (const a of adjectives) for (const b of animals) expect(checkNickname(`${a} ${b}`).ok, `${a} ${b}`).toBe(true);
+    }
+  });
+
+  it("uses the UI language's words (Finnish when unknown) and follows the random source", () => {
+    expect(randomNickname("fi", () => 0)).toBe("Rohkea Ilves");
+    expect(randomNickname("en-GB", () => 0)).toBe("Brave Lynx");
+    expect(randomNickname("sv", () => 0)).toBe("Rohkea Ilves");
+    expect(randomNickname("en", () => 0.999)).toBe("Rapid Heron");
   });
 });
 

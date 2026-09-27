@@ -89,7 +89,8 @@
     "otherGames": "Other games",
     "botGames": "Quick game against bots",
     "botGameLabel_one": "Quick game: you and {{count}} bot",
-    "botGameLabel_other": "Quick game: you and {{count}} bots"
+    "botGameLabel_other": "Quick game: you and {{count}} bots",
+    "randomName": "Draw a new name"
   },
   "game": {
     "idLabel": "Game {{id}}. Tap to copy.",

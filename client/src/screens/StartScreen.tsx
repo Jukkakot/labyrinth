@@ -1,7 +1,8 @@
+import { IconDice5 } from "@tabler/icons-react";
 import { RULES_VERSION } from "@labyrinth/rules";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { checkNickname, loadNickname } from "../session/nickname.ts";
+import { checkNickname, loadNickname, randomNickname } from "../session/nickname.ts";
 import type { ServerWake } from "../session/serverWake.ts";
 import type { OpenGames } from "../session/useOpenGames.ts";
 import type { GameSession } from "../session/useGameSession.ts";
@@ -35,9 +36,10 @@ const BOT_COUNTS = [1, 2, 3] as const;
  * join-error states.
  */
 export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInviteDone }: StartScreenProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { status, slow, play, createPrivate, joinById, playBots, retry, startNotice } = session;
-  const [input, setInput] = useState(loadNickname);
+  // A new player gets a random name, so they can start at once; it is remembered only once used.
+  const [input, setInput] = useState(() => loadNickname() || randomNickname(i18n.language));
   const [touched, setTouched] = useState(false);
   const nickname = checkNickname(input);
 
@@ -79,20 +81,34 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
             else play(name);
           }}
         >
-          <label className={styles.field}>
-            <span className={styles.label}>{t("start.nickname")}</span>
-            <input
-              className={styles.input}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onBlur={() => setTouched(true)}
-              maxLength={32}
-              autoComplete="nickname"
-              enterKeyHint="go"
-              aria-invalid={showHint || undefined}
-              aria-describedby={showHint ? "nickname-hint" : undefined}
-            />
-          </label>
+          <div className={styles.field}>
+            <label htmlFor="nickname" className={styles.label}>
+              {t("start.nickname")}
+            </label>
+            <div className={styles.inputRow}>
+              <input
+                id="nickname"
+                className={styles.input}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onBlur={() => setTouched(true)}
+                maxLength={32}
+                autoComplete="nickname"
+                enterKeyHint="go"
+                aria-invalid={showHint || undefined}
+                aria-describedby={showHint ? "nickname-hint" : undefined}
+              />
+              <Button
+                variant="secondary"
+                className={styles.dice}
+                onClick={() => setInput(randomNickname(i18n.language))}
+                aria-label={t("start.randomName")}
+                title={t("start.randomName")}
+              >
+                <IconDice5 size={22} aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
           {showHint && (
             <p id="nickname-hint" className={styles.hint}>
               {t(nickname.issue === "characters" ? "start.nicknameCharacters" : "start.nicknameLength")}

@@ -189,11 +189,27 @@ describe("lobby › Nickname", () => {
     localStorage.clear();
     const play = vi.fn();
     render(<StartScreen session={sessionOf({ play })} wake={ready} />);
+    fireEvent.change(field(), { target: { value: "" } });
     expect(button("Pelaa").disabled).toBe(true);
     fireEvent.change(field(), { target: { value: "  Pekka  " } });
     expect(button("Pelaa").disabled).toBe(false);
     fireEvent.click(button("Pelaa"));
     expect(play).toHaveBeenCalledExactlyOnceWith("Pekka");
+  });
+
+  it("Random name for a new player: a valid name is ready and Play works at once; the dice draws another", () => {
+    localStorage.clear();
+    const play = vi.fn();
+    render(<StartScreen session={sessionOf({ play })} wake={ready} />);
+    const first = field().value;
+    expect(first).toMatch(/^\S+ \S+$/);
+    expect(button("Pelaa").disabled).toBe(false);
+    const random = vi.spyOn(Math, "random").mockReturnValue(first.startsWith("Rohkea") ? 0.5 : 0);
+    fireEvent.click(button("Arvo uusi nimi"));
+    random.mockRestore();
+    expect(field().value).not.toBe(first);
+    fireEvent.click(button("Pelaa"));
+    expect(play).toHaveBeenCalledExactlyOnceWith(field().value);
   });
 
   it("Too short: every join and create action is disabled and a hint says 2–16 characters", () => {
