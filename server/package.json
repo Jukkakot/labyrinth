@@ -16,6 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@axiomhq/pino": "^2.0.0",
     "@colyseus/schema": "^5.0.34",
     "@colyseus/tools": "^0.18.4",
     "@labyrinth/protocol": "*",

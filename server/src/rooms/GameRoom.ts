@@ -46,7 +46,7 @@ import {
   type TreasureId,
 } from "@labyrinth/rules";
 import type { z } from "zod";
-import { log } from "../logging/logger.js";
+import { log, type LogFields } from "../logging/logger.js";
 import { CommandRejection, type Actor } from "./command.js";
 import { LoggedRoom } from "./LoggedRoom.js";
 import { GameState, Player, TileState } from "./schema/GameState.js";
@@ -302,6 +302,12 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   private syncSeats(): void {
     if (this.state.phase === "waiting" && !this.closing) this.maxClients = MAX_SEATS - this.bots().length;
     void this.setMetadata({ ...this.metadata, seated: this.state.players.size });
+  }
+
+  /** Adds the seat of a seated actor (person or bot), so a game can be followed by seat in the logs. */
+  protected logCtx(actor?: Actor, extra?: LogFields): LogFields {
+    const seat = actor && this.state.players.get(actor.sessionId)?.seat;
+    return super.logCtx(actor, seat ? { seat, ...extra } : extra);
   }
 
   protected commandStateFacts() {

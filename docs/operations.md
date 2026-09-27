@@ -51,12 +51,34 @@ environment.
 | `ALLOWED_ORIGINS` | `render.yaml` env | CORS allow-list (comma-separated) |
 | `NODE_ENV=production` | `render.yaml` env | Disables `/monitor` and `/playground` |
 | `PORT` | set by Render | Server listen port |
+| `AXIOM_DATASET` | `render.yaml` env (`labyrinth`) | Axiom dataset the production server ships its log lines to |
+| `AXIOM_TOKEN` | Render dashboard (secret, `sync: false`) | Axiom API token, **ingest-only** for `labyrinth`; without it nothing is shipped |
 
 ## Logs — Implemented
 
-All logs — server and client — end up in Render's log stream. Render stamps each line with a UTC
-timestamp. Read them in the Render dashboard (service → Logs) or with Render MCP
-`list_logs(resource=[service id], text=[…], startTime, endTime)`.
+All logs, server and client, are written to the server's stdout (Render's log view) and, in
+production with `AXIOM_TOKEN` set, also shipped to the **Axiom** dataset `labyrinth` (30-day
+retention, queryable with APL). Axiom is the main place to read them: Claude uses the Axiom MCP
+(`queryApl`), people the Axiom web UI. Render's view (dashboard or Render MCP
+`list_logs(resource=[service id], text=[…], startTime, endTime)`) is the fallback, e.g. while
+Axiom has no data. Shipping runs in a worker thread (`@axiomhq/pino`); a failing Axiom only loses
+lines, never slows a game.
+
+**Ready queries** (APL; narrow the time range with `where _time > ago(1d)`):
+
+```
+['labyrinth'] | where room == "brave-otters-sing" | sort by _time asc          // one game's timeline
+['labyrinth'] | where level == "error" and _time > ago(1d)                      // errors today
+['labyrinth'] | where evt == "cmd.rejected" | summarize count() by code, cmd     // rejections by code
+['labyrinth'] | where evt == "bot.fallback" | project _time, room, seat, cmd, code
+['labyrinth'] | where evt == "game.finished" | summarize count() by reason, bin(_time, 1d)
+['labyrinth'] | where evt == "game.started" | summarize count() by quick = tostring(quick), bin(_time, 1d)
+```
+
+**One-time setup** (done by the user in the web UIs): Axiom → new dataset `labyrinth`; Axiom → API
+token with ingest permission for `labyrinth` only; Render → `labyrinth-server` → Environment →
+`AXIOM_TOKEN`. Recommended: Axiom monitor on `['labyrinth'] | where level == "error"` (count > 0
+per 5 min → email).
 
 **Format:** one JSON object per line, keys in this order:
 
@@ -71,7 +93,9 @@ timestamp. Read them in the Render dashboard (service → Logs) or with Render M
 - `room` is the readable game id shown to players; `player` the session id.
 - `src` `server` or `client`; `ver` short git commit of the side that logged (`dev` locally).
 - Errors: `err` (server) or `stack` (client) inside the line — never multi-line.
-- Server lines have no own timestamp in production; client lines carry the client clock in `ts`.
+- `time`: when the server wrote the line; present when shipped to Axiom (its `_time`) and in
+  development. Client lines also carry the device clock in `ts`.
+- `seat`: on lines about a seated player (person or bot), next to `player`.
 
 **What gets logged:**
 
@@ -109,13 +133,14 @@ server and client together.
 Report shape: "around 14:30 in game brave-otters-sing, X happened".
 
 1. Convert the reported local time (Europe/Helsinki) to UTC.
-2. Fetch Render logs for the server service: `list_logs(resource=[service id], text=["<game id>"],
-   startTime, endTime)` with a window of ±15 min (widen if needed; `direction: "forward"` gives
-   chronological order). Render reads the JSON `level`, so `level: ["error"]` filters too.
-   Locally, read `logs/dev.log`.
+2. Query Axiom (Axiom MCP `queryApl`): `['labyrinth'] | where room == "<game id>" | sort by _time
+   asc`, with a ±15 min window around the reported time. If Axiom has nothing (older than 30 days,
+   or not set up), fetch Render logs: `list_logs(resource=[service id], text=["<game id>"],
+   startTime, endTime)` (`direction: "forward"` gives chronological order). Locally, read
+   `logs/dev.log`.
 3. Follow the room timeline: `player.*`, `cmd.accepted`/`cmd.rejected`/`cmd.failed`,
    `client.error` (`src:"client"`), `framework.log`. Compare `ver` of client and server.
-   Client `ts` is the device clock and can be off by seconds; order by Render's timestamp.
+   Client `ts` is the device clock and can be off by seconds; order by `_time`.
 4. Reproduce as a failing test (rules unit test, or room test with @colyseus/testing). For UI
    bugs, reproduce with Playwright MCP (two tabs = two players).
 5. Fix; the failing test stays as a regression test. Record the root cause and the log lines

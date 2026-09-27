@@ -9,10 +9,27 @@ export type LogFields = { room?: string; player?: string; err?: unknown } & Reco
 
 type Mode = "production" | "development" | "test";
 
+/** Where shipped lines go: the Axiom dataset and an ingest token. */
+export interface AxiomOptions {
+  dataset: string;
+  token: string;
+}
+
 export interface LoggerOptions {
   env?: NodeJS.ProcessEnv;
   /** Write here instead of the mode's default output (tests). */
   destination?: DestinationStream;
+  /** Builds the stream that ships lines to Axiom; tests replace it (no network). */
+  axiomStream?: (options: AxiomOptions) => DestinationStream;
+}
+
+/** The official pino transport: a worker thread that batches lines to Axiom, off the event loop. */
+const axiomTransport = (options: AxiomOptions): DestinationStream => pino.transport({ target: "@axiomhq/pino", options });
+
+/** Axiom settings when the production server should ship its lines; never in development or tests. */
+export function axiomOptionsOf(env: NodeJS.ProcessEnv): AxiomOptions | undefined {
+  const { AXIOM_TOKEN: token, AXIOM_DATASET: dataset } = env;
+  return modeOf(env) === "production" && token && dataset ? { dataset, token } : undefined;
 }
 
 const DEV_LOG_FILE = fileURLToPath(new URL("../../../logs/dev.log", import.meta.url));
@@ -37,14 +54,27 @@ function devDestination(): DestinationStream {
   ]);
 }
 
-function createPino(options: LoggerOptions): { pino: Logger; mode: Mode; ver: string } {
+interface LoggerState {
+  pino: Logger;
+  mode: Mode;
+  ver: string;
+  /** Lines carry `time`: in development, and when shipped (Axiom orders events by it). */
+  timed: boolean;
+}
+
+function createPino(options: LoggerOptions): LoggerState {
   const env = options.env ?? process.env;
   const mode = modeOf(env);
-  const destination = options.destination ?? (mode === "development" ? devDestination() : pino.destination(1));
+  const local = options.destination ?? (mode === "development" ? devDestination() : pino.destination(1));
+  const axiom = axiomOptionsOf(env);
+  // Stdout stays even when shipping: Render's log view is the fallback if Axiom is unreachable.
+  const destination = axiom
+    ? pino.multistream([{ stream: local }, { stream: (options.axiomStream ?? axiomTransport)(axiom) }])
+    : local;
   const logger = pino(
     {
       level: env.LOG_LEVEL ?? DEFAULT_LEVEL[mode],
-      // No pid/hostname and no timestamp: Render stamps every line itself.
+      // No pid/hostname and no pino timestamp: Render stamps every line; `line()` adds `time` where needed.
       base: undefined,
       timestamp: false,
       messageKey: "msg",
@@ -53,7 +83,7 @@ function createPino(options: LoggerOptions): { pino: Logger; mode: Mode; ver: st
     },
     destination,
   );
-  return { pino: logger, mode, ver: serverVersion(env) };
+  return { pino: logger, mode, ver: serverVersion(env), timed: mode === "development" || axiom !== undefined };
 }
 
 let state = createPino({});
@@ -70,7 +100,7 @@ function line(evt: string, fields: LogFields | undefined, src: "server" | "clien
   if (room !== undefined) obj.room = room;
   if (player !== undefined) obj.player = player;
   Object.assign(obj, rest, { src, ver });
-  if (state.mode === "development") obj.time = new Date().toISOString();
+  if (state.timed) obj.time = new Date().toISOString();
   return obj;
 }
 

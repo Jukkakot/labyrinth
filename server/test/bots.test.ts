@@ -163,9 +163,9 @@ describe("bots in a room", () => {
       expect(r.state.turnSeat).toBe(2);
       await vi.waitFor(() => expect(r.state.turnSeat).toBe(1));
       const botLines = logs.byEvt("cmd.accepted").filter((l) => l.bot === true);
-      expect(botLines.map((l) => [l.cmd, l.player])).toEqual([
-        ["shift", "bot:2"],
-        ["move", "bot:2"],
+      expect(botLines.map((l) => [l.cmd, l.player, l.seat])).toEqual([
+        ["shift", "bot:2", 2],
+        ["move", "bot:2", 2],
       ]);
     });
 

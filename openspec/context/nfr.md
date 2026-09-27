@@ -28,12 +28,13 @@ Apply to every change. Designs and task lists must show how they are met.
 - Technical details go to the logs only, never to the UI.
 
 ## Logging and audit
-- All logs, server and client, end up in Render's log stream. No other log
-  service.
+- All logs, server and client, end up in Render's log stream and, in production,
+  in the Axiom dataset `labyrinth` (free tier, 30 days, APL queries). No other
+  log service.
 - Format: one JSON object per line (pino). `level` and `evt` always come first,
   then `room`, `player`, event fields, `src` (`server`/`client`), `ver` (short
-  commit) and `msg` last. Server lines carry no timestamp in production (Render
-  stamps each line); client entries carry their own `ts`.
+  commit) and `msg` last. Server lines carry `time` when shipped to Axiom (and in
+  development); client entries carry their own `ts`.
 - `evt` comes from a fixed catalogue (`room.created`, `player.joined`,
   `cmd.accepted`, `cmd.rejected`, `phase.changed`, `http.request`,
   `client.error`, `conn.lost`, …) so logs can be filtered by name.

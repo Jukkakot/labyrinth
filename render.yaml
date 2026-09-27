@@ -17,3 +17,8 @@ services:
         value: "22"
       - key: ALLOWED_ORIGINS
         value: https://jukkakot.github.io
+      # Central log store (docs/operations.md → Logs). The ingest token is set in the dashboard.
+      - key: AXIOM_DATASET
+        value: labyrinth
+      - key: AXIOM_TOKEN
+        sync: false

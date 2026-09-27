@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { configureLogger, log, serverVersion } from "../src/logging/logger.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { axiomOptionsOf, configureLogger, log, serverVersion } from "../src/logging/logger.js";
 import { captureLogs } from "./support/captureLogs.js";
 
 afterEach(() => configureLogger());
@@ -46,7 +46,40 @@ describe("observability › Structured log lines", () => {
     expect(serverVersion({ RENDER_GIT_COMMIT: "0123456789abcdef" })).toBe("0123456");
     expect(serverVersion({})).toBe("dev");
   });
+});
 
+describe("observability › Central log store", () => {
+  /** In-memory stream that parses the lines it receives. */
+  const memory = () => {
+    const raw: string[] = [];
+    return { stream: { write: (chunk: string) => void raw.push(...chunk.split("\n").filter(Boolean)) }, lines: () => raw.map((l) => JSON.parse(l)) };
+  };
+  const shipping = { NODE_ENV: "production", AXIOM_TOKEN: "xaat-test", AXIOM_DATASET: "labyrinth" };
+
+  it("production with a token and dataset: every line, server and client, goes to stdout and Axiom, with time", () => {
+    const stdout = memory();
+    const axiom = memory();
+    const axiomStream = vi.fn(() => axiom.stream);
+    configureLogger({ env: shipping, destination: stdout.stream, axiomStream });
+    log.info("server.started", { port: 1 });
+    log.client({ level: "warn", evt: "client.warn", ts: "2026-09-27T10:00:00.000Z" }, "abc1234");
+
+    expect(axiomStream).toHaveBeenCalledExactlyOnceWith({ dataset: "labyrinth", token: "xaat-test" });
+    expect(axiom.lines()).toEqual(stdout.lines());
+    expect(axiom.lines().map((l) => l.evt)).toEqual(["server.started", "client.warn"]);
+    expect(Date.parse(axiom.lines()[0].time)).not.toBeNaN();
+  });
+
+  it("Not configured, or not production: nothing is shipped", () => {
+    expect(axiomOptionsOf({ NODE_ENV: "production" })).toBeUndefined();
+    expect(axiomOptionsOf({ NODE_ENV: "production", AXIOM_TOKEN: "t" })).toBeUndefined();
+    expect(axiomOptionsOf({ ...shipping, NODE_ENV: "development" })).toBeUndefined();
+    expect(axiomOptionsOf({ ...shipping, NODE_ENV: "test" })).toBeUndefined();
+    expect(axiomOptionsOf(shipping)).toEqual({ dataset: "labyrinth", token: "xaat-test" });
+  });
+});
+
+describe("observability › Structured log lines (client entries)", () => {
   it("writes client entries with src=client, the client version and timestamp", () => {
     const logs = captureLogs();
     log.client(
