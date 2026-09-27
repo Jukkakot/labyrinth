@@ -20,6 +20,8 @@
 - The bot's choice is a pure, seeded rules function, so it is unit-tested and a whole bot game can
   be simulated without a server.
 - Bot commands take exactly the path of a person's command (validation, audit, rejection).
+- The turn choice is a replaceable strategy: a much smarter bot comes later (the user's stated
+  goal), and swapping it in must not touch the server, protocol or client.
 
 **Non-Goals:**
 - Several difficulty levels, bots that block opponents or plan ahead more than one turn.
@@ -77,6 +79,13 @@ of reach = worst). Pick the best candidates, break ties with the rng, return
 **Rng:** each bot gets `createRng(mix(dealSeed, seat))` at the start and keeps it for the game, so
 a game is reproducible from `game.started` plus the commands in the log.
 Pawns of other players are ignored (they do not block movement in this game).
+**Replaceable strategy:** `chooseBotTurn` is the first implementation of a `BotStrategy` type,
+`(view: BotView, rng: Rng) => BotTurn`. `BotView` holds what a player may fairly know: the board
+and spare, every pawn square, the last insertion, each seat's found treasures and cards left, and
+the bot's own target, but never other players' targets or stacks (bots play fair, also when they
+get smarter). The server builds the `BotView` and calls the strategy it was given, so a later,
+smarter strategy (look-ahead, blocking opponents, difficulty levels) is a rules-only change. The
+simulation test takes the strategy as a parameter so it can compare strategies later.
 
 ### 6. Driving bot turns: timers in `GameRoom`
 `setTurn()` checks whether the new current player is a bot and schedules its shift after
