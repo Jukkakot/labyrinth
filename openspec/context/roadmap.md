@@ -79,10 +79,29 @@ In this order:
    Prune the specs, i18n keys, code and wiki of what is removed (no dead paths left).
 2. ~~`hide-found-treasures`~~ (done): collected treasures hidden on board and spare tiles, the own target always shown. Originally: treasures already collected (by anyone) are no longer drawn on the
    board tiles, so the board shows only what is still in play. Hint and bots already skip them.
-3. `clearer-board-marks`: a first-time player must understand every mark on the board (target,
-   reachable squares, hint ring, last push/route, shift preview reach). Start by listing each mark
-   with a screenshot and asking the user which ones confuse; options: fewer/distinct marks, a
-   short label or legend, tie them to the first-game tips.
+3. `clearer-board-marks`: a first-time player must understand every mark on the board. Marks
+   listed and variants shown to the user as mock-ups (artifact "Laudan merkit",
+   https://claude.ai/artifact/EsTs5XeSs9a8kcogcnZrbW). **The user picked (2026-09-27): A2, B2, C1, D2, E3:**
+   - A2 last push: the pushed-in tile drawn small just outside the board edge where it came in, in
+     its rotation, framed in the mover's colour (replaces the push triangle; route trace stays).
+     Cost: for side pushes it does not fit a phone's 16 px gutter, so the board shrinks ~12 % (or
+     find a better fit while building).
+   - B2 own pawn and hint: own pawn gets a slow pulsing ring in its own colour, only on your turn
+     (replaces the dashed ring); the hint ring gets a bulb badge (same icon as the "Vihje" button).
+   - C1 forbidden reverse arrow: looks as today (faded), tapping it explains why in the status line
+     ("Tästä ei voi työntää: laatta palaisi juuri sinne, mistä edellinen tippui.").
+   - D2 idle guide: after 10 s without action on your turn, the arrows (shift step) or the
+     reachable squares (move step) nudge gently toward the board; no text. Reduced motion: none.
+   - E3 reachable squares: a dot on the corridor hub, hollow in the shift preview, filled in the
+     move step (replaces preview rings and the move step's dashed squares); the whole tile stays
+     the tap target.
+5. `push-and-pick` (asked 2026-09-27): smoother turn. Placing the tile at an arrow at once shows
+   where you can walk (E3 dots) and the player can still move the tile to another arrow or rotate
+   it; tapping a reachable square commits shift + move together, so the shift needs no separate
+   confirm. A setting switches back to today's flow (confirm shift, then move). To decide in the
+   proposal: how it fits the existing "confirm shift/move" settings, what online games send
+   (shift then move, opponents see the shift only when committed), the turn clock, and the hint.
+   Build after `clearer-board-marks` (it uses E3).
 4. ~~`game-link-badge`~~ (done): the id badge shares the game link (join/watch text), device games show a plain label, the bug-report line moved to Settings → "Vianilmoitus". Originally: the game id in the top-left corner becomes an easy way to link the game to
    someone: tapping it shares/copies an http URL — a join link while the game is in the waiting
    room, a watch link once it is running (invite links already open both). To decide in the
