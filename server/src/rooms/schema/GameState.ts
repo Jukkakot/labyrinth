@@ -10,6 +10,8 @@ export type TileState = SchemaType<typeof TileState>;
 export const Player = schema({
   /** True for a computer-controlled seat (keyed `bot:<seat>`); a bot is always connected. */
   bot: t.boolean().default(false),
+  /** True while the bot plays this person's seat (they handed it over, or their connection dropped). */
+  autoplay: t.boolean().default(false),
   /** False while the player's connection is dropped and awaiting reconnection. */
   connected: t.boolean().default(true),
   /** 1–4, clockwise from the top-left start corner. */

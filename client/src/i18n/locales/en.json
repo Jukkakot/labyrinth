@@ -117,7 +117,9 @@
     "otherMove": "{{name}} is moving",
     "timeUp": "Time's up",
     "disconnected": "{{name}} – connection lost",
-    "timeLeft": "Time left {{time}}"
+    "timeLeft": "Time left {{time}}",
+    "autoplayMine": "The bot is playing for you",
+    "autoplay": "The bot is playing for {{name}}"
   },
   "shift": {
     "hint": "Pick an arrow on the board edge",
@@ -147,7 +149,8 @@
     "NOT_A_BOT": "There is no bot in that seat",
     "NOT_SPECTATOR": "Only a spectator can change the speed",
     "PEOPLE_PLAYING": "The speed can only be changed while only bots play",
-    "SERVER_FULL": "The server is full – try again in a moment"
+    "SERVER_FULL": "The server is full – try again in a moment",
+    "AUTOPLAYING": "The bot is playing your turn – take it back first"
   },
   "move": {
     "hint": "Tap a highlighted square",
@@ -168,7 +171,9 @@
     "collected": "You found: {{name}}",
     "disconnected": "connection lost",
     "left": "{{name}} left the game",
-    "bot": "bot"
+    "bot": "bot",
+    "autoplay": "the bot is playing for them",
+    "autoplayMine": "the bot is playing for you"
   },
   "result": {
     "mine": "You won!",
@@ -256,5 +261,10 @@
     "replayPrev": "Previous step",
     "replayNext": "Next step",
     "replayClose": "Close"
+  },
+  "autoplay": {
+    "handOver": "Let the bot play",
+    "takeBack": "Take back",
+    "playing": "The bot is playing for you. You can take over at any time."
   }
 }

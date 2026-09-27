@@ -26,6 +26,8 @@ const keyOf = (roomId: string) => (isDailyRoomId(roomId) ? DAILY_KEY : KEY);
 export interface SavedLocalGame {
   roomId: string;
   game: GameState;
+  /** The player's seat is handed to the bot. */
+  autoplay?: boolean;
   /** Where the bot on turn moves after its shift (chosen with the shift). */
   botTo?: Square;
   /** The next game's id once "Pelaa uudelleen" was tapped. */

@@ -129,6 +129,7 @@ emails (the user's choice for a hobby project): errors are found on the dashboar
 | `spectator.joined` / `spectator.left` | a spectator came or went (left, or the 5-min drop hold ran out), `{ spectators }` = count after; their connection lines are `player.joined` with `spectator: true` etc. |
 | `bot.added` / `bot.removed` | the host seated or removed a bot in the waiting room, `{ seat, name }` |
 | `bot.fallback` | error: a bot's chosen command was rejected, `{ cmd, code }`; it made an allowed shift and stayed instead (a bug in the bot strategy) |
+| `autoplay.changed` | the bot took over a person's seat or gave it back, `{ seat, on, reason }` (`player` handed over or took back, `drop` connection lost, `reconnect` came back); its commands then carry `bot: true` with the person's own `player` |
 | `turn.changed` | every turn change, `{ from, to }` seats (0 = nobody) |
 | `turn.expired` | the current turn's 60 s ran out, `{ seat }`; from now on the others may kick |
 | `phase.changed` | the step within a turn changes, `{ from, to, turnSeat }` (`shift` → `move`, `move` → `finished`) |

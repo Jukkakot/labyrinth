@@ -2,6 +2,7 @@ import { Client } from "@colyseus/sdk";
 import {
   CLOSE_CODES,
   GAME_ERROR_CODES,
+  type AutoplayPayload,
   type BotSeatPayload,
   type BotSpeed,
   type CommandResult,
@@ -175,7 +176,7 @@ export function noticeKey(code: string): NoticeKey {
   return (GAME_ERROR_CODES as readonly string[]).includes(code) ? `errors.${code as GameErrorCode}` : "errors.generic";
 }
 
-type Command = "start" | "addBot" | "removeBot" | "shift" | "move" | "kick" | "setSpeed" | "rematch" | "undo";
+type Command = "start" | "addBot" | "removeBot" | "shift" | "move" | "kick" | "setSpeed" | "rematch" | "undo" | "setAutoplay";
 
 export interface GameSession {
   status: SessionStatus;
@@ -202,6 +203,8 @@ export interface GameSession {
   watchBots(nickname: string, bots: number, speed?: BotSpeed): void;
   /** A spectator sets the bots' speed. Resolves undefined without sending while another command is pending. */
   setSpeed(speed: BotSpeed): Promise<CommandResult | undefined>;
+  /** Hands the viewer's seat to the bot (`on`) or takes it back. Resolves undefined without sending while another command is pending. */
+  setAutoplay(on: boolean): Promise<CommandResult | undefined>;
   /** In a finished game: asks for the rematch game (if nobody has yet) and moves there. */
   rematch(): void;
   /** True from tapping "Pelaa uudelleen" until the move to the new game begins. */
@@ -456,7 +459,7 @@ export function useGameSession(connector?: Connector): GameSession {
   }, [notice]);
 
   /** Sends one command at a time; a rejection becomes a notice. */
-  const send = useCallback(async (cmd: Command, payload: StartPayload | BotSeatPayload | ShiftPayload | MovePayload | KickPayload | SpeedPayload) => {
+  const send = useCallback(async (cmd: Command, payload: StartPayload | BotSeatPayload | ShiftPayload | MovePayload | KickPayload | SpeedPayload | AutoplayPayload) => {
     const room = roomRef.current;
     if (!room || pendingRef.current) return undefined;
     pendingRef.current = true;
@@ -491,6 +494,7 @@ export function useGameSession(connector?: Connector): GameSession {
   const kick = useCallback((seat: number) => send("kick", { seat }), [send]);
   const setSpeed = useCallback((speed: BotSpeed) => send("setSpeed", { speed }), [send]);
   const undo = useCallback(() => send("undo", {}), [send]);
+  const setAutoplay = useCallback((on: boolean) => send("setAutoplay", { on }), [send]);
 
   /**
    * Moves to the rematch game once its id is synced: asks for it first if nobody has, then waits for
@@ -557,6 +561,7 @@ export function useGameSession(connector?: Connector): GameSession {
     watch,
     watchBots,
     setSpeed,
+    setAutoplay,
     rematch,
     rematching,
     nickname,

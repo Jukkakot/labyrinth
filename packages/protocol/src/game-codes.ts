@@ -24,6 +24,7 @@ export const GAME_ERROR_CODES = [
   "NOT_A_BOT",
   "NOT_SPECTATOR",
   "PEOPLE_PLAYING",
+  "AUTOPLAYING",
   "SERVER_FULL",
 ] as const;
 export type GameErrorCode = (typeof GAME_ERROR_CODES)[number];
@@ -61,6 +62,11 @@ export type BotSpeed = (typeof BOT_SPEEDS)[number];
 /** A spectator's `setSpeed` command. */
 export interface SpeedPayload {
   speed: BotSpeed;
+}
+
+/** A seated player's `setAutoplay`: hand the own seat to the bot (`on`) or take it back. */
+export interface AutoplayPayload {
+  on: boolean;
 }
 
 /** The `rematch` command has no fields: a seated player sends it in a finished game. */

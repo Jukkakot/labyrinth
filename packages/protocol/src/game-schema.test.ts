@@ -5,6 +5,7 @@ import {
   kickPayloadSchema,
   movePayloadSchema,
   nicknameSchema,
+  autoplayPayloadSchema,
   rematchPayloadSchema,
   shiftPayloadSchema,
   speedPayloadSchema,
@@ -152,6 +153,8 @@ describe("speedPayloadSchema and rematchPayloadSchema", () => {
     for (const speed of [0, 3, 8, "2"]) expect(speedPayloadSchema.safeParse({ speed }).success).toBe(false);
     expect(rematchPayloadSchema.safeParse({}).success).toBe(true);
     expect(rematchPayloadSchema.safeParse({ x: 1 }).success).toBe(false);
+    expect(autoplayPayloadSchema.safeParse({ on: true }).success).toBe(true);
+    for (const bad of [{}, { on: 1 }, { on: true, seat: 2 }]) expect(autoplayPayloadSchema.safeParse(bad).success).toBe(false);
   });
 });
 

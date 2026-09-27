@@ -115,6 +115,14 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   the deal seed and seat) and sends the shift; 1 s later the move. A rejected choice logs
   `bot.fallback` and the bot makes an allowed shift and stays. One `botTimer` per room, cleared
   on every turn change, finish and dispose.
+- **Autoplay** (spec `autoplay`): a seated person's `setAutoplay { on }` (running game only) sets the
+  synced `Player.autoplay`; the room keeps why (`player` / `drop`) and a reconnect ends only a
+  drop's autoplay. A dropped player in a running game is auto-played during the seat hold; a
+  timed-out connected one is not (kick stays). `setTurn` schedules the bot for any bot-played seat
+  (bot or auto-played person); turning it on mid-turn plays the current step (on the move step
+  the rules' `botMoveAfterShift`), turning it off clears the pending step. The bot acts as
+  `{ sessionId: <the person's>, bot: true }`; the person's own shift/move is `AUTOPLAYING`.
+  Auto-played people still count as people for "Nobody left".
 - **Quick bot games** run only on the device: `bots` without `watch` is refused (`INVALID_OPTIONS`).
 - **Nobody left:** when no person is seated and nobody watches (held drops count), a started game
   finishes with `winnerSeat = 0` (reason `noPeople`); bots play on only for spectators.
@@ -134,7 +142,7 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 
 ## State sync — Implemented
 
-- Synced (`server/src/rooms/schema/GameState.ts`): players (seat, nickname, `bot`, connected, pawn
+- Synced (`server/src/rooms/schema/GameState.ts`): players (seat, nickname, `bot`, `autoplay`, connected, pawn
   square, card count, found treasures, and the **view-filtered** current target), the 49 squares
   and the spare as `{ id, rotation }`, `phase`, `turnSeat`, `hostSeat`, `winnerSeat`,
   `lastInsertion`, `turnDeadline`, `turnExpired`, `spectators` (count), `botSpeed`, `rematchRoomId`.
@@ -196,7 +204,8 @@ client/src/
 - **Local play:** a quick game against bots is a `LocalRoom` (`session/localRoom.ts`) that
   implements the same `GameRoomLike` as a Colyseus room, over the rules `game` engine: it exposes
   the synced-state shape (only the player's own target), answers commands with `CommandResult`,
-  plays bots with the server's pauses and fallback, and has no turn clock. The connector routes by
+  plays bots with the server's pauses and fallback (and the player's seat while it is auto-played,
+  saved with the game), and has no turn clock. The connector routes by
   prefix: room ids `local-…` and tokens `local:…` (`reconnect`, and `joinById` for rematch) go to
   the device, everything else to the server; the SDK client is created only for server games. The
   one local game is saved in localStorage (`labyrinth.localGame`) after every step, so a reload,

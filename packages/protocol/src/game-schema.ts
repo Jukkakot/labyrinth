@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  type AutoplayPayload,
   BOT_SPEEDS,
   INSERTION_IDS,
   nicknameIssue,
@@ -38,6 +39,10 @@ export const botSeatPayloadSchema = z.strictObject({
 export const speedPayloadSchema = z.strictObject({
   speed: z.literal(BOT_SPEEDS),
 }) satisfies z.ZodType<SpeedPayload>;
+
+export const autoplayPayloadSchema = z.strictObject({
+  on: z.boolean(),
+}) satisfies z.ZodType<AutoplayPayload>;
 
 export const rematchPayloadSchema = z.strictObject({}) satisfies z.ZodType<RematchPayload>;
 

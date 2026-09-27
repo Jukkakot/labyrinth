@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { StateView } from "@colyseus/schema";
 import { ErrorCode, matchMaker, ServerError, type Client, type CloseCode, type Deferred } from "colyseus";
 import {
+  autoplayPayloadSchema,
   BOT_NAMES,
   botSeatPayloadSchema,
   CLOSE_CODES,
@@ -21,6 +22,7 @@ import {
   allowedShifts,
   applyMove,
   applyShift,
+  botMoveAfterShift,
   botSeed,
   botViewOf,
   chooseBotTurn,
@@ -78,12 +80,14 @@ type CloseReason = "hostLeft";
 /** Why a player was taken out of the game (`player.removed`). */
 type RemovalReason = "left" | "kicked" | "timeout";
 
+/** Why a person's seat is auto-played: they handed it over, or their connection dropped. */
+type AutoplayReason = "player" | "drop";
+
 /** Why a started game ended (`game.finished`). */
 type FinishReason = "home" | "lastPlayer" | "noPeople";
 
 /** A bot's key in `state.players`; it can never clash with a Colyseus sessionId. */
 const botKey = (seat: number) => `bot:${seat}`;
-const botActor = (seat: number): Actor => ({ sessionId: botKey(seat), bot: true });
 
 /** Default pauses of a bot's turn, so people can follow it (the move waits for the tile slide). */
 export const BOT_SHIFT_DELAY_MS = 1500;
@@ -161,6 +165,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   private botTimer?: { clear(): void };
   /** Each bot's rng, seeded from the deal seed and its seat, kept for the whole game. */
   private botRngs = new Map<number, Rng>();
+  /** Auto-played people by sessionId, with why (a reconnect ends only a drop's autoplay). */
+  private autoplay = new Map<string, AutoplayReason>();
   /** Seat holds of dropped players, by sessionId; rejecting one removes that player at once. */
   private holds = new Map<string, Deferred<Client>>();
 
@@ -192,7 +198,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     }),
 
     shift: this.command("shift", shiftPayloadSchema, (client, { insertion, rotation }) => {
-      const player = this.requireSeated(client);
+      const player = this.requirePlaying(client);
       this.game = this.accepted(this.game && applyShift(this.game, player.seat, insertion, rotation), player.seat, "shift");
 
       const { board } = this.game;
@@ -207,7 +213,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     }),
 
     move: this.command("move", movePayloadSchema, (client, target) => {
-      const player = this.requireSeated(client);
+      const player = this.requirePlaying(client);
       this.game = this.accepted(this.game && applyMove(this.game, player.seat, target), player.seat, "move", target);
 
       placePawn(player, target);
@@ -215,6 +221,13 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       if (moved.found.length > player.found.length) this.collect(player, moved);
       if (this.game.step === "finished") this.finish(player.seat, "home");
       else this.setTurn(this.game.turnSeat);
+    }),
+
+    setAutoplay: this.command("setAutoplay", autoplayPayloadSchema, (client, { on }) => {
+      this.requireSeated(client);
+      if (!this.running()) throw new CommandRejection("WRONG_PHASE", { expected: "shift|move" });
+      if (on) this.startAutoplay(client.sessionId, "player");
+      else this.stopAutoplay(client.sessionId, "player");
     }),
 
     setSpeed: this.command("setSpeed", speedPayloadSchema, (client, { speed }) => {
@@ -282,6 +295,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     // Locked for players; the room admits spectators itself (through the watch route).
     this.maxClients = MAX_SEATS + MAX_SPECTATORS;
     for (const client of this.clients) if (this.spectators.has(client.sessionId)) this.showAllPlayers(client);
+    for (const [id, p] of this.state.players) if (!p.bot && !p.connected) this.startAutoplay(id, "drop");
     log.info(
       "game.started",
       this.logCtx(undefined, { dealSeed, seats, startSeat, ...(this.watchBots > 0 && { watch: true }) }),
@@ -427,6 +441,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     if (!player) return;
     const { seat } = player;
     this.state.players.delete(sessionId);
+    this.autoplay.delete(sessionId);
     log.info("player.removed", this.logCtx(undefined, { player: sessionId, seat, reason, ...(by !== undefined && { by }) }));
     if (this.state.phase === "waiting") {
       if (seat === this.state.hostSeat && !this.closing) this.closeRoom("hostLeft");
@@ -477,6 +492,62 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     return [...this.state.players.values()].map((p) => p.seat).sort((a, b) => a - b);
   }
 
+  /** The seated player sending a shift or move; a person whose seat the bot plays may not. Changes nothing. */
+  private requirePlaying(actor: Actor): Player {
+    const player = this.requireSeated(actor);
+    if (player.autoplay && !actor.bot) throw new CommandRejection("AUTOPLAYING", { seat: player.seat });
+    return player;
+  }
+
+  /**
+   * The bot takes over a person's seat (idempotent). A drop does not replace a hand-over, so
+   * coming back keeps the autoplay the player chose. On the seat's own turn the bot plays on
+   * from the step the turn is in.
+   */
+  private startAutoplay(sessionId: string, reason: AutoplayReason): void {
+    const player = this.state.players.get(sessionId);
+    const had = this.autoplay.get(sessionId);
+    if (!player || player.bot || had === "player" || had === reason) return;
+    this.autoplay.set(sessionId, reason);
+    if (had) return; // a drop's autoplay became the player's own: the bot already plays
+    player.autoplay = true;
+    log.info("autoplay.changed", this.logCtx(undefined, { seat: player.seat, on: true, reason }));
+    if (player.seat === this.state.turnSeat) this.scheduleBotStep(player.seat);
+  }
+
+  /** The player takes their seat back, or comes back after a drop (which ends only a drop's autoplay). */
+  private stopAutoplay(sessionId: string, reason: "player" | "reconnect"): void {
+    const player = this.state.players.get(sessionId);
+    const had = this.autoplay.get(sessionId);
+    if (!player || !had || (reason === "reconnect" && had !== "drop")) return;
+    this.autoplay.delete(sessionId);
+    player.autoplay = false;
+    log.info("autoplay.changed", this.logCtx(undefined, { seat: player.seat, on: false, reason }));
+    if (player.seat === this.state.turnSeat) this.clearBotTimer();
+  }
+
+  /** True when the seat is played by the bot: a bot's, or an auto-played person's. */
+  private isBotPlayed(seat: number): boolean {
+    const holder = this.seatHolder(seat);
+    return !!holder && (holder.bot || holder.autoplay);
+  }
+
+  /** The actor the bot sends a seat's commands as: the seat's own key, marked as a bot. */
+  private botActorOf(seat: number): Actor | undefined {
+    const entry = [...this.state.players.entries()].find(([, p]) => p.seat === seat);
+    return entry && { sessionId: entry[0], bot: true };
+  }
+
+  /** The bot rng of a seat, seeded from the deal seed and the seat (made on first use for an auto-played person). */
+  private botRngOf(seat: number): Rng {
+    let rng = this.botRngs.get(seat);
+    if (!rng) {
+      rng = createRng(botSeed(this.game!.seed, seat));
+      this.botRngs.set(seat, rng);
+    }
+    return rng;
+  }
+
   /** The seated player sending a command; rejects anyone else (spectators too). Changes nothing. */
   private requireSeated(actor: Actor): Player {
     const player = this.state.players.get(actor.sessionId);
@@ -512,7 +583,17 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     log.info("turn.changed", this.logCtx(undefined, { from, to: seat }));
     this.restartClock();
     this.clearBotTimer();
-    if (this.state.players.get(botKey(seat))) this.botTimer = this.clock.setTimeout(() => void this.playBotShift(seat), this.botDelay(this.botShiftDelayMs));
+    if (this.isBotPlayed(seat)) this.scheduleBotStep(seat);
+  }
+
+  /** The bot plays the step the seat's turn is in, after the usual pause: the whole turn, or where to walk after a shift already made. */
+  private scheduleBotStep(seat: number): void {
+    this.clearBotTimer();
+    if (this.state.phase === "shift") {
+      this.botTimer = this.clock.setTimeout(() => void this.playBotShift(seat), this.botDelay(this.botShiftDelayMs));
+    } else if (this.state.phase === "move") {
+      this.botTimer = this.clock.setTimeout(() => void this.playBotTakeover(seat), this.botDelay(this.botMoveDelayMs));
+    }
   }
 
   /** A bot pause at the current speed. */
@@ -531,8 +612,10 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
    */
   private async playBotShift(seat: number): Promise<void> {
     this.botTimer = undefined;
-    const actor = botActor(seat);
-    const turn = this.botStrategy(botViewOf(this.game!, seat), this.botRngs.get(seat) ?? createRng(seat));
+    const actor = this.botActorOf(seat);
+    // Taken back (or the turn moved on) before the pause ended: nothing to play.
+    if (!actor || !this.isBotPlayed(seat) || this.state.turnSeat !== seat) return;
+    const turn = this.botStrategy(botViewOf(this.game!, seat), this.botRngOf(seat));
     let to: Square | undefined = turn.to;
     const result = await this.messages.shift(actor, { insertion: turn.insertion, rotation: turn.rotation });
     if (!result.ok) {
@@ -545,12 +628,18 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     this.botTimer = this.clock.setTimeout(() => void this.playBotMove(seat, to), this.botDelay(this.botMoveDelayMs));
   }
 
+  /** The bot takes over after a shift the player made: it chooses only where to walk. */
+  private async playBotTakeover(seat: number): Promise<void> {
+    if (!this.isBotPlayed(seat) || this.state.turnSeat !== seat || this.state.phase !== "move") return;
+    await this.playBotMove(seat, botMoveAfterShift(botViewOf(this.game!, seat), this.botRngOf(seat)));
+  }
+
   /** A bot's move to `to`, or staying (always allowed) when there is none or it is rejected. */
   private async playBotMove(seat: number, to: Square | undefined): Promise<void> {
     this.botTimer = undefined;
-    const actor = botActor(seat);
-    const own = this.state.players.get(botKey(seat));
-    if (!own) return;
+    const actor = this.botActorOf(seat);
+    const own = actor && this.state.players.get(actor.sessionId);
+    if (!actor || !own || !this.isBotPlayed(seat) || this.state.turnSeat !== seat) return;
     const result = await this.messages.move(actor, to ?? squareOf(own));
     if (!result.ok && to) {
       log.error("bot.fallback", this.logCtx(actor, { cmd: "move", code: result.code }));
@@ -711,6 +800,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     if (!player || this.closing) return;
     player.connected = false;
     this.holds.set(client.sessionId, this.holdSeat(client, code, this.disconnectLimitSeconds));
+    if (this.running()) this.startAutoplay(client.sessionId, "drop");
   }
 
   onReconnect(client: Client) {
@@ -724,6 +814,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     if (player) {
       player.connected = true;
       this.showOwnPlayer(client, player);
+      this.stopAutoplay(client.sessionId, "reconnect");
     }
   }
 

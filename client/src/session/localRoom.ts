@@ -3,6 +3,7 @@ import {
   allowedShifts,
   applyMove,
   applyShift,
+  botMoveAfterShift,
   botRngFor,
   botViewOf,
   chooseBotTurn,
@@ -43,6 +44,8 @@ const BOT_NAMES = ["Robo", "Pixel", "Byte"] as const;
 
 /** The player's key in the synced players (their session id). */
 const ME = "me";
+/** The bot acting for the player while their seat is handed over. */
+const BOT_FOR_ME = "bot:me";
 
 export interface LocalRoomDeps {
   setTimeout(fn: () => void, ms: number): unknown;
@@ -138,6 +141,7 @@ export class LocalRoom implements GameRoomLike {
           seat: s.seat,
           name: s.name,
           bot: s.bot,
+          ...(!s.bot && { autoplay: this.saved.autoplay ?? false }),
           connected: true,
           row: s.pawn.row,
           col: s.pawn.col,
@@ -213,9 +217,10 @@ export class LocalRoom implements GameRoomLike {
 
   private handle(type: string, payload: unknown, actor: string): CommandResult {
     if (this.gone) return { ok: false, code: "WRONG_PHASE" };
-    const seat = actor === ME ? 1 : Number(actor.slice("bot:".length));
+    const seat = actor === ME || actor === BOT_FOR_ME ? 1 : Number(actor.slice("bot:".length));
     switch (type) {
       case "shift": {
+        if (actor === ME && this.saved.autoplay) return { ok: false, code: "AUTOPLAYING" };
         const { insertion, rotation } = (payload ?? {}) as { insertion?: unknown; rotation?: unknown };
         if (!isInsertionId(insertion) || !ROTATIONS.includes(rotation as Rotation)) return { ok: false, code: "INVALID_COMMAND" };
         const result = applyShift(this.game, seat, insertion, rotation as Rotation);
@@ -226,12 +231,15 @@ export class LocalRoom implements GameRoomLike {
         return this.apply(result);
       }
       case "move": {
+        if (actor === ME && this.saved.autoplay) return { ok: false, code: "AUTOPLAYING" };
         const { row, col } = (payload ?? {}) as { row?: unknown; col?: unknown };
         if (!isIndex(row) || !isIndex(col)) return { ok: false, code: "INVALID_COMMAND" };
         return this.apply((this.daily ? applyPuzzleMove : applyMove)(this.game, seat, { row, col }));
       }
       case "undo":
         return this.undo();
+      case "setAutoplay":
+        return this.setAutoplay(payload);
       case "rematch":
         return this.rematch();
       case "setSpeed":
@@ -253,6 +261,17 @@ export class LocalRoom implements GameRoomLike {
     }
     this.update({ ...this.saved, game: result.state, marks });
     if (finishing && !this.daily) this.logFinished(result.state.winnerSeat);
+    return { ok: true };
+  }
+
+  /** The bot takes over the player's seat or gives it back; it plays on from the step the turn is in. */
+  private setAutoplay(payload: unknown): CommandResult {
+    const { on } = (payload ?? {}) as { on?: unknown };
+    if (typeof on !== "boolean") return { ok: false, code: "INVALID_COMMAND" };
+    // The puzzle is the player's own to solve.
+    if (this.daily || this.game.step === "finished") return { ok: false, code: "WRONG_PHASE" };
+    if ((this.saved.autoplay ?? false) === on) return { ok: true };
+    this.update({ ...this.saved, autoplay: on, botTo: undefined });
     return { ok: true };
   }
 
@@ -300,12 +319,13 @@ export class LocalRoom implements GameRoomLike {
     const { game } = this;
     if (this.gone || game.step === "finished") return;
     const current = game.seats.find((s) => s.seat === game.turnSeat);
-    if (!current?.bot) return;
-    const actor = `bot:${current.seat}`;
+    // The bot plays its own seats, and the player's while it is handed over.
+    if (!current || !(current.bot || this.saved.autoplay)) return;
+    const actor = current.bot ? `bot:${current.seat}` : BOT_FOR_ME;
     if (game.step === "shift") {
       this.botTimer = this.deps.setTimeout(() => this.playBotShift(current.seat, actor), BOT_SHIFT_DELAY_MS);
     } else {
-      this.botTimer = this.deps.setTimeout(() => this.playBotMove(actor, current.pawn), BOT_MOVE_DELAY_MS);
+      this.botTimer = this.deps.setTimeout(() => this.playBotMove(actor, current.seat, current.pawn), BOT_MOVE_DELAY_MS);
     }
   }
 
@@ -323,9 +343,10 @@ export class LocalRoom implements GameRoomLike {
     this.handle("shift", fallback, actor);
   }
 
-  private playBotMove(actor: string, stay: Square): void {
+  private playBotMove(actor: string, seat: number, stay: Square): void {
     this.botTimer = undefined;
-    const to = this.saved.botTo ?? stay;
+    // Without a move chosen with the shift (handed over after the player's own shift), choose it now.
+    const to = this.saved.botTo ?? (actor === BOT_FOR_ME ? botMoveAfterShift(botViewOf(this.game, seat), botRngFor(this.game, seat)) : stay);
     this.saved = { ...this.saved, botTo: undefined };
     const result = this.handle("move", to, actor);
     if (!result.ok) {

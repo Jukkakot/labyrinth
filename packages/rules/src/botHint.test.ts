@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { allowedShifts, type BotView } from "./bot.js";
+import { allowedShifts, botMoveAfterShift, type BotView } from "./bot.js";
 import { hintMove, hintSeed, hintTurn } from "./botHint.js";
+import { createRng } from "./rng.js";
 import { ALL_SQUARES, type Square } from "./geometry.js";
 import { isReachable } from "./move.js";
 import { isValidSeed } from "./rng.js";
@@ -84,5 +85,19 @@ describe("board-view › Hint", () => {
 
   it("the move hint needs the shift just made", () => {
     expect(() => hintMove(viewOf(1))).toThrow();
+  });
+});
+
+describe("autoplay › Bot plays an auto-played seat", () => {
+  it("Handed over mid-turn: walks to a reachable square, the target when it is in reach", () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const view = viewOf(seed);
+      const shift = allowedShifts(undefined)[(seed * 7) % 48]!;
+      const moved = afterShift(view, shift.insertion, shift.rotation);
+      const to = botMoveAfterShift(moved, createRng(seed));
+      expect(reachable(moved, to)).toBe(true);
+      const i = moved.board.squares.findIndex((t) => t.id === targetTileId(1, view.target));
+      if (i !== -1 && reachable(moved, ALL_SQUARES[i]!)) expect(to).toEqual(ALL_SQUARES[i]);
+    }
   });
 });

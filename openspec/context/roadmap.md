@@ -47,7 +47,10 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
 19. ~~`daily-puzzle`~~ (done): solo puzzle of the local date (3 treasures and home, fewest
     turns), one attempt, result shared as an emoji row with share sheet or clipboard. Originally: one seed per day for everyone, solo with no opponents: reach the treasure in as
     few turns as possible; result shareable as text (Wordle style). Builds on local play
-20. `autoplay` (requested 2026-09-27): a player can hand their seat to the bot for a while and take
+20. ~~`autoplay`~~ (done): "Anna botin pelata" in the top bar hands the seat to the bot, "Ota vuoro
+    takaisin" takes it back; robot icon on the chip and in the turn line for everyone; a dropped
+    player is auto-played during the seat hold, a slow connected one can still be kicked; works in
+    device games, not in the daily puzzle. Originally: a player can hand their seat to the bot for a while and take
     it back; the chip shows it to everyone. Same fair `BotStrategy` as bots. To decide in the
     proposal: whether a dropped or timed-out player is auto-played instead of kicked
 21. `settings`: confirmations, theme, sounds, **turn notification** (tab title, vibration, sound)

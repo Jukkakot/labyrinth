@@ -49,6 +49,8 @@ export interface SyncedPlayer {
   connected: boolean;
   /** True for a computer-controlled seat. */
   bot?: boolean;
+  /** True while the bot plays this person's seat. */
+  autoplay?: boolean;
   name?: string;
   row?: number;
   col?: number;
@@ -71,6 +73,8 @@ export interface SeatView {
   isMe: boolean;
   /** A computer-controlled seat (never the viewer, never the host). */
   isBot: boolean;
+  /** A person's seat the bot plays for now (handed over, or the connection dropped). */
+  autoplay?: boolean;
   /** The square the pawn stands on. */
   square: Square;
   /** Size of the seat's treasure stack. */
@@ -108,7 +112,14 @@ export interface GameView {
   mySeat?: number;
   /** Seat of the current player; 0 in the waiting room. */
   turnSeat: number;
+  /** The viewer plays the current turn themselves (false while the bot plays their seat). */
   isMyTurn: boolean;
+  /** The bot plays the viewer's seat. */
+  myAutoplay: boolean;
+  /** The viewer may hand their seat to the bot: seated in a running game that is not a daily puzzle. */
+  canAutoplay: boolean;
+  /** The current turn is an auto-played person's. */
+  turnAutoplay: boolean;
   step: TurnStep;
   /** On the viewer's own move step: every square their pawn can reach, its own square first. */
   reachable?: Square[];
@@ -173,7 +184,8 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     // Only the viewer's own target arrives, or every one for a spectator.
     const target = readTarget(p.target, found.length, p.cards ?? 0);
     const isBot = p.bot === true;
-    seats.push({ seat: p.seat, sessionId, name: p.name ?? "", connected: isBot || p.connected, isMe, isBot, square, cards: p.cards ?? 0, found, target });
+    const autoplay = !isBot && p.autoplay === true;
+    seats.push({ seat: p.seat, sessionId, name: p.name ?? "", connected: isBot || p.connected, isMe, isBot, autoplay, square, cards: p.cards ?? 0, found, target });
   });
   seats.sort((a, b) => a.seat - b.seat);
   const mySeat = seats.find((s) => s.isMe)?.seat;
@@ -183,9 +195,11 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
   const winnerSeat = state.winnerSeat ?? 0;
   const finished = state.phase === "finished";
   const phase: GamePhase = finished ? "finished" : state.phase === "waiting" ? "waiting" : "playing";
-  const isMyTurn = !finished && mySeat !== undefined && mySeat === turnSeat;
-  const step: TurnStep = state.phase === "move" ? "move" : "shift";
   const me = seats.find((s) => s.isMe);
+  const myAutoplay = me?.autoplay ?? false;
+  const isMyTurn = !finished && mySeat !== undefined && mySeat === turnSeat && !myAutoplay;
+  const step: TurnStep = state.phase === "move" ? "move" : "shift";
+  const daily = isDailyRoomId(roomId);
   const current = seats.find((s) => s.seat === turnSeat);
   const turnExpired = !finished && (state.turnExpired ?? false);
   // Whose target the board highlights: the viewer's own, or the current player's for a spectator.
@@ -205,6 +219,9 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     mySeat,
     turnSeat,
     isMyTurn,
+    myAutoplay,
+    canAutoplay: phase === "playing" && me !== undefined && !daily,
+    turnAutoplay: !finished && current?.autoplay === true,
     step,
     reachable: isMyTurn && step === "move" && me ? reachableSquares(board, me.square) : undefined,
     lastInsertion: isInsertionId(state.lastInsertion) ? state.lastInsertion : undefined,
@@ -220,7 +237,7 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     turnExpired,
     turnDisconnected: !finished && current !== undefined && !current.connected,
     canKick: turnExpired && mySeat !== undefined && current !== undefined && mySeat !== turnSeat,
-    daily: isDailyRoomId(roomId),
+    daily,
     turn: state.turn ?? 0,
     par: state.par ?? 0,
     undoable: state.undoable ?? false,

@@ -8,7 +8,7 @@ import { TREASURE_ICONS } from "./treasureIcons.ts";
 /**
  * One chip per seat: pawn shape and colour, the nickname (shortened with an ellipsis; the full name is
  * in the accessible text), treasures found out of cards, and a dimmed chip with an icon when
- * disconnected. A bot's chip has a robot icon. A chip also shows the seat's target when the viewer
+ * disconnected. A bot's chip has a robot icon, and so does a person's while the bot plays for them. A chip also shows the seat's target when the viewer
  * knows it: their own, or every one for a spectator.
  */
 export function PlayerStrip({ view }: { view: Pick<GameView, "seats"> }) {
@@ -24,6 +24,7 @@ export function PlayerStrip({ view }: { view: Pick<GameView, "seats"> }) {
         const summary = [
           t(s.isMe ? "board.pawnMe" : "board.pawn", { name: s.name }),
           s.isBot ? t("progress.bot") : undefined,
+          s.autoplay ? t(s.isMe ? "progress.autoplayMine" : "progress.autoplay") : undefined,
           t("progress.count", { found: s.found.length, cards: s.cards }),
           showTarget ? t("progress.target", { name: targetName }) : undefined,
           s.connected ? undefined : t("progress.disconnected"),
@@ -32,12 +33,12 @@ export function PlayerStrip({ view }: { view: Pick<GameView, "seats"> }) {
           .join(", ");
         const cls = [styles.chip, s.isMe && styles.mine, !s.connected && styles.offline].filter(Boolean).join(" ");
         return (
-          <li key={s.seat} className={cls} data-seat={s.seat} data-offline={s.connected ? undefined : ""}>
+          <li key={s.seat} className={cls} data-seat={s.seat} data-offline={s.connected ? undefined : ""} data-autoplay={s.autoplay ? "" : undefined}>
             <span className={styles.srOnly}>{summary}</span>
             <svg viewBox="0 0 100 100" className={styles.pawn} aria-hidden="true">
               <Pawn seat={s.seat} isMe={s.isMe} />
             </svg>
-            {s.isBot && <IconRobot size={16} stroke={2} aria-hidden="true" className={styles.botIcon} />}
+            {(s.isBot || s.autoplay) && <IconRobot size={16} stroke={2} aria-hidden="true" className={styles.botIcon} />}
             <span className={styles.name} aria-hidden="true">
               {s.name}
             </span>

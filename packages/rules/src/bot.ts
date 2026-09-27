@@ -1,5 +1,5 @@
 import type { Board } from "./board.js";
-import { lookaheadStrategy } from "./botLookahead.js";
+import { lookaheadMove, lookaheadStrategy } from "./botLookahead.js";
 import { ALL_SQUARES, type Square } from "./geometry.js";
 import { reachableSquares } from "./move.js";
 import { MAX_SEED, type Rng } from "./rng.js";
@@ -83,6 +83,14 @@ export const greedyBotTurn: BotStrategy = (view, rng) => {
 
 /** The bots' strategy: the look-ahead one (see `botLookahead.ts`). */
 export const chooseBotTurn: BotStrategy = lookaheadStrategy();
+
+/**
+ * Where a bot walks when it takes over a turn whose shift is already made (autoplay turned on
+ * after the player's own shift): `view.board` is the shifted board, `view.lastInsertion` that shift.
+ */
+export function botMoveAfterShift(view: BotView, rng: Rng): Square {
+  return lookaheadMove(view, rng);
+}
 
 /** A seed for one bot's rng, mixed from the game's deal seed and the bot's seat. */
 export function botSeed(dealSeed: number, seat: number): number {

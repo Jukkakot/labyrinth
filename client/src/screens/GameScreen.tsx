@@ -11,6 +11,7 @@ import { dailyRecordOf } from "../session/dailyRecord.ts";
 import { GameOverControls } from "../game/GameOverControls.tsx";
 import { moveHint, quarterTurns, shiftHint } from "../game/hint.ts";
 import { KickControl } from "../game/KickControl.tsx";
+import { AutoplayButton, AutoplayPanel } from "../game/AutoplayControls.tsx";
 import { LeaveButton, LeaveConfirm } from "../game/LeaveControls.tsx";
 import { MoveControls } from "../game/MoveControls.tsx";
 import { PlayerStrip } from "../game/PlayerStrip.tsx";
@@ -33,7 +34,7 @@ export interface GameScreenProps {
     "shift" | "move" | "kick" | "leave" | "pending" | "notice" | "setSpeed" | "rematch" | "rematching" | "watchBots" | "nickname"
   > &
     // Only the daily puzzle uses these.
-    Partial<Pick<GameSession, "playDaily" | "undo">>;
+    Partial<Pick<GameSession, "playDaily" | "undo" | "setAutoplay">>;
 }
 
 /**
@@ -52,7 +53,7 @@ export interface GameScreenProps {
  */
 export function GameScreen({ view, session }: GameScreenProps) {
   const { t } = useTranslation();
-  const { shift, move, kick, leave, pending, notice, setSpeed, rematch, rematching, watchBots, nickname, playDaily, undo } = session;
+  const { shift, move, kick, leave, pending, notice, setSpeed, setAutoplay, rematch, rematching, watchBots, nickname, playDaily, undo } = session;
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
   const [leaving, setLeaving] = useState(false);
@@ -195,6 +196,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
       end={
         <>
           <SpectatorCount count={view.spectators} />
+          {setAutoplay && view.canAutoplay && !view.myAutoplay && <AutoplayButton disabled={pending} onClick={() => void setAutoplay(true)} />}
           <LeaveButton onClick={view.finished || view.spectating || view.daily ? leave : () => setLeaving(true)} />
           <LanguageSwitcher />
         </>
@@ -255,6 +257,8 @@ export function GameScreen({ view, session }: GameScreenProps) {
           pending={pending}
           onKick={() => void kick(view.turnSeat)}
         />
+      ) : view.myAutoplay ? (
+        <AutoplayPanel pending={pending} onTakeBack={() => void setAutoplay?.(false)} />
       ) : view.step === "move" ? (
         <MoveControls
           spare={view.board.spare}

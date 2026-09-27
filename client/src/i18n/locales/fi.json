@@ -117,7 +117,9 @@
     "otherMove": "{{name}} siirtää",
     "timeUp": "Aika loppui",
     "disconnected": "{{name}} – yhteys katkennut",
-    "timeLeft": "Aikaa jäljellä {{time}}"
+    "timeLeft": "Aikaa jäljellä {{time}}",
+    "autoplayMine": "Botti pelaa puolestasi",
+    "autoplay": "Botti pelaa: {{name}}"
   },
   "shift": {
     "hint": "Valitse nuoli laudan reunalta",
@@ -147,7 +149,8 @@
     "NOT_A_BOT": "Paikalla ei ole bottia",
     "NOT_SPECTATOR": "Vain katsoja voi muuttaa nopeutta",
     "PEOPLE_PLAYING": "Nopeutta voi muuttaa vain, kun pelaavat pelkät botit",
-    "SERVER_FULL": "Palvelin on täynnä – yritä hetken päästä uudelleen"
+    "SERVER_FULL": "Palvelin on täynnä – yritä hetken päästä uudelleen",
+    "AUTOPLAYING": "Botti pelaa vuoroasi – ota vuoro takaisin ensin"
   },
   "move": {
     "hint": "Napauta korostettua ruutua",
@@ -168,7 +171,9 @@
     "collected": "Löysit: {{name}}",
     "disconnected": "yhteys katkennut",
     "left": "{{name}} poistui pelistä",
-    "bot": "botti"
+    "bot": "botti",
+    "autoplay": "botti pelaa hänen puolestaan",
+    "autoplayMine": "botti pelaa puolestasi"
   },
   "result": {
     "mine": "Voitit!",
@@ -256,5 +261,10 @@
     "replayPrev": "Edellinen vaihe",
     "replayNext": "Seuraava vaihe",
     "replayClose": "Sulje"
+  },
+  "autoplay": {
+    "handOver": "Anna botin pelata",
+    "takeBack": "Ota vuoro takaisin",
+    "playing": "Botti pelaa puolestasi. Voit ottaa vuoron takaisin milloin vain."
   }
 }

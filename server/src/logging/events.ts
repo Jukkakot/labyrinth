@@ -26,6 +26,7 @@ export const SERVER_LOG_EVENTS = [
   "bot.added",
   "bot.removed",
   "bot.fallback",
+  "autoplay.changed",
   "spectator.joined",
   "spectator.left",
   "game.rematch",
