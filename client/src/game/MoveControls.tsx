@@ -17,7 +17,8 @@ export interface MoveControlsProps {
   target?: TargetMark;
   onStay(): void;
   /** Shows the hinted square. */
-  onHint(): void;
+  /** Omitted where there is no hint (the daily puzzle). */
+  onHint?(): void;
 }
 
 /** Under the board in the move step: the spare, what to do, and the Stay button. Same slot and width as the shift controls. */
@@ -27,7 +28,7 @@ export function MoveControls({ spare, enabled, pending, target, onStay, onHint }
     <div className={styles.controls}>
       <div className={styles.tiles}>
         <SpareTile tile={spare} target={target} />
-        <HintButton disabled={!enabled || pending} onHint={onHint} />
+        {onHint && <HintButton disabled={!enabled || pending} onHint={onHint} />}
       </div>
       {enabled && (
         <div className={styles.actions}>

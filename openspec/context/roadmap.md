@@ -44,7 +44,8 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
     not so strong or so blocking that it feels annoying
 18. ~~`hint`~~ (done): "Vihje" previews the look-ahead bot's shift and rings the square to walk to,
     computed in the client from your own information; bots (and the hint) skip found treasures
-19. `daily-puzzle`: one seed per day for everyone, solo with no opponents: reach the treasure in as
+19. ~~`daily-puzzle`~~ (done): solo puzzle of the local date (3 treasures and home, fewest
+    turns), one attempt, result shared as an emoji row with share sheet or clipboard. Originally: one seed per day for everyone, solo with no opponents: reach the treasure in as
     few turns as possible; result shareable as text (Wordle style). Builds on local play
 20. `autoplay` (requested 2026-09-27): a player can hand their seat to the bot for a while and take
     it back; the chip shows it to everyone. Same fair `BotStrategy` as bots. To decide in the

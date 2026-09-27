@@ -9,6 +9,7 @@ import {
   isInsertionId,
   MAX_SEED,
   ROTATIONS,
+  startDailyPuzzle,
   startGame,
   targetOf,
   type BotStrategy,
@@ -18,8 +19,11 @@ import {
   type Square,
 } from "@labyrinth/rules";
 import { log } from "../logging/logger.ts";
+import { saveDailyRecord, saveDailyResult } from "./dailyRecord.ts";
 import {
   clearLocalGame,
+  DAILY_ROOM_PREFIX,
+  isDailyRoomId,
   loadLocalGame,
   localToken,
   newLocalRoomId,
@@ -104,6 +108,15 @@ export class LocalRoom implements GameRoomLike {
     return new LocalRoom(newGame(nickname, bots, all), all);
   }
 
+  /** Starts the daily puzzle of `date` (a solo game in its own save slot) and records the attempt. */
+  static createDaily(name: string, date: string, deps: Partial<LocalRoomDeps> = {}): LocalRoom {
+    const roomId = newLocalRoomId(Math.random, DAILY_ROOM_PREFIX);
+    const game = startDailyPuzzle(date, name);
+    saveDailyRecord({ date, roomId });
+    log.info("client.daily.started", { room: roomId, date, dealSeed: game.seed });
+    return new LocalRoom({ roomId, game, marks: "" }, { ...defaultDeps(), ...deps });
+  }
+
   /** The saved game `roomId`, continued where it was; undefined when it is gone. */
   static restore(roomId: string, deps: Partial<LocalRoomDeps> = {}): LocalRoom | undefined {
     const saved = loadLocalGame(roomId);
@@ -149,6 +162,7 @@ export class LocalRoom implements GameRoomLike {
       spectators: 0,
       botSpeed: 1,
       rematchRoomId: rematchRoomId ?? "",
+      turn: game.turn,
     };
   }
 
@@ -177,15 +191,22 @@ export class LocalRoom implements GameRoomLike {
     return Promise.resolve(this.handle(type, payload, ME));
   }
 
-  /** Leaving on purpose: the game is over and forgotten. */
+  /** Leaving on purpose: the game is over and forgotten; an unfinished daily puzzle stays saved to continue. */
   leave(): Promise<void> {
     if (!this.gone) {
       this.gone = true;
       this.clearBotTimer();
-      if (this.game.step !== "finished") this.logFinished(0);
-      clearLocalGame(this.roomId);
+      const unfinished = this.game.step !== "finished";
+      if (!(unfinished && this.daily)) {
+        if (unfinished) this.logFinished(0);
+        clearLocalGame(this.roomId);
+      }
     }
     return Promise.resolve();
+  }
+
+  private get daily(): boolean {
+    return isDailyRoomId(this.roomId);
   }
 
   private handle(type: string, payload: unknown, actor: string): CommandResult {
@@ -215,14 +236,21 @@ export class LocalRoom implements GameRoomLike {
   private apply(result: ReturnType<typeof applyShift>): CommandResult {
     if (!result.ok) return result;
     const finishing = result.state.step === "finished" && this.game.step !== "finished";
-    this.update({ ...this.saved, game: result.state });
-    if (finishing) this.logFinished(result.state.winnerSeat);
+    const marks = this.daily && this.game.step === "move" ? `${this.saved.marks ?? ""}${turnMark(this.game, result.state)}` : this.saved.marks;
+    // The result is stored before the finished state is published, so the end screen can show it.
+    if (finishing && this.daily) {
+      saveDailyResult(this.roomId, { turns: result.state.turn, marks: marks ?? "" });
+      log.info("client.daily.finished", { room: this.roomId, turns: result.state.turn });
+    }
+    this.update({ ...this.saved, game: result.state, marks });
+    if (finishing && !this.daily) this.logFinished(result.state.winnerSeat);
     return { ok: true };
   }
 
   /** Creates the next game with the same seats and syncs its id; the session then moves there. */
   private rematch(): CommandResult {
-    if (this.game.step !== "finished") return { ok: false, code: "WRONG_PHASE" };
+    // A daily puzzle has one attempt.
+    if (this.game.step !== "finished" || this.daily) return { ok: false, code: "WRONG_PHASE" };
     if (this.saved.rematchRoomId) return { ok: true };
     const next = newGame(
       this.game.seats.find((s) => !s.bot)!.name,
@@ -298,4 +326,11 @@ export class LocalRoom implements GameRoomLike {
   }
 }
 
-const isIndex = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 6;
+/** What a finished turn did, for the daily puzzle's result: "h" home, "t" a treasure found, "-" nothing. */
+function turnMark(before: GameState, after: GameState): string {
+  if (after.step === "finished") return "h";
+  const found = (state: GameState) => state.seats.reduce((n, s) => n + s.found.length, 0);
+  return found(after) > found(before) ? "t" : "-";
+}
+
+const isIndex =(value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 6;

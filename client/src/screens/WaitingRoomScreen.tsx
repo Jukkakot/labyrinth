@@ -10,20 +10,10 @@ import { Button } from "../ui/Button.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
 import { Notice } from "../ui/Notice.tsx";
 import { Screen } from "../ui/Screen.tsx";
+import { browserSharer, shareOrCopy, type Sharer } from "../ui/share.ts";
 import styles from "./WaitingRoomScreen.module.css";
 
 const SEATS = [1, 2, 3, 4] as const;
-
-/** How the invite link leaves the device: the share sheet where there is one, else the clipboard. */
-export interface Sharer {
-  share?(data: ShareData): Promise<void>;
-  copy(text: string): Promise<void>;
-}
-
-const browserSharer = (): Sharer => ({
-  share: typeof navigator !== "undefined" && navigator.share ? (data) => navigator.share(data) : undefined,
-  copy: (text) => navigator.clipboard.writeText(text),
-});
 
 export interface WaitingRoomScreenProps {
   view: Pick<GameView, "roomId" | "seats" | "hostSeat" | "mySeat">;
@@ -53,21 +43,9 @@ export function WaitingRoomScreen({ view, session, sharer = browserSharer() }: W
 
   const invite = async () => {
     const url = inviteUrl(view.roomId);
-    if (sharer.share) {
-      try {
-        await sharer.share({ url, text: t("waiting.shareText") });
-        return;
-      } catch (err) {
-        // The player closed the share sheet: nothing more to do.
-        if (err instanceof Error && err.name === "AbortError") return;
-      }
-    }
-    try {
-      await sharer.copy(url);
-      setShareNote(t("waiting.copied"));
-    } catch {
-      setShareNote(t("waiting.copyFailed", { url }));
-    }
+    const outcome = await shareOrCopy(sharer, { url, text: t("waiting.shareText") }, url);
+    if (outcome === "copied") setShareNote(t("waiting.copied"));
+    if (outcome === "failed") setShareNote(t("waiting.copyFailed", { url }));
   };
 
   const askLeave = () => {

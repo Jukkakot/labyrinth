@@ -1,21 +1,27 @@
 import { createBoard, type GameState, type Square } from "@labyrinth/rules";
 
 /**
- * The one quick game against bots that runs on this device, kept in localStorage so a reload, an
- * update or a reopened app continues it. Storage blocked (private mode): the game still plays, it
- * just cannot be continued.
+ * The games that run on this device, kept in localStorage so a reload, an update or a reopened app
+ * continues them: one quick game against bots and, in a slot of its own, the daily puzzle. Storage
+ * blocked (private mode): the game still plays, it just cannot be continued.
  */
 const KEY = "labyrinth.localGame";
+const DAILY_KEY = "labyrinth.dailyGame";
 
 /** Room ids of games on the device start with this; server ids never do. */
 export const LOCAL_ROOM_PREFIX = "local-";
+/** Room ids of daily puzzles: local room ids with a save slot of their own. */
+export const DAILY_ROOM_PREFIX = `${LOCAL_ROOM_PREFIX}daily-`;
 /** Reconnection tokens of games on the device: this prefix and the room id. */
 export const LOCAL_TOKEN_PREFIX = "local:";
 
 export const isLocalRoomId = (roomId: string): boolean => roomId.startsWith(LOCAL_ROOM_PREFIX);
+export const isDailyRoomId = (roomId: string): boolean => roomId.startsWith(DAILY_ROOM_PREFIX);
 export const isLocalToken = (token: string): boolean => token.startsWith(LOCAL_TOKEN_PREFIX);
 export const localToken = (roomId: string): string => LOCAL_TOKEN_PREFIX + roomId;
 export const roomIdOfToken = (token: string): string => token.slice(LOCAL_TOKEN_PREFIX.length);
+
+const keyOf = (roomId: string) => (isDailyRoomId(roomId) ? DAILY_KEY : KEY);
 
 export interface SavedLocalGame {
   roomId: string;
@@ -24,6 +30,8 @@ export interface SavedLocalGame {
   botTo?: Square;
   /** The next game's id once "Pelaa uudelleen" was tapped. */
   rematchRoomId?: string;
+  /** Daily puzzle: what each finished turn did ("t" a treasure found, "h" home, "-" nothing). */
+  marks?: string;
 }
 
 function storage(): Storage | undefined {
@@ -34,14 +42,14 @@ function storage(): Storage | undefined {
   }
 }
 
-/** A new room id for a game on the device. */
-export function newLocalRoomId(random = Math.random): string {
-  return `${LOCAL_ROOM_PREFIX}${Date.now().toString(36)}${Math.floor(random() * 36 ** 4).toString(36)}`;
+/** A new room id for a game on the device (`prefix` picks the kind). */
+export function newLocalRoomId(random = Math.random, prefix = LOCAL_ROOM_PREFIX): string {
+  return `${prefix}${Date.now().toString(36)}${Math.floor(random() * 36 ** 4).toString(36)}`;
 }
 
 export function saveLocalGame(saved: SavedLocalGame, store = storage()): void {
   try {
-    store?.setItem(KEY, JSON.stringify(saved));
+    store?.setItem(keyOf(saved.roomId), JSON.stringify(saved));
   } catch {
     // Storage blocked or full: play on without resuming.
   }
@@ -50,26 +58,27 @@ export function saveLocalGame(saved: SavedLocalGame, store = storage()): void {
 /** The saved game with this room id; undefined when there is none, another one, or a broken record. */
 export function loadLocalGame(roomId: string, store = storage()): SavedLocalGame | undefined {
   try {
-    const raw = store?.getItem(KEY);
+    const raw = store?.getItem(keyOf(roomId));
     if (!raw) return undefined;
     const saved = JSON.parse(raw) as SavedLocalGame;
     if (saved.roomId !== roomId) return undefined;
     // Validates the board and brings back plain tiles.
     return { ...saved, game: { ...saved.game, board: createBoard(saved.game.board) } };
   } catch {
-    clearLocalGame(undefined, store);
+    clearLocalGame(roomId, store, true);
     return undefined;
   }
 }
 
-/** Forgets the saved game; with `roomId`, only if it is that game (a newer one stays). */
-export function clearLocalGame(roomId?: string, store = storage()): void {
+/** Forgets the saved game `roomId`; a newer one in its slot stays unless `broken` says the slot is unreadable. */
+export function clearLocalGame(roomId: string, store = storage(), broken = false): void {
+  const key = keyOf(roomId);
   try {
-    if (roomId !== undefined) {
-      const raw = store?.getItem(KEY);
+    if (!broken) {
+      const raw = store?.getItem(key);
       if (!raw || (JSON.parse(raw) as Partial<SavedLocalGame>).roomId !== roomId) return;
     }
-    store?.removeItem(KEY);
+    store?.removeItem(key);
   } catch {
     // ignore
   }

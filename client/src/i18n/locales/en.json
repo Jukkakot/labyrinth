@@ -226,5 +226,23 @@
     "close": "Close tip",
     "reset": "Show tips again",
     "resetDone": "Tips will show in the next game."
+  },
+  "daily": {
+    "title": "Daily puzzle",
+    "explain": "The same puzzle for everyone today: find 3 treasures and return home in as few turns as you can.",
+    "play": "Play the daily puzzle",
+    "continue": "Continue the daily puzzle",
+    "solved": "Daily puzzle solved",
+    "today_one": "Today {{count}} turn. A new puzzle tomorrow.",
+    "today_other": "Today {{count}} turns. A new puzzle tomorrow.",
+    "turns_one": "{{count}} turn",
+    "turns_other": "{{count}} turns",
+    "turn": "Turn {{turn}}",
+    "won_one": "You solved the daily puzzle in {{count}} turn!",
+    "won_other": "You solved the daily puzzle in {{count}} turns!",
+    "shareTitle": "Labyrinth – daily puzzle {{date}}",
+    "share": "Share result",
+    "copied": "Result copied to the clipboard",
+    "copyFailed": "Copying did not work"
   }
 }

@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import "../i18n";
 import type { GameSession } from "../session/useGameSession.ts";
 import type { SeatView } from "../session/viewModel.ts";
-import { WaitingRoomScreen, type Sharer, type WaitingRoomScreenProps } from "./WaitingRoomScreen.tsx";
+import type { Sharer } from "../ui/share.ts";
+import { WaitingRoomScreen, type WaitingRoomScreenProps } from "./WaitingRoomScreen.tsx";
 
 const seat = (n: number, name: string, extra: Partial<SeatView> = {}): SeatView => ({
   seat: n,

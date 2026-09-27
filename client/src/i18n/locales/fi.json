@@ -226,5 +226,23 @@
     "close": "Sulje vinkki",
     "reset": "Näytä vinkit uudelleen",
     "resetDone": "Vinkit näytetään seuraavassa pelissä."
+  },
+  "daily": {
+    "title": "Päivän pulma",
+    "explain": "Sama pulma kaikille tänään: löydä 3 aarretta ja palaa kotiin mahdollisimman harvalla vuorolla.",
+    "play": "Pelaa päivän pulma",
+    "continue": "Jatka päivän pulmaa",
+    "solved": "Päivän pulma ratkaistu",
+    "today_one": "Tänään {{count}} vuoro. Uusi pulma huomenna.",
+    "today_other": "Tänään {{count}} vuoroa. Uusi pulma huomenna.",
+    "turns_one": "{{count}} vuoro",
+    "turns_other": "{{count}} vuoroa",
+    "turn": "Vuoro {{turn}}",
+    "won_one": "Ratkaisit päivän pulman {{count}} vuorossa!",
+    "won_other": "Ratkaisit päivän pulman {{count}} vuorossa!",
+    "shareTitle": "Muuttuva labyrintti – päivän pulma {{date}}",
+    "share": "Jaa tulos",
+    "copied": "Tulos kopioitu leikepöydälle",
+    "copyFailed": "Kopiointi ei onnistunut"
   }
 }

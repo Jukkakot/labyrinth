@@ -32,7 +32,9 @@ result record, game screen differences, share text). **server** untouched.
 
 ### Modified Capabilities
 
-(none; the start screen entry and the game screen differences are specified in `daily-puzzle`)
+- `observability`: "Games on the device logged" adds the daily puzzle's start and end events.
+
+(The start screen entry and the game screen differences are specified in `daily-puzzle`.)
 
 ## Impact
 
@@ -40,6 +42,7 @@ result record, game screen differences, share text). **server** untouched.
 - `client/src/session`: `localGameStore.ts` (separate save slot for the puzzle), `localRoom.ts`
   (daily game kind, turn marks recorded), new `dailyRecord.ts` (today's attempt and result),
   `useGameSession.ts` (start/continue the puzzle).
+- `packages/protocol`: the two new client log events in the catalogue (the server accepts only listed names).
 - `client/src/screens`: `StartScreen.tsx` (button, result, share), `GameScreen.tsx` (no hint,
   turn number, puzzle end).
 - i18n fi/en texts; logs `client.daily.started` / `client.daily.finished`.

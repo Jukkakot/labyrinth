@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { serverUrl } from "../config.ts";
 import { log, setLogContext } from "../logging/logger.ts";
 import { isLocalRoomId, isLocalToken, roomIdOfToken } from "./localGameStore.ts";
+import { loadDailyRecord, todayString } from "./dailyRecord.ts";
 import { LocalRoom } from "./localRoom.ts";
 import { loadNickname, randomNickname, saveNickname } from "./nickname.ts";
 import { clearResume, loadResume, saveResume, type ResumeRecord } from "./resumeRecord.ts";
@@ -60,6 +61,8 @@ export interface Connector {
   /** A new game of 2–4 bots only, watched by the caller. */
   createBotWatch(options: JoinRequest & { bots: number; speed: BotSpeed }): Promise<GameRoomLike>;
   reconnect(token: string): Promise<GameRoomLike>;
+  /** The daily puzzle of `date` on the device: today's attempt continued, else a new one. */
+  playDaily(options: JoinRequest & { date: string }): Promise<GameRoomLike>;
 }
 
 /** Optional quick-play pool from `?pool=…`: players only meet others in the same pool. */
@@ -113,6 +116,11 @@ export function createConnector(): Connector {
       sdkClient().create("game", { ...withPool(options), watch: true, bots, speed, private: true }) as unknown as Promise<GameRoomLike>,
     reconnect: (token) =>
       isLocalToken(token) ? restoreLocal(roomIdOfToken(token)) : (sdkClient().reconnect(token) as unknown as Promise<GameRoomLike>),
+    playDaily: async ({ nickname, date }) => {
+      const record = loadDailyRecord(date);
+      if (record?.result) return restoreLocal(record.roomId);
+      return (record && LocalRoom.restore(record.roomId)) ?? LocalRoom.createDaily(nickname, date);
+    },
   };
 }
 
@@ -182,6 +190,8 @@ export interface GameSession {
   joinById(roomId: string, nickname: string): void;
   /** A quick game against 1–3 bots, straight into the game. */
   playBots(nickname: string, bots: number): void;
+  /** Today's daily puzzle: continued where it was left, else started. */
+  playDaily(nickname: string): void;
   /** Joins an invited game; if it has already started, watches it instead. */
   joinInvite(roomId: string, nickname: string): void;
   /** Watches a running game. */
@@ -387,6 +397,10 @@ export function useGameSession(connector?: Connector): GameSession {
     (nickname: string, bots: number) => connect(() => getConnector().createBotGame({ nickname, bots }), nickname),
     [connect],
   );
+  const playDaily = useCallback(
+    (nickname: string) => connect(() => getConnector().playDaily({ nickname, date: todayString() }), nickname),
+    [connect],
+  );
   const joinById = useCallback(
     (roomId: string, nickname: string) => connect(() => getConnector().joinById(roomId, { nickname }), nickname),
     [connect],
@@ -534,6 +548,7 @@ export function useGameSession(connector?: Connector): GameSession {
     createPrivate,
     joinById,
     playBots,
+    playDaily,
     joinInvite,
     watch,
     watchBots,

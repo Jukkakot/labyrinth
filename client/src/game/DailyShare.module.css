@@ -1,0 +1,13 @@
+/* The share button with its copy confirmation right under it. */
+.share {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.note {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-s);
+  text-align: center;
+}

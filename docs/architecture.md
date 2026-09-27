@@ -202,6 +202,13 @@ client/src/
   one local game is saved in localStorage (`labyrinth.localGame`) after every step, so a reload,
   an app update or "Jatka peliä" (no time limit for a local token) continues it, also offline.
   Start and end are logged as `client.local.started` / `client.local.finished`.
+- **Daily puzzle:** a `LocalRoom` of a solo game from the rules' `startDailyPuzzle(date)` (board
+  and 3 treasures seeded from the local date, the same for everyone that day). Its room ids start
+  with `local-daily-` and it has its own save slot (`labyrinth.dailyGame`), so it and a quick game
+  never replace each other; leaving an unfinished puzzle keeps it. `labyrinth.daily` records
+  today's attempt and, once solved, its result (turns and one mark per turn) for the start screen
+  and the shared text. The view model spots a puzzle by its room id; local games also report
+  `turn`. Logged as `client.daily.started` / `client.daily.finished`.
 - **PWA:** `vite-plugin-pwa` builds the manifest and a Workbox service worker that precaches the
   app shell (auto-update: a new version takes over on the next load and reloads once; both kinds
   of game survive a reload). Off in `vite dev`. Icons are generated from `public/favicon.svg`.

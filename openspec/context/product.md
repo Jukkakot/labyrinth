@@ -14,6 +14,9 @@ Agreed before any capability was specified. Once a capability has a spec under
 
 ## Modes and players
 - Online multiplayer, humans + bots mixed, solo vs bots. No hot-seat.
+- Daily puzzle: a solo game on the device, the same for everyone on a date; find 3 treasures and
+  return home in as few turns as possible; one attempt per day; the result is shared as text
+  (one emoji per turn, Wordle style). No hint in the puzzle.
 - Identity = nickname only, no accounts. Session is per browser tab
   (sessionStorage), so two tabs = two players; reload rejoins the same seat.
   Nickname is remembered (localStorage) only as a prefill.

@@ -4,6 +4,7 @@ import { reachableSquares, reverseOf, rotate, shiftBoard, type BotTurn, type Ins
 import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
+import { DailyOver } from "../game/DailyShare.tsx";
 import { GameOverControls } from "../game/GameOverControls.tsx";
 import { moveHint, quarterTurns, shiftHint } from "../game/hint.ts";
 import { KickControl } from "../game/KickControl.tsx";
@@ -176,7 +177,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
       end={
         <>
           <SpectatorCount count={view.spectators} />
-          <LeaveButton onClick={view.finished || view.spectating ? leave : () => setLeaving(true)} />
+          <LeaveButton onClick={view.finished || view.spectating || view.daily ? leave : () => setLeaving(true)} />
           <LanguageSwitcher />
         </>
       }
@@ -204,6 +205,8 @@ export function GameScreen({ view, session }: GameScreenProps) {
                 : undefined
             }
           />
+        ) : view.daily ? (
+          <DailyOver roomId={view.roomId} onHome={leave} />
         ) : (
           <GameOverControls onHome={leave} onRematch={rematch} rematching={rematching} />
         )
@@ -226,7 +229,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
           enabled={view.isMyTurn}
           pending={pending}
           onStay={() => me && moveTo(me.square)}
-          onHint={showHint}
+          onHint={view.daily ? undefined : showHint}
         />
       ) : (
         <ShiftControls
@@ -236,7 +239,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
           enabled={view.isMyTurn}
           pending={pending}
           onRotate={() => setTurns((n) => n + 1)}
-          onHint={showHint}
+          onHint={view.daily ? undefined : showHint}
           onConfirm={() => selected && void confirm(selected)}
           onCancel={() => setSelected(undefined)}
         />

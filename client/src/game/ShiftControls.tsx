@@ -20,7 +20,8 @@ export interface ShiftControlsProps {
   target?: TargetMark;
   onRotate(): void;
   /** Shows the hinted shift and square. */
-  onHint(): void;
+  /** Omitted where there is no hint (the daily puzzle). */
+  onHint?(): void;
   onConfirm(): void;
   onCancel(): void;
 }
@@ -43,7 +44,7 @@ export function ShiftControls({ spare, outgoing, enabled, pending, target, onRot
         >
           <IconRotateClockwise size={22} aria-hidden="true" />
         </Button>
-        <HintButton disabled={!enabled || pending} onHint={onHint} />
+        {onHint && <HintButton disabled={!enabled || pending} onHint={onHint} />}
         {outgoing && (
           <div className={styles.outgoing}>
             <SpareTile tile={outgoing} caption={t("shift.newSpare")} outgoing target={target} />

@@ -17,3 +17,4 @@ export * from "./turns.js";
 export * from "./bot.js";
 export * from "./botHint.js";
 export * from "./game.js";
+export * from "./daily.js";

@@ -47,6 +47,7 @@ function connectorWith(overrides: Partial<Connector>): Connector {
     joinById: vi.fn(),
     watch: vi.fn(),
     createBotWatch: vi.fn(),
+    playDaily: vi.fn(),
     reconnect: vi.fn(),
     ...overrides,
   };

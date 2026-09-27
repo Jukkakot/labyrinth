@@ -22,7 +22,7 @@ practice replays of a solved puzzle, difficulty levels.
 1. **Date and seed.** The puzzle date is the device's local date (`YYYY-MM-DD`); players in the
    same time zone share it, and a new puzzle starts at local midnight. `dailySeed(date)` hashes the
    date string (FNV-1a) into the seed range; the board, spare and deal come from `startGame` with
-   that seed and one seat, as any game. A date string rather than a day number keeps it readable
+   that seed (the deal needs 2–4 seats, so the puzzle builds its one-seat state itself: the seed's board, the first 3 cards of a seeded shuffle). A date string rather than a day number keeps it readable
    in logs.
 2. **Goal: 3 treasures, then home.** One treasure is often solved in one or two turns and gives
    no spread; the whole stack of 24 is far too long for a daily. 3 treasures plus home gives a
@@ -55,9 +55,11 @@ practice replays of a solved puzzle, difficulty levels.
    else clipboard with a short "Kopioitu" confirmation, as the invite link does; the share helper
    moves to a shared module used by both.
 10. **Start screen placement.** The puzzle is a separate section under the quick bot game
-    ("Päivän pulma" button with a one-line explanation), not mixed into the 1v1–1v3 choices. It
-    does not need the nickname field to be filled; the player's name defaults to the nickname or
-    "Sinä".
+    ("Päivän pulma" button with a one-line explanation), not mixed into the 1v1–1v3 choices. Like the bot games it plays under the nickname
+    (prefilled with a random one), and is disabled only while the nickname is invalid.
+11. **Turn count in sight.** Games on the device report `turn` in their state (the server does
+    not); the view model marks a puzzle by its room id, and the turn line reads
+    "Vuoro N · Sinun vuorosi – …".
 
 ## Risks / Trade-offs
 

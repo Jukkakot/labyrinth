@@ -12,6 +12,7 @@ import {
   type Square,
   type TreasureId,
 } from "@labyrinth/rules";
+import { isDailyRoomId } from "./localGameStore.ts";
 
 /** The synced state as the client receives it (Colyseus schema instances satisfy this shape). */
 export interface SyncedState {
@@ -35,6 +36,8 @@ export interface SyncedState {
   botSpeed?: number;
   /** Id of the rematch game; "" until someone asked for one. */
   rematchRoomId?: string;
+  /** Turns started so far; only games on the device report it. */
+  turn?: number;
 }
 
 export interface SyncedPlayer {
@@ -127,6 +130,10 @@ export interface GameView {
   turnDisconnected: boolean;
   /** The viewer may kick the current player: seated, not on turn, time up, game running. */
   canKick: boolean;
+  /** A daily puzzle (solo, on the device). */
+  daily: boolean;
+  /** Turns started so far (the winning turn once finished); 0 when not known. */
+  turn: number;
 }
 
 const isTreasure = (value: unknown): value is TreasureId => (TREASURES as readonly unknown[]).includes(value);
@@ -205,6 +212,8 @@ export function toGameView(state: SyncedState, roomId: string, mySessionId: stri
     turnExpired,
     turnDisconnected: !finished && current !== undefined && !current.connected,
     canKick: turnExpired && mySeat !== undefined && current !== undefined && mySeat !== turnSeat,
+    daily: isDailyRoomId(roomId),
+    turn: state.turn ?? 0,
   };
 }
 

@@ -15,6 +15,8 @@ export const CLIENT_LOG_EVENTS = [
   "client.cmd.rejected",
   "client.local.started",
   "client.local.finished",
+  "client.daily.started",
+  "client.daily.finished",
 ] as const;
 export type ClientLogEvent = (typeof CLIENT_LOG_EVENTS)[number];
 
@@ -25,6 +27,8 @@ export const CLIENT_KEY_EVENTS: readonly ClientLogEvent[] = [
   "client.cmd.rejected",
   "client.local.started",
   "client.local.finished",
+  "client.daily.started",
+  "client.daily.finished",
 ];
 
 export const CLIENT_LOG_LIMITS = {
