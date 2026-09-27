@@ -87,6 +87,18 @@ gentle pulse that stays still when the viewer prefers reduced motion.
 - **WHEN** another player is taking their turn
 - **THEN** the "Vihje" button is shown disabled
 
+#### Scenario: Same position, same hint
+- **WHEN** the viewer presses "Vihje" twice in the same position
+- **THEN** both show the same shift and square
+
+#### Scenario: Ring stands out
+- **WHEN** the hint ring is shown next to reach rings or move outlines
+- **THEN** it has a different colour from them and pulses gently
+
+#### Scenario: Reduced motion
+- **WHEN** the viewer prefers reduced motion and the hint ring is shown
+- **THEN** the ring does not pulse
+
 ## REMOVED Requirements
 
 ### Requirement: Shift controls
