@@ -57,7 +57,7 @@ export function WaitingRoomScreen({ view, session, sharer = browserSharer() }: W
   };
 
   return (
-    <Screen start={<GameIdBadge roomId={view.roomId} />} end={<LanguageSwitcher />}>
+    <Screen start={<GameIdBadge roomId={view.roomId} invite="join" />} end={<LanguageSwitcher />}>
       <h1 className={styles.title}>{t("waiting.title")}</h1>
       <ul className={styles.seats} aria-label={t("waiting.seats")}>
         {SEATS.map((seat) => {

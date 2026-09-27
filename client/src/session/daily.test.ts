@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { DAILY_SEAT, startDailyPuzzle, targetOf, tileAt, treasureOf, type GameState } from "@labyrinth/rules";
 import { beforeEach, describe, expect, it } from "vitest";
-import { dailyRecordOf, loadDailyRecord, marksRow, saveDailyRecord, todayString } from "./dailyRecord.ts";
+import { dailyRecordOf, loadDailyRecord, saveDailyRecord, todayString } from "./dailyRecord.ts";
 import { isDailyRoomId, loadLocalGame, saveLocalGame } from "./localGameStore.ts";
 import { LocalRoom } from "./localRoom.ts";
 import { createConnector } from "./useGameSession.ts";
@@ -21,14 +21,14 @@ async function plainTurn(room: LocalRoom) {
  * Saves an attempt in its move step with the pawn already standing on the destination's tile, as if
  * the shift had carried it there: staying solves the puzzle in `turn`.
  */
-function onTheTreasure(roomId: string, turn: number, marks: string) {
+function onTheTreasure(roomId: string, turn: number) {
   const { game, par } = startDailyPuzzle(DATE, "Maija");
   const target = targetOf(game.seats[0]!)!;
   const at = game.board.squares.findIndex((t) => treasureOf(t.id) === target);
   const square = { row: Math.floor(at / 7), col: at % 7 };
   expect(treasureOf(tileAt(game.board, square).id)).toBe(target);
   const moveStep: GameState = { ...game, step: "move", turn, seats: game.seats.map((s) => ({ ...s, pawn: square })) };
-  saveLocalGame({ roomId, game: moveStep, marks, par, history: [] });
+  saveLocalGame({ roomId, game: moveStep, par, history: [] });
   return LocalRoom.restore(roomId, quiet)!;
 }
 
@@ -45,7 +45,7 @@ describe("daily-puzzle › Same puzzle for everyone on a day (on the device)", (
 
   it("todayString is the local date; old-format records are ignored", () => {
     expect(todayString(new Date(2026, 8, 7, 23, 59))).toBe("2026-09-07");
-    localStorage.setItem("labyrinth.daily", JSON.stringify({ date: DATE, roomId: "local-daily-old", result: { turns: 9, marks: "" } }));
+    localStorage.setItem("labyrinth.daily", JSON.stringify({ date: DATE, roomId: "local-daily-old", result: { turns: 9 } }));
     expect(loadDailyRecord(DATE)).toBeUndefined();
   });
 });
@@ -66,7 +66,6 @@ describe("daily-puzzle › Undo and try again", () => {
     expect(room.game.turn).toBe(2);
     await room.request("undo", {}); // the whole previous turn
     expect(room.game).toEqual(start);
-    expect(loadLocalGame(room.roomId)?.marks).toBe("");
     expect(room.state.undoable).toBe(false);
   });
 
@@ -92,11 +91,11 @@ describe("daily-puzzle › Undo and try again", () => {
     for (const [i, turns] of [4, 3, 5].entries()) {
       const roomId = `local-daily-try${i}`;
       saveDailyRecord({ ...loadDailyRecord(DATE), date: DATE, roomId, par });
-      const room = onTheTreasure(roomId, turns, "-".repeat(turns - 1));
+      const room = onTheTreasure(roomId, turns);
       await room.request("move", room.game.seats[0]!.pawn);
       expect(room.game.step).toBe("finished");
     }
-    expect(dailyRecordOf("local-daily-try2")?.best).toEqual({ turns: 3, marks: "--t" });
+    expect(dailyRecordOf("local-daily-try2")?.best).toEqual({ turns: 3 });
     const next = (await createConnector().playDaily({ nickname: "Maija", date: DATE })) as LocalRoom;
     expect(next.roomId).not.toBe("local-daily-try2");
     expect(next.game.step).toBe("shift");
@@ -105,7 +104,7 @@ describe("daily-puzzle › Undo and try again", () => {
 
   it("no rematch in a puzzle", async () => {
     saveDailyRecord({ date: DATE, roomId: "local-daily-x", par: 2 });
-    const room = onTheTreasure("local-daily-x", 2, "-");
+    const room = onTheTreasure("local-daily-x", 2);
     await room.request("move", room.game.seats[0]!.pawn);
     expect((await room.request("rematch", {})).ok).toBe(false);
   });
@@ -119,24 +118,14 @@ describe("daily-puzzle › Undo and try again", () => {
 });
 
 describe("daily-puzzle › Goal and score (on the device)", () => {
-  it("Solved: a plain turn marks ⬜, the solving turn 💎; the puzzle ends in that turn", async () => {
-    const room = LocalRoom.createDaily("Maija", DATE, quiet);
-    await plainTurn(room);
-    expect(loadLocalGame(room.roomId)?.marks).toBe("-");
-
+  it("Solved: the puzzle ends in the turn the pawn reaches the treasure", async () => {
     saveDailyRecord({ date: DATE, roomId: "local-daily-x", par: 2 });
-    const last = onTheTreasure("local-daily-x", 3, "--");
+    const last = onTheTreasure("local-daily-x", 3);
     await last.request("move", last.game.seats[0]!.pawn);
     expect(last.game.step).toBe("finished");
     expect(last.game.winnerSeat).toBe(DAILY_SEAT);
-    expect(loadDailyRecord(DATE)?.best).toEqual({ turns: 3, marks: "--t" });
+    expect(loadDailyRecord(DATE)?.best).toEqual({ turns: 3 });
     await last.leave();
     expect(loadLocalGame(last.roomId)).toBeUndefined();
-  });
-});
-
-describe("daily-puzzle › Shareable result", () => {
-  it("Result text: one mark per turn", () => {
-    expect(marksRow("--t")).toBe("⬜⬜💎");
   });
 });

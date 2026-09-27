@@ -1,7 +1,8 @@
 # spectators Specification
 
 ## Purpose
-Watching games without playing: joining a running game or a game of bots only as a spectator, what
+Watching games without playing: joining a running game on the server, or a game of bots only on
+the device, as a spectator, what
 a spectator sees and may do, the bots' speed while only bots play, and how players see that they
 are watched.
 

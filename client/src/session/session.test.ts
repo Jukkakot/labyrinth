@@ -42,7 +42,6 @@ function fakeRoom(overrides: Partial<GameRoomLike> = {}): GameRoomLike {
 function connectorWith(overrides: Partial<Connector>): Connector {
   return {
     joinOrCreate: vi.fn(),
-    createPrivate: vi.fn(),
     createBotGame: vi.fn(),
     joinById: vi.fn(),
     watch: vi.fn(),
@@ -379,14 +378,6 @@ describe("lobby › joining", () => {
     expect(loadNickname()).toBe("Maija");
   });
 
-  it("Create a private game", async () => {
-    const connector = connectorWith({ createPrivate: vi.fn(async () => fakeRoom()) });
-    const { result } = renderHook(() => useGameSession(connector));
-    act(() => result.current.createPrivate("Maija"));
-    await waitFor(() => expect(result.current.status).toBe("playing"));
-    expect(connector.createPrivate).toHaveBeenCalledWith({ nickname: "Maija" });
-  });
-
   it("Join by invite link or from the list", async () => {
     const connector = connectorWith({ joinById: vi.fn(async () => fakeRoom()) });
     const { result } = renderHook(() => useGameSession(connector));
@@ -405,9 +396,9 @@ describe("lobby › joining", () => {
   });
 
   it("Server full: the server-full notice, not the error state", async () => {
-    const connector = connectorWith({ createPrivate: vi.fn(async () => Promise.reject(matchMakeError("SERVER_FULL", 526))) });
+    const connector = connectorWith({ joinOrCreate: vi.fn(async () => Promise.reject(matchMakeError("SERVER_FULL", 526))) });
     const { result } = renderHook(() => useGameSession(connector));
-    act(() => result.current.createPrivate("Maija"));
+    act(() => result.current.play("Maija"));
     await waitFor(() => expect(result.current.startNotice).toBe("serverFull"));
     expect(result.current.status).toBe("idle");
   });
@@ -587,7 +578,7 @@ describe("spectators › session", () => {
     await waitFor(() => expect(result.current.startNotice).toBe("notOpen"));
   });
 
-  it("watchBots creates a watched bot game with count and speed, leaving the current game first", async () => {
+  it("watchBots starts a watched bot game with count and speed, leaving the current game first", async () => {
     const first = fakeRoom();
     const createBotWatch = vi.fn(async () => fakeRoom({ roomId: "second" }));
     const connector = connectorWith({ joinOrCreate: vi.fn(async () => first), createBotWatch });
@@ -596,7 +587,7 @@ describe("spectators › session", () => {
     await waitFor(() => expect(result.current.status).toBe("playing"));
     act(() => result.current.watchBots("Maija", 3, 2));
     await waitFor(() => expect(result.current.view?.roomId).toBe("second"));
-    expect(createBotWatch).toHaveBeenCalledWith({ nickname: "Maija", bots: 3, speed: 2 });
+    expect(createBotWatch).toHaveBeenCalledWith({ bots: 3, speed: 2 });
     expect(first.leave).toHaveBeenCalledTimes(1);
   });
 

@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n";
 import { startDailyPuzzle, targetOf, tileAt, treasureOf } from "@labyrinth/rules";
-import { DailyOver } from "../game/DailyShare.tsx";
 import { solutionFrames } from "../game/solutionReplay.ts";
 import { saveDailyRecord, todayString } from "../session/dailyRecord.ts";
 import { LocalRoom } from "../session/localRoom.ts";
@@ -20,7 +19,6 @@ function startScreen(playDaily = vi.fn()) {
     status: "idle",
     slow: false,
     play: vi.fn(),
-    createPrivate: vi.fn(),
     joinById: vi.fn(),
     playBots: vi.fn(),
     playDaily,
@@ -72,11 +70,11 @@ describe("daily-puzzle › Start screen puzzle entry", () => {
     expect(screen.getByRole("button", { name: "Jatka päivän pulmaa" })).toBeTruthy();
   });
 
-  it("Solved today: best against par, share, and the button plays again", () => {
-    saveDailyRecord({ date: todayString(), roomId: "local-daily-x", par: 2, best: { turns: 3, marks: "--t" } });
+  it("Solved today: best against par, no share action, and the button plays again", () => {
+    saveDailyRecord({ date: todayString(), roomId: "local-daily-x", par: 2, best: { turns: 3 } });
     const playDaily = startScreen();
     expect(screen.getByText("Paras tuloksesi tänään: 3 vuoroa (paras mahdollinen 2)")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Jaa tulos" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Jaa tulos" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Pelaa uudelleen" }));
     expect(playDaily).toHaveBeenCalledWith("Maija");
   });
@@ -106,12 +104,12 @@ describe("daily-puzzle › Puzzle game screen with par", () => {
     expect(leave).toHaveBeenCalled();
   });
 
-  it("Puzzle end: turns against the best, share, Uudelleen and home, no rematch", () => {
+  it("Puzzle end: turns against the best, Uudelleen and home, no share and no rematch", () => {
     const room = LocalRoom.createDaily("Maija", "2026-09-27", quiet);
-    saveDailyRecord({ date: "2026-09-27", roomId: room.roomId, par: 2, best: { turns: 3, marks: "--t" } });
+    saveDailyRecord({ date: "2026-09-27", roomId: room.roomId, par: 2, best: { turns: 3 } });
     const { playDaily } = gameScreen(room.roomId, { ...room.state, phase: "finished", winnerSeat: 1, turn: 3, par: 2 });
     expect(screen.getByText("Ratkaisit pulman 3 vuorossa (paras 2)")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Jaa tulos" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Jaa tulos" })).toBeNull();
     expect(screen.getByRole("button", { name: "Alkuun" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Pelaa uudelleen" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Uudelleen" }));
@@ -137,7 +135,7 @@ describe("daily-puzzle › Best route replay", () => {
 
   it("Closing the replay: steps forward to the end, then back to the end screen", () => {
     const room = LocalRoom.createDaily("Maija", "2026-09-27", quiet);
-    saveDailyRecord({ date: "2026-09-27", roomId: room.roomId, par: 2, best: { turns: 3, marks: "--t" } });
+    saveDailyRecord({ date: "2026-09-27", roomId: room.roomId, par: 2, best: { turns: 3 } });
     gameScreen(room.roomId, { ...room.state, phase: "finished", winnerSeat: 1, turn: 3, par: 2 });
     fireEvent.click(screen.getByRole("button", { name: "Näytä paras reitti" }));
     expect(screen.getByText("Paras reitti · vaihe 1/5 · Lähtötilanne")).toBeTruthy();
@@ -149,33 +147,5 @@ describe("daily-puzzle › Best route replay", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sulje" }));
     expect(screen.getByRole("button", { name: "Näytä paras reitti" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Uudelleen" })).toBeTruthy();
-  });
-});
-
-describe("daily-puzzle › Shareable result", () => {
-  it("No share sheet: the text is copied and the copy confirmed", async () => {
-    saveDailyRecord({ date: "2026-09-27", roomId: "local-daily-x", par: 2, best: { turns: 3, marks: "--t" } });
-    const copy = vi.fn(async (_text: string) => {});
-    render(<DailyOver roomId="local-daily-x" onHome={vi.fn()} onRetry={vi.fn()} onReplay={vi.fn()} sharer={{ copy }} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Jaa tulos" }));
-    });
-    expect(copy.mock.calls[0]![0].split("\n")).toEqual([
-      "Muuttuva labyrintti – päivän pulma 27.9.2026",
-      "3 vuoroa (paras 2)",
-      "⬜⬜💎",
-      `${location.origin}${location.pathname}`,
-    ]);
-    expect(screen.getByRole("status").textContent).toBe("Tulos kopioitu leikepöydälle");
-  });
-
-  it("Result text: a star when the best was reached", async () => {
-    saveDailyRecord({ date: "2026-09-27", roomId: "local-daily-x", par: 2, best: { turns: 2, marks: "-t" } });
-    const copy = vi.fn(async (_text: string) => {});
-    render(<DailyOver roomId="local-daily-x" onHome={vi.fn()} onRetry={vi.fn()} onReplay={vi.fn()} sharer={{ copy }} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Jaa tulos" }));
-    });
-    expect(copy.mock.calls[0]![0].split("\n")[1]).toBe("2 vuoroa (paras 2) ⭐");
   });
 });

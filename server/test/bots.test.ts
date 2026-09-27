@@ -234,8 +234,8 @@ describe("bots in a room", () => {
   });
 
   describe("Quick game against bots", () => {
-    it("Not on the server (it runs on the device): no game is created", async () => {
-      await expect(colyseus.sdk.create("game", { nickname: "Maija", bots: 1 })).rejects.toThrow("INVALID_OPTIONS");
+    it("Too many bots: games with bots at creation are not made on the server (they run on the device)", async () => {
+      await expect(colyseus.sdk.create("game", { nickname: "Maija", bots: 4 })).rejects.toThrow("INVALID_OPTIONS");
       expect(logs.byEvt("room.created")).toHaveLength(0);
       expect(logs.byEvt("room.refused")).toEqual([expect.objectContaining({ reason: "options" })]);
     });

@@ -118,11 +118,11 @@ emails (the user's choice for a hobby project): errors are found on the dashboar
 | `http.request` | every HTTP request incl. matchmaking (`/health` only at debug) |
 | `room.created` / `room.disposed` / `room.error` | room lifecycle, uncaught room exceptions |
 | `room.closed` | the host left the waiting room, so the game closed for everyone, `{ reason: "hostLeft" }` |
-| `room.refused` | a join or creation refused, `{ reason }`: `nickname` (invalid), `options` (another invalid join option, e.g. `bots`), `cap` (`open` games at the limit) or `notWatchable` (a spectator for a game not running) |
+| `room.refused` | a join or creation refused, `{ reason }`: `nickname` (invalid), `options` (another invalid or unknown join option, e.g. `bots` or `private` from an old app), `cap` (`open` games at the limit) or `notWatchable` (a spectator for a game not running) |
 | `player.joined` / `left` / `dropped` / `reconnected` | connection changes (a dropped seat is held 5 min); `joined` carries the nickname `name` |
 | `player.removed` | a player is taken out of a game, `{ seat, reason, by? }` (`left`, `kicked` by seat `by`, `timeout` after 5 min disconnected) |
 | `game.setup` | a new game's seed |
-| `game.started` | the game started, `{ dealSeed, seats, startSeat, watch? }` (reproduces the deal and who began; seed never synced; `watch: true` for a bot-only game created to watch) |
+| `game.started` | the game started, `{ dealSeed, seats, startSeat }` (reproduces the deal and who began; seed never synced) |
 | `treasure.collected` | a player collects their target, `{ seat, treasure, found, cards }` |
 | `game.finished` | the game ended, `{ winner, reason }` (seat; `home` or `lastPlayer`; `noPeople` with winner 0 when only bots were left and nobody watched) |
 | `game.rematch` | a finished game created its rematch game, `{ rematchRoom }` (follow the group into that room) |

@@ -111,29 +111,21 @@ describe("nicknameSchema", () => {
 });
 
 describe("joinOptionsSchema", () => {
-  it("accepts a nickname with an optional pool and private flag", () => {
+  it("accepts a nickname with an optional pool", () => {
     expect(joinOptionsSchema.parse({ nickname: " Pekka " })).toEqual({ nickname: "Pekka" });
-    expect(joinOptionsSchema.safeParse({ nickname: "Pekka", pool: "e2e-1", private: true }).success).toBe(true);
+    expect(joinOptionsSchema.safeParse({ nickname: "Pekka", pool: "e2e-1" }).success).toBe(true);
   });
 
-  it("rejects a missing nickname and a bad private flag", () => {
+  it("rejects a missing nickname", () => {
     expect(joinOptionsSchema.safeParse({}).success).toBe(false);
-    expect(joinOptionsSchema.safeParse({ nickname: "Pekka", private: "yes" }).success).toBe(false);
   });
 
-  it("refuses bots without watching: quick games against bots run on the device", () => {
-    for (const bots of [1, 2, 3]) expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots }).success).toBe(false);
-    for (const bots of [0, 5, 2.5, "2"]) expect(joinOptionsSchema.safeParse({ nickname: "Pekka", watch: true, bots }).success).toBe(false);
-  });
-
-  it("accepts 2–4 bots to watch, with an optional speed", () => {
+  it("refuses the removed private, bots and speed options: games on the server are public and start without bots", () => {
     const ok = (o: object) => joinOptionsSchema.safeParse({ nickname: "Pekka", ...o }).success;
-    expect(ok({ watch: true, bots: 2 })).toBe(true);
-    expect(ok({ watch: true, bots: 4, speed: 4 })).toBe(true);
-    expect(ok({ watch: true, bots: 1 })).toBe(false);
+    expect(ok({ private: true })).toBe(false);
+    expect(ok({ bots: 1 })).toBe(false);
+    expect(ok({ watch: true, bots: 3, speed: 2 })).toBe(false);
     expect(ok({ watch: true })).toBe(true); // a spectator of a running game
-    expect(ok({ watch: true, bots: 3, speed: 3 })).toBe(false);
-    expect(ok({ bots: 2, speed: 2 })).toBe(false);
   });
 
   it("accepts distinct bot seats for a rematch, not when watching", () => {

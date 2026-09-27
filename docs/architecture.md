@@ -25,8 +25,8 @@ delivered by that roadmap change.
 - **Monorepo**, npm workspaces, TypeScript everywhere. Hosting: client on GitHub Pages, server on
   Render ([operations.md](operations.md)).
 - **No database.** Games live in server memory and are lost on restart, deploy or sleep.
-- **Quick games against bots run on the device** (see Client → Local play); online games,
-  watching and the waiting room use the server.
+- **Games with bots from the start screen run on the device** (see Client → Local play), played
+  or watched; online games, watching them and the waiting room use the server.
 
 ## Workspaces — Implemented
 
@@ -79,15 +79,15 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
  (nickname)     host = 1st joiner   └─ 60 s turn clock ─┘   win: home or last player standing
 ```
 
-- **Joining:** join options `{ nickname, pool?, private?, bots? }` are validated in `onCreate` (no room is
+- **Joining:** join options `{ nickname, pool?, watch?, botSeats?, look? }` (strict: unknown keys are refused) are validated in `onCreate` (no room is
   created) and `onAuth` (before a seat); refusals are a `ServerError` whose message is the code
   (`INVALID_NICKNAME`, `INVALID_OPTIONS` for any other bad option, `SERVER_FULL`). Seats: lowest free 1–4 → start corner clockwise from
   top-left, taken only in the waiting room. `MAX_OPEN_GAMES` caps the rooms (static counter).
 - **Waiting room:** `phase = "waiting"`, no turn, no cards, no clock. The first joiner is the host
   (`hostSeat`). A guest leaving frees the seat; the host leaving (or a dropped host's hold running
-  out) closes the room for everyone (`closeRoom`, close code `HOST_LEFT` 4101). Private rooms
-  (`setPrivate`) are never listed or quick-matched; metadata `{ host, open, pool, seated }` feeds
-  the list (`seated` = people + bots).
+  out) closes the room for everyone (`closeRoom`, close code `HOST_LEFT` 4101). Every room is public
+  (no private rooms; friends come in by the invite link); metadata `{ host, open, pool, seated }`
+  feeds the list (`seated` = people + bots).
 - **Game engine:** from the start the room holds the game as the rules engine's `GameState`
   (`packages/rules/src/game.ts`, the same engine as the device's quick games) and every rule goes
   through it: `startGame`, `applyShift` / `applyMove` (their rejection codes are the commands'),
@@ -95,8 +95,8 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   the room keeps only what is not a rule (seats and connections, clock, bots' timers, logs).
   Room tests arrange positions through `arrange()` in `test/support/game.ts`, which edits both.
 - **Start** (host only, ≥ 2 seated): `startGame(dealSeed, seats, hostSeat, board)` deals 24/n cards
-  from one seeded RNG onto the waiting room's board; the host takes the first turn (`firstSeat`; a
-  bot-only game keeps the seat the deal drew), and `game.started { dealSeed, seats, startSeat }`
+  from one seeded RNG onto the waiting room's board; the host takes the first turn (`firstSeat`; with no
+  host, as in a watched bot game on the device, the deal draws the seat), and `game.started { dealSeed, seats, startSeat }`
   records the opening. The room locks: nobody joins a started game.
 - **Turn:** `shift` then `move` by the current player; the turn passes clockwise to the next taken
   seat after the move or when the current player leaves. Shift and move before the start or after
@@ -128,19 +128,18 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   for games on the device. `setLook { look }` changes it in the waiting room (`LOOK_TAKEN`). The
   client draws every pawn and last-move mark by look; the seat only places crowded pawns.
   Auto-played people still count as people for "Nobody left".
-- **Quick bot games** run only on the device: `bots` without `watch` is refused (`INVALID_OPTIONS`).
+- **Bot games from the start screen** run only on the device: a `bots` option is refused (`INVALID_OPTIONS`).
 - **Nobody left:** when no person is seated and nobody watches (held drops count), a started game
   finishes with `winnerSeat = 0` (reason `noPeople`); bots play on only for spectators.
 - **Spectators** (spec `spectators`): a started room stays locked, so `joinById` refuses everyone;
   `POST /watch { roomId, nickname }` checks the listing's `watchable` (running, < 8 spectators) and
   calls `matchMaker.reserveSeatFor` with `watch: true` in the auth, and the client consumes the
   reservation. `onJoin` keeps spectators in a set (not in `players`), syncs their count and gives
-  their `StateView` every player (so they see all targets); drops are held like players'. A bot-only
-  game is created with `{ watch: true, bots: 2–4, speed? }`: private, its creator becomes the
-  spectator, bots take seats 1..n and it starts. `setSpeed` (spectator, no person seated) sets
-  `botSpeed`; bot pauses are divided by it. After the start `maxClients` = 4 + 8.
+  their `StateView` every player (so they see all targets); drops are held like players'. Creating
+  a room with `watch` is refused. When every person has left and spectators remain, `setSpeed`
+  (spectator, no person seated) sets `botSpeed`; bot pauses are divided by it. After the start `maxClients` = 4 + 8.
 - **Rematch:** `rematch` (seated, finished) creates one new room through `matchMaker.createRoom`
-  with the requester's nickname, the same `private`/`pool`, and `botSeats` (bots of the start);
+  with the requester's nickname, the same `pool`, and `botSeats` (bots of the start);
   concurrent requests share one pending creation. The id is synced as
   `rematchRoomId`; clients that tapped "Pelaa uudelleen" leave and `joinById` it (the requester
   first, so they host).
@@ -222,7 +221,11 @@ client/src/
   the device, everything else to the server; the SDK client is created only for server games. The
   one local game (with its pawns by seat) is saved in localStorage (`labyrinth.localGame`) after every step, so a reload,
   an app update or "Jatka peliä" (no time limit for a local token) continues it, also offline.
-  Start and end are logged as `client.local.started` / `client.local.finished`.
+  A game of bots to watch ("Pelaan itse" off) is a `LocalRoom` too: ids `local-watch-…`, bots in
+  seats 1..n, no seat for the viewer (so the view model sees a spectator), every target synced,
+  `setSpeed` divides the pauses; it is never saved, so a reload ends it.
+  Start and end are logged as `client.local.started` (`watch: true` for a watched game) /
+  `client.local.finished`.
 - **Daily puzzle:** a `LocalRoom` of a solo game from the rules' `startDailyPuzzle(date)`: the
   local date seeds the board, and a breadth-first search over shifts (`fewestTurns`, a board plus
   the set of squares the pawn could be on per node) picks a destination treasure whose best is 2

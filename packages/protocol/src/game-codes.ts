@@ -102,17 +102,8 @@ export interface JoinOptions {
   nickname: string;
   /** Matchmaking pool; only E2E tests set it, so their games stay out of the real list. */
   pool?: string;
-  /** Create a private game: never listed and never picked by quick play. */
-  private?: boolean;
-  /**
-   * With `watch`, a game of 2–4 bots only: the room is created private and starts as soon as its
-   * creator joins. (Quick games against bots run on the device, not on the server.)
-   */
-  bots?: number;
-  /** The joiner watches instead of taking a seat (a bot-only game they create, or a running game). */
+  /** The joiner watches a running game instead of taking a seat (games of bots to watch run on the device). */
   watch?: boolean;
-  /** Starting bot speed of a watched bot-only game. */
-  speed?: BotSpeed;
   /** Seats that get a bot as soon as the room is created (a rematch keeps the finished game's bots). */
   botSeats?: number[];
   /** The pawn (1–4) the player would like; they get it when nobody in the game has it. */

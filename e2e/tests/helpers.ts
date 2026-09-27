@@ -15,6 +15,6 @@ export async function quickPlay(page: Page, pool: string, nickname: string) {
 
 /** The game id shown in the top bar. */
 export async function gameId(page: Page): Promise<string> {
-  const label = await page.getByRole("button", { name: /^Peli .* Napauta kopioidaksesi\.$/ }).getAttribute("aria-label");
-  return label!.replace(/^Peli (.*)\. Napauta kopioidaksesi\.$/, "$1");
+  const label = await page.getByRole("button", { name: /^Peli .* Napauta jakaaksesi pelin linkin\.$/ }).getAttribute("aria-label");
+  return label!.replace(/^Peli (.*)\. Napauta jakaaksesi pelin linkin\.$/, "$1");
 }

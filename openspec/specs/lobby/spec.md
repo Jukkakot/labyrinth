@@ -1,8 +1,8 @@
 # lobby Specification
 
 ## Purpose
-The way into a game before it starts: a nickname, the list of open games, private games joined by
-invite link, and the waiting room where the creator starts the game once enough players are in.
+The way into a game before it starts: a nickname, the list of open games, invite links, and the
+waiting room where the creator starts the game once enough players are in.
 
 ## Requirements
 

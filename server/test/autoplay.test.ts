@@ -71,9 +71,13 @@ describe("autoplay in a room", () => {
     });
 
     it("Spectator: NOT_SEATED", async () => {
-      const room = (await colyseus.createRoom("game", { nickname: "Katsoja", watch: true, bots: 2 })) as unknown as GameRoom;
-      room.botShiftDelayMs = LONG_MS;
-      const watcher = (await colyseus.connectTo(room as never, { nickname: "Katsoja", watch: true })) as unknown as TestClient;
+      const { room } = await game(2);
+      // A running game admits spectators through the watch route only.
+      const res = await colyseus.http.post("/watch", {
+        body: JSON.stringify({ roomId: room.roomId, nickname: "Katsoja" }),
+        headers: { "Content-Type": "text/plain" },
+      });
+      const watcher = (await colyseus.sdk.consumeSeatReservation(res.data as never)) as unknown as TestClient;
       expect(await setAutoplay(watcher, true)).toEqual({ ok: false, code: "NOT_SEATED" });
     });
   });

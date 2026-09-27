@@ -43,8 +43,8 @@ turn first. The player MUST go straight to the board without a connecting state.
 be disabled only for an invalid nickname; they MUST NOT wait for the server to wake up, and they
 MUST work without a network connection. The game is an ordinary game of bots with the same rules,
 bot behaviour and bot pacing as on the server: they play until one wins. It has no turn clock,
-nobody else can see, join or watch it, and it is not kept: leaving or reloading the page ends it,
-and it MUST NOT replace or end a quick bot game saved on the device.
+nobody else can see, join or watch it, and it is not kept: leaving or reloading the page ends it.
+Like starting any other game, it replaces the game "Jatka peliä" would continue.
 
 #### Scenario: Watch three bots
 - **WHEN** the player turns "Pelaan itse" off and taps "3 bottia"
@@ -69,10 +69,6 @@ and it MUST NOT replace or end a quick bot game saved on the device.
 #### Scenario: Reload ends it
 - **WHEN** the spectator reloads the page while watching
 - **THEN** they are on the start screen and the watched game is gone
-
-#### Scenario: Saved quick game kept
-- **WHEN** the player has an unfinished 1v2 game saved, watches a game of 4 bots and leaves it
-- **THEN** "Jatka peliä" still continues the 1v2 game
 
 ### Requirement: New bot game after watching
 When a watched game with no person seated has finished, its spectators SHALL be offered "Uusi

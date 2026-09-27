@@ -18,7 +18,7 @@ player actually uses: fewer choices, one clear bot section, and no paths nobody 
   in the game as today.
 - **Watched bot games run on the device**, like quick play: no server wake-up, works offline, never
   listed. "Uusi bottipeli" after it starts another one on the device. It is not saved: leaving or
-  reloading ends it, and it never replaces a saved quick game.
+  reloading ends it.
 - **The server no longer creates bot-only games** (`watch` + `bots` + `speed` create options are
   removed; **BREAKING** for old clients, which only matters for a stale cached app, handled by the
   existing auto-update). Watching running public games and bot speed for spectators when every

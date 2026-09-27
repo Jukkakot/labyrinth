@@ -65,26 +65,21 @@ export const nicknameSchema = z
 const seat = z.int().min(1).max(4);
 
 /**
- * Join options. `bots` is 2–4 and only with `watch`, for a game of bots only (`watch` alone is a
- * spectator joining a running game through the watch route; quick games against bots run on the
- * device); `speed` only with `watch`; `botSeats` are distinct and leave at least one seat free.
+ * Join options. `watch` is a spectator joining a running game through the watch route (games of
+ * bots to watch run on the device); `botSeats` are distinct and leave at least one seat free.
+ * Unknown keys are refused, so an old app asking for a private game or a game of bots gets no game.
  */
 export const joinOptionsSchema = z
-  .object({
+  .strictObject({
     nickname: nicknameSchema,
     pool: z.string().max(64).optional(),
-    private: z.boolean().optional(),
-    bots: z.int().min(2).max(4).optional(),
     watch: z.boolean().optional(),
-    speed: z.literal(BOT_SPEEDS).optional(),
     botSeats: z.array(seat).max(3).optional(),
     look: z.literal(LOOKS).optional(),
   })
   .superRefine((o, ctx) => {
-    if (!o.watch && o.bots !== undefined) ctx.addIssue({ code: "custom", path: ["bots"], message: "bots only when watching" });
-    if (o.speed !== undefined && !o.watch) ctx.addIssue({ code: "custom", path: ["speed"], message: "speed only when watching" });
     if (o.botSeats && new Set(o.botSeats).size !== o.botSeats.length) ctx.addIssue({ code: "custom", path: ["botSeats"], message: "seats repeat" });
-    if (o.botSeats?.length && (o.bots || o.watch)) ctx.addIssue({ code: "custom", path: ["botSeats"], message: "not when watching" });
+    if (o.botSeats?.length && o.watch) ctx.addIssue({ code: "custom", path: ["botSeats"], message: "not when watching" });
   }) satisfies z.ZodType<JoinOptions, unknown>;
 
 export const watchRequestSchema = z.object({

@@ -25,7 +25,6 @@ export interface RoomListing {
   clients: number;
   maxClients: number;
   locked?: boolean;
-  private?: boolean;
   createdAt?: string | number | Date;
   metadata?: { host?: unknown; open?: unknown; pool?: unknown; seated?: unknown; watchable?: unknown };
 }
@@ -58,15 +57,15 @@ const toEntry = (r: RoomListing): OpenGame => ({ roomId: r.roomId, host: hostOf(
  */
 export function toOpenGames(rooms: Iterable<RoomListing>): OpenGame[] {
   return [...rooms]
-    .filter((r) => !r.locked && !r.private && r.clients < r.maxClients && seatedOf(r) < 4 && r.metadata?.open === true && hostOf(r) !== "")
+    .filter((r) => !r.locked && r.clients < r.maxClients && seatedOf(r) < 4 && r.metadata?.open === true && hostOf(r) !== "")
     .sort((a, b) => time(a) - time(b))
     .map(toEntry);
 }
 
-/** Running public games that take another spectator, oldest first. */
+/** Running games that take another spectator, oldest first. */
 export function toRunningGames(rooms: Iterable<RoomListing>): OpenGame[] {
   return [...rooms]
-    .filter((r) => !r.private && r.metadata?.watchable === true)
+    .filter((r) => r.metadata?.watchable === true)
     .sort((a, b) => time(a) - time(b))
     .map(toEntry);
 }

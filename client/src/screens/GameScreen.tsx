@@ -3,8 +3,9 @@ import type { BotSpeed } from "@labyrinth/protocol";
 import { reachableSquares, reverseOf, rotate, sameSquare, shiftBoard, type BotTurn, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { Board } from "../game/Board.tsx";
+import { collectedTreasures } from "../game/collected.ts";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
-import { DailyOver } from "../game/DailyShare.tsx";
+import { DailyOver } from "../game/DailyOver.tsx";
 import { ReplayControls } from "../game/ReplayControls.tsx";
 import { solutionFrames, type ReplayFrame } from "../game/solutionReplay.ts";
 import { dailyRecordOf } from "../session/dailyRecord.ts";
@@ -205,7 +206,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
         : undefined;
 
   // Settings (and the language) open over the game; the game keeps running underneath.
-  if (settingsOpen) return <SettingsScreen onClose={() => setSettingsOpen(false)} />;
+  if (settingsOpen) return <SettingsScreen roomId={view.roomId} onClose={() => setSettingsOpen(false)} />;
 
   return (
     <Screen
@@ -258,7 +259,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
             onClose={() => setReplay(undefined)}
           />
         ) : view.daily ? (
-          <DailyOver roomId={view.roomId} onHome={leave} onRetry={() => playDaily?.(nickname())} onReplay={openReplay} />
+          <DailyOver onHome={leave} onRetry={() => playDaily?.(nickname())} onReplay={openReplay} />
         ) : (
           <GameOverControls onHome={leave} onRematch={rematch} rematching={rematching} />
         )
@@ -279,6 +280,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
       ) : view.step === "move" ? (
         <MoveControls
           spare={view.board.spare}
+          collected={collectedTreasures(view.seats)}
           target={target}
           enabled={view.isMyTurn}
           pending={pending}
@@ -293,6 +295,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
       ) : (
         <ShiftControls
           spare={spare}
+          collected={collectedTreasures(view.seats)}
           outgoing={preview?.pushedOut}
           target={target}
           enabled={view.isMyTurn}

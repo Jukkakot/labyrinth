@@ -1,3 +1,4 @@
+import type { BotSpeed } from "@labyrinth/protocol";
 import { createBoard, type GameState, type Square } from "@labyrinth/rules";
 
 /**
@@ -12,11 +13,14 @@ const DAILY_KEY = "labyrinth.dailyGame";
 export const LOCAL_ROOM_PREFIX = "local-";
 /** Room ids of daily puzzles: local room ids with a save slot of their own. */
 export const DAILY_ROOM_PREFIX = `${LOCAL_ROOM_PREFIX}daily-`;
+/** Room ids of games of bots to watch: local room ids that are never saved. */
+export const WATCH_ROOM_PREFIX = `${LOCAL_ROOM_PREFIX}watch-`;
 /** Reconnection tokens of games on the device: this prefix and the room id. */
 export const LOCAL_TOKEN_PREFIX = "local:";
 
 export const isLocalRoomId = (roomId: string): boolean => roomId.startsWith(LOCAL_ROOM_PREFIX);
 export const isDailyRoomId = (roomId: string): boolean => roomId.startsWith(DAILY_ROOM_PREFIX);
+export const isWatchRoomId = (roomId: string): boolean => roomId.startsWith(WATCH_ROOM_PREFIX);
 export const isLocalToken = (token: string): boolean => token.startsWith(LOCAL_TOKEN_PREFIX);
 export const localToken = (roomId: string): string => LOCAL_TOKEN_PREFIX + roomId;
 export const roomIdOfToken = (token: string): string => token.slice(LOCAL_TOKEN_PREFIX.length);
@@ -34,12 +38,12 @@ export interface SavedLocalGame {
   botTo?: Square;
   /** The next game's id once "Pelaa uudelleen" was tapped. */
   rematchRoomId?: string;
-  /** Daily puzzle: what each finished turn did ("t" the destination found, "-" nothing). */
-  marks?: string;
+  /** A game of bots to watch: the bots' speed (every pause divided by it). */
+  speed?: BotSpeed;
   /** Daily puzzle: the fewest turns possible. */
   par?: number;
   /** Daily puzzle: the states before each shift, for undo (the last is undone first). */
-  history?: { game: GameState; marks: string }[];
+  history?: { game: GameState }[];
 }
 
 function storage(): Storage | undefined {

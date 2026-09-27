@@ -36,9 +36,11 @@ server bot speed; the other refinement items (found treasures, board marks, game
    server's bot-only start. `setSpeed` is accepted in a watch game (`NOT_SPECTATOR` elsewhere
    stays) and divides both bot delays, like the server. `rematch` is rejected (`NOT_SEATED`): the
    screen's "Uusi bottipeli" starts a new watch game itself.
-3. **Not saved**: a watch game never writes to the local game store, so it cannot overwrite a saved
-   1v game, and it is not offered for resume; a reload lands on the start screen. Keeping it would
-   need its own save slot for something the user only watches.
+3. **Not saved**: a watch game never writes to (or clears) the local game store and is not offered
+   for resume; a reload lands on the start screen. Keeping it would need its own save slot for
+   something the user only watches. Starting it clears the "Jatka peliä" record like any join
+   (existing rule "Another game started instead"); an earlier draft kept the saved 1v game
+   resumable, dropped because it would break that rule.
 4. **"Uusi bottipeli" always starts a device game**, also after a server game whose people left
    (the same client call, `watchBots`, now local). No server path remains for it.
 5. **Start screen section**: heading "Pikapeli bottien kanssa" / "Quick game with bots" (fits both
@@ -51,9 +53,10 @@ server bot speed; the other refinement items (found treasures, board marks, game
 6. **Server pruning**: `joinOptionsSchema` loses `private`, `bots` and `speed`; `GameRoom` loses
    `watchBots`, `settings.private`, `setPrivate`, the `watch` create path and `game.started`'s
    `watch` field; rematch copies only `pool` and `botSeats`. `watch` stays in the options for a
-   spectator's join through `/watch`, and creating with `watch` is still refused. An old cached
-   client asking for a private game gets an ordinary listed game (unknown keys are stripped); an
-   old bot-watch request is refused as `INVALID_OPTIONS` — acceptable, the PWA auto-updates.
+   spectator's join through `/watch`, and creating with `watch` is still refused. The schema is
+   strict (unknown keys refused), so an old cached client asking for a private game or a game of
+   bots gets `INVALID_OPTIONS` and no game — acceptable, the PWA auto-updates. (Stripping the keys
+   instead would have created a public game with no bots for such a request.)
 7. **Daily puzzle**: `DailyShare` component and its CSS go; `DailyOver` keeps "Alkuun",
    "Uudelleen" and "Näytä paras reitti", with "Uudelleen" as the primary action. The per-turn
    `marks` (only used for the share text) go from the daily record, the saved game and

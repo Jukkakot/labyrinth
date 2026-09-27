@@ -201,16 +201,21 @@ describe("lobby in a room", () => {
     });
   });
 
-  describe("Private game and invite link", () => {
-    it("Quick play skips private games; joinById joins one", async () => {
-      const { room } = await waitingRoom(colyseus, 1, { create: { private: true } });
-      expect((await listing(room.roomId))?.private).toBe(true);
+  describe("Invite link", () => {
+    it("No private game to create: the private option is refused", async () => {
+      await expect(colyseus.sdk.create("game", { nickname: "Maija", private: true })).rejects.toThrow("INVALID_OPTIONS");
+      expect(logs.byEvt("room.created")).toHaveLength(0);
+    });
+
+    it("Quick play finds every open game; joinById joins one", async () => {
+      const { room } = await waitingRoom(colyseus, 1);
+      expect((await listing(room.roomId))?.private).toBe(false);
       const quick = await colyseus.sdk.joinOrCreate("game", { nickname: "Pekka" });
-      expect(quick.roomId).not.toBe(room.roomId);
+      expect(quick.roomId).toBe(room.roomId);
 
       const invited = await colyseus.sdk.joinById(room.roomId, { nickname: "Liisa" });
       expect(invited.roomId).toBe(room.roomId);
-      expect(room.state.players.get(invited.sessionId)?.seat).toBe(2);
+      expect(room.state.players.get(invited.sessionId)?.seat).toBe(3);
     });
   });
 
@@ -222,7 +227,7 @@ describe("lobby in a room", () => {
     it("Server full: creating is refused, joining an existing game works, and a disposed game frees a slot", async () => {
       GameRoom.maxOpenGames = GameRoom.openGames + 1;
       const first = await colyseus.sdk.create("game", { nickname: "Maija" });
-      await expect(colyseus.sdk.create("game", { nickname: "Pekka", private: true })).rejects.toThrow("SERVER_FULL");
+      await expect(colyseus.sdk.create("game", { nickname: "Pekka" })).rejects.toThrow("SERVER_FULL");
       expect(logs.byEvt("room.refused")).toEqual([expect.objectContaining({ reason: "cap" })]);
 
       const joined = await colyseus.sdk.joinOrCreate("game", { nickname: "Liisa" });

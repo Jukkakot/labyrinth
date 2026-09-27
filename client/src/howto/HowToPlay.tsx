@@ -1,3 +1,4 @@
+import { IconCalendarStar } from "@tabler/icons-react";
 import type { Rotation, Tile, TileKind } from "@labyrinth/rules";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -181,7 +182,7 @@ export function HowToPlay({ onClose }: { onClose(): void }) {
         <Section id="home" picture={<HomePicture />}>
           <p>{t("howTo.home.body")}</p>
         </Section>
-        <Section id="daily" picture={<p className={styles.marks} aria-hidden="true">⬜⬜💎</p>}>
+        <Section id="daily" picture={<IconCalendarStar className={styles.dailyIcon} size={56} stroke={1.5} aria-hidden="true" />}>
           <p>{t("howTo.daily.body")}</p>
           <p>{t("howTo.daily.more")}</p>
         </Section>

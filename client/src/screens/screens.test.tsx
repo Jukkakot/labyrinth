@@ -14,7 +14,6 @@ function sessionOf(overrides: Partial<StartScreenProps["session"]> = {}): StartS
     status: "idle",
     slow: false,
     play: vi.fn(),
-    createPrivate: vi.fn(),
     joinById: vi.fn(),
     playBots: vi.fn(),
     playDaily: vi.fn(),
@@ -188,7 +187,6 @@ describe("lobby › Nickname", () => {
     render(<StartScreen session={sessionOf()} wake={ready} openGames={{ status: "ready", games: [{ roomId: "a-b-c", host: "Liisa", seated: 1 }], running: [] }} />);
     fireEvent.change(field(), { target: { value: "M" } });
     expect(button("Pelaa").disabled).toBe(true);
-    expect(button("Luo yksityinen peli").disabled).toBe(true);
     expect(button("Liity peliin: Liisa, 1/4 pelaajaa").disabled).toBe(true);
     expect(screen.getByText("Nimimerkissä pitää olla 2–16 merkkiä")).toBeTruthy();
     expect(field().getAttribute("aria-invalid")).toBe("true");
@@ -242,11 +240,9 @@ describe("lobby › Open games list and private game", () => {
     expect((screen.getByRole("button", { name: "Pelaa" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("Create a private game", () => {
-    const createPrivate = vi.fn();
-    render(<StartScreen session={sessionOf({ createPrivate })} wake={ready} />);
-    fireEvent.click(screen.getByRole("button", { name: "Luo yksityinen peli" }));
-    expect(createPrivate).toHaveBeenCalledExactlyOnceWith("Maija");
+  it("Create a private game: there is no such action any more", () => {
+    render(<StartScreen session={sessionOf()} wake={ready} />);
+    expect(screen.queryByRole("button", { name: "Luo yksityinen peli" })).toBeNull();
   });
 
   it.each([
@@ -274,13 +270,17 @@ describe("spectators › start screen", () => {
     expect(screen.queryByText("Käynnissä olevat pelit")).toBeNull();
   });
 
-  it("Watch three bots: the 3 button starts watching a game of 3 bots; disabled while waking", () => {
+  it("Watch three bots: Pelaan itse off offers 2–4 bots, 3 bottia starts watching; enabled while waking", () => {
     const watchBots = vi.fn();
-    const { rerender } = render(<StartScreen session={sessionOf({ watchBots })} wake={ready} />);
+    render(<StartScreen session={sessionOf({ watchBots })} wake={{ state: "waking", slow: false }} />);
+    const myself = screen.getByRole<HTMLInputElement>("switch", { name: "Pelaan itse" });
+    expect(myself.checked).toBe(true);
+    expect(screen.queryByRole("button", { name: "Katso 3 botin peliä" })).toBeNull();
+    fireEvent.click(myself);
+    expect(screen.queryByRole("button", { name: "Pikapeli: sinä ja 1 botti" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: /^Katso \d botin peliä$/ }).map((b) => b.textContent)).toEqual(["2 bottia", "3 bottia", "4 bottia"]);
     fireEvent.click(screen.getByRole("button", { name: "Katso 3 botin peliä" }));
     expect(watchBots).toHaveBeenCalledExactlyOnceWith("Maija", 3);
-    rerender(<StartScreen session={sessionOf({ watchBots })} wake={{ state: "waking", slow: false }} />);
-    expect((screen.getByRole("button", { name: "Katso 4 botin peliä" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 

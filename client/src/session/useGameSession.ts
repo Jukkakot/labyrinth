@@ -48,22 +48,20 @@ export interface GameRoomLike {
   removeAllListeners(): void;
 }
 
-/** What the player chooses when joining; the connector adds the page's pool and the private flag. */
+/** What the player chooses when joining; the connector adds the page's pool and the pawn. */
 export type JoinRequest = Pick<JoinOptions, "nickname">;
 
 export interface Connector {
   /** Quick play: a public waiting room with a free seat, or a new public game. */
   joinOrCreate(options: JoinRequest): Promise<GameRoomLike>;
-  /** A new private game, with the caller as its host. */
-  createPrivate(options: JoinRequest): Promise<GameRoomLike>;
   /** A quick game against `bots` bots: never listed, started as soon as the caller is seated. */
   createBotGame(options: JoinRequest & { bots: number }): Promise<GameRoomLike>;
   /** One particular game, from the list or an invite link. */
   joinById(roomId: string, options: JoinRequest): Promise<GameRoomLike>;
   /** Watch a running game as a spectator (through the server's watch route). */
   watch(roomId: string, options: JoinRequest): Promise<GameRoomLike>;
-  /** A new game of 2–4 bots only, watched by the caller. */
-  createBotWatch(options: JoinRequest & { bots: number; speed: BotSpeed }): Promise<GameRoomLike>;
+  /** A new game of 2–4 bots only on the device, watched by the caller. */
+  createBotWatch(options: { bots: number; speed: BotSpeed }): Promise<GameRoomLike>;
   reconnect(token: string): Promise<GameRoomLike>;
   /** The daily puzzle of `date` on the device: an unfinished attempt continued, else a new attempt. */
   playDaily(options: JoinRequest & { date: string }): Promise<GameRoomLike>;
@@ -105,8 +103,6 @@ export function createConnector(): Connector {
   };
   return {
     joinOrCreate: (options) => sdkClient().joinOrCreate("game", withPool(options)) as unknown as Promise<GameRoomLike>,
-    createPrivate: (options) =>
-      sdkClient().create("game", { ...withPool(options), private: true }) as unknown as Promise<GameRoomLike>,
     createBotGame: async ({ bots, nickname }) => LocalRoom.create(nickname, bots),
     joinById: (roomId, options) =>
       isLocalRoomId(roomId) ? restoreLocal(roomId) : (sdkClient().joinById(roomId, withPool(options)) as unknown as Promise<GameRoomLike>),
@@ -120,8 +116,7 @@ export function createConnector(): Connector {
       if (!res.ok) throw new Error(res.status === 400 ? "INVALID_OPTIONS" : ("NOT_WATCHABLE" satisfies JoinErrorCode));
       return sdkClient().consumeSeatReservation(await res.json()) as unknown as Promise<GameRoomLike>;
     },
-    createBotWatch: ({ bots, speed, ...options }) =>
-      sdkClient().create("game", { ...withPool(options), watch: true, bots, speed, private: true }) as unknown as Promise<GameRoomLike>,
+    createBotWatch: async ({ bots, speed }) => LocalRoom.createWatch(bots, speed),
     reconnect: (token) =>
       isLocalToken(token) ? restoreLocal(roomIdOfToken(token)) : (sdkClient().reconnect(token) as unknown as Promise<GameRoomLike>),
     playDaily: async ({ nickname, date }) => {
@@ -192,8 +187,6 @@ export interface GameSession {
   slow: boolean;
   /** Quick play under `nickname` (valid and trimmed). */
   play(nickname: string): void;
-  /** Creates a private game with this player as its host. */
-  createPrivate(nickname: string): void;
   /** Joins one particular game (from the list or an invite link). */
   joinById(roomId: string, nickname: string): void;
   /** A quick game against 1–3 bots, straight into the game. */
@@ -206,7 +199,7 @@ export interface GameSession {
   joinInvite(roomId: string, nickname: string): void;
   /** Watches a running game. */
   watch(roomId: string, nickname: string): void;
-  /** Watches a new game of 2–4 bots (leaving the current game, if any). */
+  /** Watches a new game of 2–4 bots on the device (leaving the current game, if any). */
   watchBots(nickname: string, bots: number, speed?: BotSpeed): void;
   /** Waiting room: takes a free pawn, and remembers it as the player's choice. */
   setLook(look: Look): Promise<CommandResult | undefined>;
@@ -250,7 +243,7 @@ export interface GameSession {
 
 /**
  * Joining games and per-tab rejoin. A tab with a stored reconnection token rejoins its game on
- * load; otherwise it waits for play(), createPrivate() or joinById().
+ * load; otherwise it waits for play(), joinById() or another way in.
  */
 export function useGameSession(connector?: Connector): GameSession {
   const connectorRef = useRef<Connector | undefined>(connector);
@@ -403,10 +396,6 @@ export function useGameSession(connector?: Connector): GameSession {
   );
 
   const play = useCallback((nickname: string) => connect(() => getConnector().joinOrCreate({ nickname }), nickname), [connect]);
-  const createPrivate = useCallback(
-    (nickname: string) => connect(() => getConnector().createPrivate({ nickname }), nickname),
-    [connect],
-  );
   const playBots = useCallback(
     (nickname: string, bots: number) => connect(() => getConnector().createBotGame({ nickname, bots }), nickname),
     [connect],
@@ -425,7 +414,7 @@ export function useGameSession(connector?: Connector): GameSession {
   );
   const watchBots = useCallback(
     (nickname: string, bots: number, speed: BotSpeed = 1) =>
-      connect(() => getConnector().createBotWatch({ nickname, bots, speed }), nickname),
+      connect(() => getConnector().createBotWatch({ bots, speed }), nickname),
     [connect],
   );
   const joinInvite = useCallback(
@@ -568,7 +557,6 @@ export function useGameSession(connector?: Connector): GameSession {
     view,
     slow: status === "connecting" && slow,
     play,
-    createPrivate,
     joinById,
     playBots,
     playDaily,

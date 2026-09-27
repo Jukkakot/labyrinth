@@ -8,4 +8,4 @@
 ## 2. Wiki and handover
 
 - [x] 2.1 Update the docs wiki where board rendering is described
-- [ ] 2.2 Coordinator: pass `collected={collectedTreasures(view.seats)}` to `ShiftControls` and `MoveControls` in `GameScreen.tsx` (outside this job's files)
+- [x] 2.2 Coordinator: pass `collected={collectedTreasures(view.seats)}` to `ShiftControls` and `MoveControls` in `GameScreen.tsx` (outside this job's files)

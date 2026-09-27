@@ -150,6 +150,17 @@
   font-size: var(--text-s);
 }
 
+/* "Pelaan itse": the whole row is the tap target. */
+.playMyself {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: var(--tap-min);
+  cursor: pointer;
+}
+
 /* The open games: one tappable row per game. */
 .games {
   width: min(100%, 22rem);

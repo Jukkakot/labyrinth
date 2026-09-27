@@ -77,12 +77,6 @@ describe("rematch", () => {
     expect(next.state.players.get(pekka.sessionId)?.seat).toBe(2);
   });
 
-  it("Private stays private", async () => {
-    const { clients } = await finishedGame({ private: true });
-    await clients[0]!.request("rematch", {});
-    expect((await listing(await rematchId(clients[0]!)))?.private).toBe(true);
-  });
-
   it("Rematch of a running game: WRONG_PHASE, no game", async () => {
     const { clients } = await startedGame(colyseus, 2);
     expect(await clients[0]!.request("rematch", {})).toEqual({ ok: false, code: "WRONG_PHASE" });

@@ -1,5 +1,3 @@
-import { formatDateTime } from "../i18n/formatDateTime.ts";
-
 /**
  * The daily puzzle on this device: which date, the current attempt's saved game, the puzzle's par
  * and the day's best solve over all attempts. A record of an earlier date is replaced by today's.
@@ -7,10 +5,8 @@ import { formatDateTime } from "../i18n/formatDateTime.ts";
 const KEY = "labyrinth.daily";
 
 export interface DailyResult {
-  /** Turns taken, the home turn included. */
+  /** Turns taken, the solving turn included. */
   turns: number;
-  /** One character per turn: "t" the destination found, "-" nothing. */
-  marks: string;
 }
 
 export interface DailyRecord {
@@ -74,17 +70,4 @@ export function saveDailyRecord(record: DailyRecord, store = storage()): void {
 export function saveDailyResult(roomId: string, result: DailyResult, store = storage()): void {
   const record = dailyRecordOf(roomId, store);
   if (record && (!record.best || result.turns < record.best.turns)) saveDailyRecord({ ...record, best: result }, store);
-}
-
-const EMOJI: Record<string, string> = { t: "💎" };
-
-/** The marks row of a result: 💎 the turn the destination was found, ⬜ any other turn. */
-export function marksRow(marks: string): string {
-  return [...marks].map((m) => EMOJI[m] ?? "⬜").join("");
-}
-
-/** A date `YYYY-MM-DD` as people write it in the UI language, e.g. "27.9.2026" in Finnish. */
-export function displayDate(date: string, lng: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  return formatDateTime(new Date(y!, m! - 1, d!), lng).date;
 }

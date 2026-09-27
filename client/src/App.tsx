@@ -35,15 +35,14 @@ export default function App() {
   const devUsed = useRef(false);
 
   useEffect(() => {
-    // A bot game runs on the device and starts at once; watching needs the server awake.
-    const waiting = devBots === undefined && wake.state === "waking";
-    if ((devBots ?? devWatch) === undefined || devUsed.current || waiting || status !== "idle") return;
+    // Bot games, played or watched, run on the device and start at once.
+    if ((devBots ?? devWatch) === undefined || devUsed.current || status !== "idle") return;
     devUsed.current = true;
     dropDevShortcut();
     const nickname = loadNickname() || randomNickname(i18n.language);
     if (devBots !== undefined) playBots(nickname, devBots);
     else watchBots(nickname, devWatch!);
-  }, [wake.state, status, playBots, watchBots, i18n.language]);
+  }, [status, playBots, watchBots, i18n.language]);
 
   if (inGame && session.view!.phase === "waiting") return <WaitingRoomScreen view={session.view!} session={session} />;
   if (inGame) return <GameScreen view={session.view!} session={session} />;

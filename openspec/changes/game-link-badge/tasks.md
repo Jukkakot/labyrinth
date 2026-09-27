@@ -21,3 +21,9 @@ Notes: wiring outside this job's files, left to the coordinator: `GameScreen` pa
 `roomId={view.roomId}` to `SettingsScreen`; `WaitingRoomScreen` passes `invite="join"` to
 `GameIdBadge`; `e2e/tests/helpers.ts` reads the game id from the badge's aria-label, which is now
 "Peli <id>. Napauta jakaaksesi pelin linkin.".
+
+## Coordinator wiring (after merge)
+
+- [x] C.1 `GameScreen`: pass `roomId` to `SettingsScreen` so the bug-report line in a game names it.
+- [x] C.2 `WaitingRoomScreen`: badge with `invite="join"` (join text instead of watch text).
+- [x] C.3 `e2e/tests/helpers.ts`: game id read from the new badge label.

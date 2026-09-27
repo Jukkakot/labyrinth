@@ -150,10 +150,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   private game?: Game;
   /** True while the room is being closed for everyone: dropped connections hold no seat. */
   private closing = false;
-  /** Bots of a game of bots only (0 = an ordinary game): seated and started when its first spectator joins. */
-  private watchBots = 0;
-  /** The creation settings a rematch copies. */
-  private settings: { private: boolean; pool: string } = { private: false, pool: "" };
+  /** The matchmaking pool, which a rematch copies. */
+  private pool = "";
   /** Seats that held a bot when the game started (a rematch seats bots there again). */
   private startBotSeats: number[] = [];
   /** Spectators by sessionId, dropped ones in their hold included. */
@@ -287,8 +285,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
 
   /**
    * Deals the cards to the seated players (bots included), locks the room and gives the first turn
-   * to the host (or, with no host seated, a seat drawn from the deal seed). The one way a game
-   * starts (host's start, bot-only game).
+   * to the host. The one way a game starts.
    */
   private startGame(): void {
     const seats = this.seats();
@@ -309,23 +306,19 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     this.maxClients = MAX_SEATS + MAX_SPECTATORS;
     for (const client of this.clients) if (this.spectators.has(client.sessionId)) this.showAllPlayers(client);
     for (const [id, p] of this.state.players) if (!p.bot && !p.connected) this.startAutoplay(id, "drop");
-    log.info(
-      "game.started",
-      this.logCtx(undefined, { dealSeed, seats, startSeat, ...(this.watchBots > 0 && { watch: true }) }),
-    );
+    log.info("game.started", this.logCtx(undefined, { dealSeed, seats, startSeat }));
     this.setTurn(startSeat);
     this.syncListing({ open: false });
   }
 
   /**
    * Creates the rematch game with this game's settings: the requester's nickname (they join it
-   * first and host it), the same privacy and pool, and the bots of the start.
+   * first and host it), the same pool, and the bots of the start.
    */
   private async createRematch(nickname: string): Promise<void> {
     const options: JoinOptions = {
       nickname,
-      ...(this.settings.pool && { pool: this.settings.pool }),
-      ...(this.settings.private && { private: true }),
+      ...(this.pool && { pool: this.pool }),
       botSeats: this.startBotSeats,
     };
     let roomId: string;
@@ -702,8 +695,8 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
       log.info("room.refused", { reason });
       throw refuse(reason === "nickname" ? "INVALID_NICKNAME" : "INVALID_OPTIONS");
     }
-    // Watching needs bots to watch: a spectator of a running game joins, never creates.
-    if (parsed.data.watch && !parsed.data.bots) {
+    // A spectator of a running game joins, never creates (games of bots to watch run on the device).
+    if (parsed.data.watch) {
       log.info("room.refused", { reason: "options" });
       throw refuse("INVALID_OPTIONS");
     }
@@ -716,17 +709,14 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
 
     await super.onCreate(options);
     const { data } = parsed;
-    this.watchBots = data.bots ?? 0;
-    this.settings = { private: data.private ?? false, pool: data.pool ?? "" };
-    if (data.speed) this.state.botSpeed = data.speed;
-    if (data.private || this.watchBots > 0) await this.setPrivate(true);
+    this.pool = data.pool ?? "";
     await this.setMetadata({ host: "", open: true, pool: data.pool ?? "", seated: 0, watchable: false });
     this.seed = randomInt(0, MAX_SEED + 1);
     const board = setupBoard(this.seed);
     this.setupBoard = board;
     this.state.squares.push(...board.squares.map(toTileState));
     this.state.spare = toTileState(board.spare);
-    log.info("game.setup", this.logCtx(undefined, { seed: this.seed, private: data.private ?? false }));
+    log.info("game.setup", this.logCtx(undefined, { seed: this.seed }));
     // A rematch keeps the finished game's bots in their seats.
     for (const seat of data.botSeats ?? []) this.seatBot(seat);
   }
@@ -771,12 +761,11 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
   }
 
   /**
-   * A spectator comes in: the creator of a bot-only game (who then gets the bots and the start), or
-   * anyone while the game runs and has room. Anything else is refused (a race with the watch route).
+   * A spectator comes in while the game runs and has room. Anything else is refused (a race with
+   * the watch route).
    */
   private addSpectator(client: Client, name: string): void {
-    const creator = this.watchBots > 0 && this.state.phase === "waiting" && this.spectators.size === 0;
-    if (!creator && !(this.running() && this.spectators.size < MAX_SPECTATORS)) {
+    if (!(this.running() && this.spectators.size < MAX_SPECTATORS)) {
       log.info("room.refused", this.logCtx(client, { reason: "notWatchable" }));
       throw refuse("NOT_WATCHABLE");
     }
@@ -785,12 +774,7 @@ export class GameRoom extends LoggedRoom<{ state: GameState; metadata: GameMetad
     this.state.spectators = this.spectators.size;
     this.showAllPlayers(client);
     log.info("spectator.joined", this.logCtx(client, { spectators: this.spectators.size }));
-    if (creator) {
-      for (let seat = 1; seat <= this.watchBots; seat++) this.seatBot(seat);
-      this.startGame();
-    } else {
-      this.syncListing();
-    }
+    this.syncListing();
   }
 
   /** Consented leave, or a dropped player's hold ran out (a kicked player is already gone). */

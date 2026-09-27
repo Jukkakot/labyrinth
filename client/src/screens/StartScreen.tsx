@@ -17,16 +17,16 @@ import { LookPicker } from "../ui/LookPicker.tsx";
 import { loadLook, saveLook } from "../session/look.ts";
 import { Message } from "../ui/Message.tsx";
 import { Screen } from "../ui/Screen.tsx";
+import { Switch } from "../ui/Switch.tsx";
 import { BuildInfo } from "./BuildInfo.tsx";
 import styles from "./StartScreen.module.css";
-import { DailyShare } from "../game/DailyShare.tsx";
 import { loadDailyRecord } from "../session/dailyRecord.ts";
 import { loadLocalGame } from "../session/localGameStore.ts";
 
 export interface StartScreenProps {
   session: Pick<
     GameSession,
-    "status" | "slow" | "play" | "createPrivate" | "joinById" | "playBots" | "playDaily" | "joinInvite" | "watch" | "watchBots" | "retry" | "startNotice" | "resumable" | "resume"
+    "status" | "slow" | "play" | "joinById" | "playBots" | "playDaily" | "joinInvite" | "watch" | "watchBots" | "retry" | "startNotice" | "resumable" | "resume"
   >;
   /** The early server wake-up: the join actions stay disabled until it is over. */
   wake: ServerWake;
@@ -66,13 +66,13 @@ function minutesSeconds(total: number): string {
 }
 
 /**
- * Before a game: the nickname field and the ways in (quick play, a private game, a quick game
- * against bots, a game of bots to watch, the open games list, the running games to watch, or the
- * invite in invite mode), then the connecting and join-error states.
+ * Before a game: the nickname field and the ways in (quick play, a quick game with bots to play or
+ * to watch, the daily puzzle, the open games list, the running games to watch, or the invite in
+ * invite mode), then the connecting and join-error states.
  */
 export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInviteDone }: StartScreenProps) {
   const { t, i18n } = useTranslation();
-  const { status, slow, play, createPrivate, joinById, playBots, playDaily, joinInvite, watch, watchBots, retry, startNotice, resumable, resume } = session;
+  const { status, slow, play, joinById, playBots, playDaily, joinInvite, watch, watchBots, retry, startNotice, resumable, resume } = session;
   // A new player gets a random name, so they can start at once; it is remembered only once used.
   const [input, setInput] = useState(() => loadNickname() || randomNickname(i18n.language));
   const [touched, setTouched] = useState(false);
@@ -83,6 +83,8 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
   const waited = useSecondsWaited(wake.state === "waking" && status !== "connecting" && status !== "error");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [howToOpen, setHowToOpen] = useState(false);
+  // "Pelaan itse": on whenever the screen opens; off offers a game of bots only to watch.
+  const [playMyself, setPlayMyself] = useState(true);
   // Without a stored choice the blue circle shows: it is what the player gets in a game on the device.
   const [look, setLook] = useState(() => loadLook() ?? 1);
   if (settingsOpen) return <SettingsScreen onClose={() => setSettingsOpen(false)} />;
@@ -195,24 +197,37 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
                 <Button type="submit" variant={offerResume ? "secondary" : undefined} disabled={disabled}>
                   {t("start.play")}
                 </Button>
-                <Button variant="secondary" disabled={disabled} onClick={() => createPrivate(name)}>
-                  {t("start.createPrivate")}
-                </Button>
                 <div className={styles.bots} role="group" aria-labelledby="bot-games">
                   <p id="bot-games" className={styles.botsTitle}>
                     {t("start.botGames")}
                   </p>
-                  {BOT_COUNTS.map((bots) => (
-                    <Button
-                      key={bots}
-                      variant="secondary"
-                      disabled={!nickname.ok}
-                      onClick={() => playBots(name, bots)}
-                      aria-label={t("start.botGameLabel", { count: bots })}
-                    >
-                      1v{bots}
-                    </Button>
-                  ))}
+                  <label className={styles.playMyself}>
+                    {t("start.playMyself")}
+                    <Switch checked={playMyself} onChange={(e) => setPlayMyself(e.target.checked)} />
+                  </label>
+                  {playMyself
+                    ? BOT_COUNTS.map((bots) => (
+                        <Button
+                          key={bots}
+                          variant="secondary"
+                          disabled={!nickname.ok}
+                          onClick={() => playBots(name, bots)}
+                          aria-label={t("start.botGameLabel", { count: bots })}
+                        >
+                          1v{bots}
+                        </Button>
+                      ))
+                    : WATCH_COUNTS.map((bots) => (
+                        <Button
+                          key={bots}
+                          variant="secondary"
+                          disabled={!nickname.ok}
+                          onClick={() => watchBots(name, bots)}
+                          aria-label={t("start.watchBotsLabel", { count: bots })}
+                        >
+                          {t("start.watchBotCount", { count: bots })}
+                        </Button>
+                      ))}
                 </div>
                 <div className={styles.daily} role="group" aria-labelledby="daily-title">
                   <p id="daily-title" className={styles.botsTitle}>
@@ -224,23 +239,6 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
                   <Button variant="secondary" disabled={!nickname.ok} onClick={() => playDaily(name)}>
                     {t(dailyUnfinished ? "daily.continue" : daily?.best ? "daily.again" : "daily.play")}
                   </Button>
-                  {daily?.best && <DailyShare date={daily.date} result={daily.best} par={daily.par} />}
-                </div>
-                <div className={styles.bots} role="group" aria-labelledby="watch-bots">
-                  <p id="watch-bots" className={styles.botsTitle}>
-                    {t("start.watchBots")}
-                  </p>
-                  {WATCH_COUNTS.map((bots) => (
-                    <Button
-                      key={bots}
-                      variant="secondary"
-                      disabled={disabled}
-                      onClick={() => watchBots(name, bots)}
-                      aria-label={t("start.watchBotsLabel", { count: bots })}
-                    >
-                      {bots}
-                    </Button>
-                  ))}
                 </div>
               </>
             )}

@@ -28,7 +28,7 @@ describe("how-to-play › What the rules screen explains", () => {
     expect(daily).toMatch(/paras yrityksesi/);
 
     const pictures = [...container.querySelectorAll("section > svg")];
-    expect(pictures).toHaveLength(5);
+    expect(pictures).toHaveLength(6);
     expect(pictures.every((svg) => svg.getAttribute("aria-hidden") === "true")).toBe(true);
     expect(screen.queryAllByRole("img")).toHaveLength(0);
   });

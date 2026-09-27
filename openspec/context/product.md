@@ -16,16 +16,17 @@ Agreed before any capability was specified. Once a capability has a spec under
 - Online multiplayer, humans + bots mixed, solo vs bots. No hot-seat.
 - Daily puzzle: a solo game on the device, the same for everyone on a date; reach one treasure in
   as few turns as possible; the puzzle shows the best possible (par, usually 2). Undo and retries
-  are allowed, the day keeps the best solve; the hint is on. The result is shared as text
-  (turns vs. par, one emoji per turn, Wordle style).
+  are allowed, the day keeps the best solve; the hint is on. No sharing of the result.
 - Identity = nickname only, no accounts. Session is per browser tab
   (sessionStorage), so two tabs = two players; reload rejoins the same seat.
   Nickname is remembered (localStorage) only as a prefill.
 - One bot difficulty level. Bots act with a short delay so humans can follow.
 
 ## Lobby and game lifecycle
-- Public lobby: list of open games, quick play, create public or private game.
-  Private games are joined by invite link only (no code entry field).
+- Public lobby: list of open games and quick play; every server game is public. Friends are
+  invited by the waiting room's link (no private games, no code entry field).
+- Games with bots from the start screen run on the device: "Pelaan itse" on = 1v1–1v3, off = a
+  game of 2–4 bots to watch (speed 1×/2×/4×).
 - Waiting room: creator adds/removes bots in empty seats and presses Start
   (min 2 players). If the creator leaves the waiting room, the room closes.
 - Turn limit 60 s. Nothing automatic happens; after it expires the other human

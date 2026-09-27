@@ -138,12 +138,11 @@ describe("lobby › Open games list", () => {
 });
 
 describe("spectators › running games", () => {
-  it("lists public watchable games apart from the open ones; a rematch game without its host yet is hidden", () => {
+  it("lists watchable games apart from the open ones; a rematch game without its host yet is hidden", () => {
     const rooms = [
       listing("open-game"),
       listing("running-game", { locked: true, metadata: { host: "Pekka", open: false, pool: "", seated: 3, watchable: true } }),
       listing("full-of-spectators", { locked: true, metadata: { host: "Liisa", open: false, pool: "", seated: 2, watchable: false } }),
-      listing("private-running", { private: true, locked: true, metadata: { host: "Olli", open: false, pool: "", watchable: true } }),
       listing("rematch-no-host", { metadata: { host: "", open: true, pool: "", seated: 1 } }),
     ];
     expect(toOpenGames(rooms).map((g) => g.roomId)).toEqual(["open-game"]);

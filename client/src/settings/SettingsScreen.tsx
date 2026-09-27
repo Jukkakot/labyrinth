@@ -7,6 +7,7 @@ import { BackButton } from "../ui/BackButton.tsx";
 import { useTranslation } from "react-i18next";
 import { Button } from "../ui/Button.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
+import { Switch } from "../ui/Switch.tsx";
 import { Screen } from "../ui/Screen.tsx";
 import { canVibrate } from "./feedback.ts";
 import { updateSettings, useSettings, type Settings, type Theme } from "./settings.ts";
@@ -39,10 +40,7 @@ function Toggle({ name, disabled = false, note }: { name: Flag; disabled?: boole
           {note ?? t(`settings.${name}Note`)}
         </span>
       </span>
-      <input
-        type="checkbox"
-        role="switch"
-        className={styles.switch}
+      <Switch
         checked={settings[name] && !disabled}
         disabled={disabled}
         aria-describedby={noteId}

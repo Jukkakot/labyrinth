@@ -138,32 +138,27 @@ describe("spectators", () => {
     });
   });
 
-  describe("Watching a game of bots", () => {
-    it("Watch three bots: started at once, 8 cards each, private, the bots play", async () => {
-      const spectator = (await colyseus.sdk.create("game", { nickname: "Katsoja", watch: true, bots: 3 })) as unknown as TestClient;
-      const room = colyseus.getRoomById(spectator.roomId) as unknown as GameRoom;
-      quick(room);
-      expect(room.state.players.size).toBe(3);
-      expect([...room.state.players.values()].map((p) => [p.seat, p.name, p.cards])).toEqual([
-        [1, "Robo", 8],
-        [2, "Pixel", 8],
-        [3, "Byte", 8],
-      ]);
-      expect(room.state.spectators).toBe(1);
-      expect((await listing(room.roomId))?.private).toBe(true);
-      expect(logs.byEvt("game.started")).toEqual([expect.objectContaining({ watch: true })]);
-      await vi.waitFor(() => expect(logs.byEvt("cmd.accepted").filter((l) => l.cmd === "move").length).toBeGreaterThan(0), { timeout: 4000 });
-    });
+  /** A running game of `bots` bots and one spectator: its only person started it and left. */
+  async function botOnlyGame(bots: number): Promise<{ room: GameRoom; spectator: TestClient }> {
+    const { room, clients } = await waitingRoom(colyseus, 1);
+    quick(room);
+    for (let seat = 2; seat <= bots + 1; seat++) await clients[0]!.request("addBot", { seat });
+    await clients[0]!.request("start", {});
+    const spectator = await watch(room.roomId);
+    await clients[0]!.leave();
+    await vi.waitFor(() => expect(room.state.players.size).toBe(bots));
+    return { room, spectator };
+  }
 
-    it("One bot is not a game: no room", async () => {
-      await expect(colyseus.sdk.create("game", { nickname: "Katsoja", watch: true, bots: 1 })).rejects.toThrow("INVALID_OPTIONS");
+  describe("Watching a game of bots", () => {
+    it("One bot is not a game: games of bots to watch are never created on the server", async () => {
+      await expect(colyseus.sdk.create("game", { nickname: "Katsoja", watch: true, bots: 3 })).rejects.toThrow("INVALID_OPTIONS");
       await expect(colyseus.sdk.create("game", { nickname: "Katsoja", watch: true })).rejects.toThrow("INVALID_OPTIONS");
       expect(logs.byEvt("room.created")).toHaveLength(0);
     });
 
     it("Last spectator leaves a bot-only game: it ends without a winner", async () => {
-      const spectator = (await colyseus.sdk.create("game", { nickname: "Katsoja", watch: true, bots: 2 })) as unknown as TestClient;
-      const room = colyseus.getRoomById(spectator.roomId) as unknown as GameRoom;
+      const { room, spectator } = await botOnlyGame(2);
       await spectator.leave();
       await vi.waitFor(() => expect(logs.byEvt("game.finished")).toEqual([expect.objectContaining({ winner: 0, reason: "noPeople" })]));
       expect(room.state.winnerSeat).toBe(0);
@@ -189,9 +184,8 @@ describe("spectators", () => {
 
   describe("Bot speed", () => {
     it("Faster bots: a spectator of a bot-only game sets 4×, everyone sees it, pauses shrink", async () => {
-      const spectator = (await colyseus.sdk.create("game", { nickname: "Katsoja", watch: true, bots: 2, speed: 2 })) as unknown as TestClient;
-      const room = colyseus.getRoomById(spectator.roomId) as unknown as GameRoom;
-      expect(room.state.botSpeed).toBe(2);
+      const { room, spectator } = await botOnlyGame(2);
+      expect(room.state.botSpeed).toBe(1);
       expect(await spectator.request("setSpeed", { speed: 4 })).toEqual({ ok: true } satisfies CommandResult);
       await vi.waitFor(() => expect(seen(spectator).botSpeed).toBe(4));
       const other = await watch(room.roomId);
