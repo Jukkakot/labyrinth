@@ -40,15 +40,15 @@ describe("board-view › Last turn shown", () => {
   it("nothing is marked for a game already under way when first seen", () => {
     const { before } = afterShift();
     const trace = nextTrace(undefined, before);
-    expect(trace.pushedTileId).toBeUndefined();
+    expect(trace.insertion).toBeUndefined();
     expect(trace.route).toBeUndefined();
   });
 
-  it("a shift marks the pushed-in tile (now at the entry square) and the mover", () => {
-    const { before, after, board } = afterShift();
+  it("a shift marks where the tile was pushed in and the mover", () => {
+    const { before, after } = afterShift();
     const trace = nextTrace(nextTrace(undefined, before), after);
     expect(trace.seat).toBe(2);
-    expect(trace.pushedTileId).toBe(board.squares[3]!.id); // row 0, col 3
+    expect(trace.insertion).toBe("N3");
     expect(trace.route).toBeUndefined();
   });
 
@@ -61,7 +61,7 @@ describe("board-view › Last turn shown", () => {
     trace = nextTrace(trace, view({ board, squares: [pawns[0]!, to!], turnSeat: 1, step: "shift", lastInsertion: "N3" }));
     expect(trace.route?.[0]).toEqual(from);
     expect(trace.route?.at(-1)).toEqual(to);
-    expect(trace.pushedTileId).toBe(board.squares[3]!.id);
+    expect(trace.insertion).toBe("N3");
   });
 
   it("Staying put: no route", () => {
@@ -69,7 +69,7 @@ describe("board-view › Last turn shown", () => {
     let trace = nextTrace(nextTrace(undefined, before), after);
     trace = nextTrace(trace, view({ board, squares: pawns, turnSeat: 1, step: "shift", lastInsertion: "N3" }));
     expect(trace.route).toBeUndefined();
-    expect(trace.pushedTileId).toBeDefined();
+    expect(trace.insertion).toBe("N3");
   });
 
   it("the last move of a finished game is traced", () => {
@@ -89,7 +89,7 @@ describe("board-view › Last turn shown", () => {
     trace = nextTrace(trace, view({ board: next.board, squares: [...next.pawns], turnSeat: 1, step: "move", lastInsertion: "W1" }));
     expect(trace.seat).toBe(1);
     expect(trace.route).toBeUndefined();
-    expect(trace.pushedTileId).toBe(next.board.squares[7]!.id); // row 1, col 0
+    expect(trace.insertion).toBe("W1");
   });
 
   it("a move step ending without a move (seat kicked) draws no route", () => {

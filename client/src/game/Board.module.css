@@ -4,6 +4,8 @@
   width: min(100%, 60dvh, 640px);
   aspect-ratio: 1;
   height: auto;
+  /* The last push is marked just outside the board edge, in the page gutter. */
+  overflow: visible;
 }
 
 .pawns {

@@ -1,24 +1,68 @@
-import type { Square } from "@labyrinth/rules";
+import { BOARD_SIZE, type InsertionId, type Square } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import { TILE_UNITS } from "./TileView.tsx";
 import styles from "./TurnMarks.module.css";
 
-const hub = (sq: Square) => `${sq.col * TILE_UNITS + TILE_UNITS / 2},${sq.row * TILE_UNITS + TILE_UNITS / 2}`;
+const hubOf = (sq: Square): [number, number] => [sq.col * TILE_UNITS + TILE_UNITS / 2, sq.row * TILE_UNITS + TILE_UNITS / 2];
 
-/** The last walked route: a dotted line through the tile hubs in the mover's colour, a hollow ring where it began. */
+/** The arrowhead's tip stops this far from the end hub, at the edge of the pawn standing there. */
+const PAWN_GAP = 34;
+const HEAD_LENGTH = 20;
+const HEAD_HALF_WIDTH = 12;
+
+/**
+ * The last walked route in the mover's colour: a dashed line through the tile hubs, a small hollow
+ * ring where it began and an arrowhead that ends at the pawn where it stopped.
+ */
 export function RouteTrace({ route, seat }: { route: readonly Square[]; seat: number }) {
   const start = route[0];
   if (!start || route.length < 2) return null;
   const colour = `var(--seat-${seat})`;
+  const hubs = route.map(hubOf);
+  const [ex, ey] = hubs.at(-1)!;
+  const [px, py] = hubs.at(-2)!;
+  const length = Math.hypot(ex - px, ey - py);
+  const [dx, dy] = [(ex - px) / length, (ey - py) / length];
+  const tip: [number, number] = [ex - dx * PAWN_GAP, ey - dy * PAWN_GAP];
+  const base: [number, number] = [tip[0] - dx * HEAD_LENGTH, tip[1] - dy * HEAD_LENGTH];
+  const head = [
+    tip,
+    [base[0] - dy * HEAD_HALF_WIDTH, base[1] + dx * HEAD_HALF_WIDTH],
+    [base[0] + dy * HEAD_HALF_WIDTH, base[1] - dx * HEAD_HALF_WIDTH],
+  ];
+  const line = [...hubs.slice(0, -1), base];
   return (
     <g className={styles.marks} aria-hidden data-route={route.map((sq) => `${sq.row},${sq.col}`).join(" ")}>
-      <polyline points={route.map(hub).join(" ")} className={styles.route} style={{ stroke: colour }} />
-      <circle
-        cx={start.col * TILE_UNITS + TILE_UNITS / 2}
-        cy={start.row * TILE_UNITS + TILE_UNITS / 2}
-        r={13}
-        className={styles.routeStart}
-        style={{ stroke: colour }}
+      <polyline points={line.join(" ")} className={styles.route} style={{ stroke: colour }} />
+      <polygon points={head.join(" ")} className={styles.routeEnd} style={{ fill: colour }} data-route-end />
+      <circle cx={hubs[0]![0]} cy={hubs[0]![1]} r={10} className={styles.routeStart} style={{ stroke: colour }} data-route-start />
+    </g>
+  );
+}
+
+/** Where each side's edge marker stands (the board edge) and how it is turned to point inward. */
+const PUSH_SIDES = {
+  N: (line: number) => ({ x: line * TILE_UNITS + TILE_UNITS / 2, y: 0, angle: 0 }),
+  S: (line: number) => ({ x: line * TILE_UNITS + TILE_UNITS / 2, y: BOARD_SIZE * TILE_UNITS, angle: 180 }),
+  W: (line: number) => ({ x: 0, y: line * TILE_UNITS + TILE_UNITS / 2, angle: -90 }),
+  E: (line: number) => ({ x: BOARD_SIZE * TILE_UNITS, y: line * TILE_UNITS + TILE_UNITS / 2, angle: 90 }),
+} as const;
+
+/**
+ * Where the last shift pushed the tile in: an arrowhead just outside the board edge, pointing into
+ * the shifted line, in the colour of the player who shifted. It stands in the page gutter, so the
+ * board keeps its size.
+ */
+export function PushMark({ insertion, seat }: { insertion: InsertionId; seat: number }) {
+  const side = insertion[0] as keyof typeof PUSH_SIDES;
+  const { x, y, angle } = PUSH_SIDES[side](Number(insertion.slice(1)));
+  return (
+    <g className={styles.marks} aria-hidden data-push={insertion} data-seat={seat}>
+      <polygon
+        points="-20,-27 20,-27 0,-4"
+        transform={`translate(${x} ${y}) rotate(${angle})`}
+        className={styles.push}
+        style={{ fill: `var(--seat-${seat})` }}
       />
     </g>
   );

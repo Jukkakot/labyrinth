@@ -1,14 +1,14 @@
-import { insertionLine, sameSquare, shortestPath, squareIndex, type Square } from "@labyrinth/rules";
+import { sameSquare, shortestPath, type InsertionId, type Square } from "@labyrinth/rules";
 import type { GameView } from "../session/viewModel.ts";
 
-/** What the last turn did, kept until the next shift: the pushed-in tile and the walked route. */
+/** What the last turn did, kept until the next shift: where the tile was pushed in and the walked route. */
 export interface TurnTrace {
   /** Identifies the last seen shift (spare id + insertion); a new value means someone shifted. */
   shiftKey: string;
   /** Seat that made the last shift, and whose route is drawn. */
   seat?: number;
-  /** Id of the tile the last shift pushed in. */
-  pushedTileId?: number;
+  /** Where the last shift pushed the spare in; marked at the board edge. */
+  insertion?: InsertionId;
   /** The walked route `[from, …, to]`; undefined when the pawn stayed or has not moved yet. */
   route?: Square[];
   /** While a move step runs: the mover's seat and square at its start. */
@@ -37,16 +37,10 @@ export function nextTrace(previous: TurnTrace | undefined, view: TraceView): Tur
     trace = { ...trace, moving: undefined, route };
   }
 
-  // Someone shifted: mark the pushed-in tile; the previous route is gone.
+  // Someone shifted: mark where the tile was pushed in; the previous route is gone.
   const shiftKey = keyOf(view);
   if (shiftKey !== trace.shiftKey) {
-    const entry = view.lastInsertion ? insertionLine(view.lastInsertion)[0] : undefined;
-    trace = {
-      shiftKey,
-      seat: view.turnSeat,
-      pushedTileId: entry ? view.board.squares[squareIndex(entry)]?.id : undefined,
-      route: undefined,
-    };
+    trace = { shiftKey, seat: view.turnSeat, insertion: view.lastInsertion, route: undefined };
   }
 
   // The move step starts: remember where the mover stands (after the shift carried it).

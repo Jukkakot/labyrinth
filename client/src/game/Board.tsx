@@ -8,7 +8,7 @@ import { PawnLayer } from "./PawnLayer.tsx";
 import { ShiftTargets, type ShiftTargetsProps } from "./ShiftTargets.tsx";
 import { targetOf, type TargetMark } from "./target.ts";
 import { TILE_UNITS, TileView } from "./TileView.tsx";
-import { HintMark, ReachMarks, RouteTrace } from "./TurnMarks.tsx";
+import { HintMark, PushMark, ReachMarks, RouteTrace } from "./TurnMarks.tsx";
 import type { TurnTrace } from "./turnTrace.ts";
 
 const SIZE = BOARD_SIZE * TILE_UNITS;
@@ -24,7 +24,7 @@ export interface BoardProps {
   highlightTileId?: number;
   /** The viewer's target, marked wherever its tile is. */
   target?: TargetMark;
-  /** The last turn's marks: the pushed-in tile and the walked route. */
+  /** The last turn's marks: where the tile was pushed in and the walked route. */
   trace?: TurnTrace;
   /** Squares the viewer could reach after the previewed shift. */
   reach?: readonly Square[];
@@ -55,11 +55,11 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
               y={row * TILE_UNITS}
               highlight={tile.id === highlightTileId}
               target={targetOf(tile.id, target)}
-              pushedBy={trace?.seat !== undefined && tile.id === trace.pushedTileId ? trace.seat : undefined}
             />
           );
         })}
       </g>
+      {trace?.insertion && trace.seat !== undefined && <PushMark insertion={trace.insertion} seat={trace.seat} />}
       {trace?.route && trace.seat !== undefined && <RouteTrace route={trace.route} seat={trace.seat} />}
       {reach && <ReachMarks squares={reach} />}
       {moveTargets && <MoveTargets {...moveTargets} />}

@@ -58,7 +58,7 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
 Ideas for existing features, picked up after the roadmap items above or when a change touches the
 same area. Each becomes its own change (or joins a related one) when picked up.
 
-- **Last-move marks, clearer** (asked 2026-09-27, **do next**, before `daily-puzzle`): the board has
+- ~~**Last-move marks, clearer**~~ (done in `last-move-marks`): push marked by an arrowhead outside the board edge, route dashed with a start ring and an arrowhead, all in the mover's colour. Originally: the board has
   too many similar highlight-style marks. Ideas: outside the board, mark the arrow/edge where the
   last push started (the tile was pushed in from there); show the walk as a route with a distinct
   start and end point and a dashed line; draw all of a turn's marks in the colour of the player

@@ -576,7 +576,7 @@ describe("board-view › Reach shown in the shift preview", () => {
 });
 
 describe("board-view › Last turn shown (game screen)", () => {
-  it("Bot shifts and walks: pushed-in tile outlined and route drawn in seat 2's colour; own preview hides them", () => {
+  it("Bot shifts and walks: push marked at the board edge and route drawn in seat 2's colour; own preview hides them", () => {
     const corners = [square(0, 0), square(0, 6)];
     const shifted = shiftBoard(board, "N3", 0, corners);
     const from = shifted.pawns[1]!;
@@ -587,16 +587,18 @@ describe("board-view › Last turn shown (game screen)", () => {
     show({ board: shifted.board, turnSeat: 2, phase: "move", lastInsertion: "N3", mine: shifted.pawns[0], other: { row: from.row, col: from.col } });
     show({ board: shifted.board, turnSeat: 1, phase: "shift", lastInsertion: "N3", mine: shifted.pawns[0], other: { row: to.row, col: to.col } });
 
-    const pushed = container.querySelector("[data-pushed-by]");
-    expect(pushed?.getAttribute("data-pushed-by")).toBe("2");
-    expect(pushed?.closest("[data-tile-id]")?.getAttribute("data-tile-id")).toBe(String(shifted.board.squares[3]!.id));
+    const push = container.querySelector("[data-push]");
+    expect(push?.getAttribute("data-push")).toBe("N3");
+    expect(push?.getAttribute("data-seat")).toBe("2");
+    expect(container.querySelector("[data-route-start]")).toBeTruthy();
+    expect(container.querySelector("[data-route-end]")).toBeTruthy();
     const route = container.querySelector("[data-route]")?.getAttribute("data-route")?.split(" ");
     expect(route?.[0]).toBe(`${from.row},${from.col}`);
     expect(route?.at(-1)).toBe(`${to.row},${to.col}`);
 
     fireEvent.click(arrow("Työnnä vasemmalta riviin 2"));
     expect(container.querySelector("[data-route]")).toBeNull();
-    expect(container.querySelector("[data-pushed-by]")).toBeNull();
+    expect(container.querySelector("[data-push]")).toBeNull();
   });
 });
 

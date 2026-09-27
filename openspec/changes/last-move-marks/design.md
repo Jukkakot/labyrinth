@@ -24,11 +24,11 @@ dashed outline + dot), hint (pulsing yellow ring), target (purple ring + badge),
    outline (more marks, the opposite of the aim).
 2. **Drawn in the page gutter, the board does not shrink.** The board SVG gets
    `overflow: visible` and the marker is drawn at negative coordinates / beyond 700 units. Its
-   depth (18 units ≈ 8–9 px on a phone) fits the content's 16 px side padding and the 16 px gap
+   depth (27 units ≈ 12 px on a phone) fits the content's 16 px side padding and the 16 px gap
    above and below the board. Alternative: widen the viewBox by a margin — shrinks every tile ~5 %
    for a mark that is rarely looked at.
-3. **Route: dashed line, hollow start ring, arrowhead end.** Dash `14 9`, round caps, width 6. The
-   last segment is shortened so an SVG arrowhead ends at the pawn's edge (~30 units from the hub)
+3. **Route: dashed line, hollow start ring, arrowhead end.** Dash `14 10`, round caps, width 6. The
+   last segment is shortened so an arrowhead polygon ends at the pawn's edge (34 units from the hub)
    instead of hiding under the pawn. The start ring is small (r 10) so it does not read as a
    reach ring (r 23) or the hint (r 33).
 4. **Colour.** All last-turn marks use `--seat-N` of the player who shifted (unchanged). Shape

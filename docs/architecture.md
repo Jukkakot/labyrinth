@@ -183,7 +183,7 @@ client/src/
 
 - **Server state is the truth.** `toGameView()` turns synced state into an immutable `GameView`;
   components render it. Previews (shift and the reach after it) are computed locally with the same rules functions;
-  the last turn's marks (pushed-in tile, walked route) are derived by comparing successive views.
+  the last turn's marks (where the tile was pushed in, marked outside the board edge; walked route) are derived by comparing successive views.
 - **UI foundation:** every colour, spacing and radius is a token (light and dark); CSS Modules;
   anything shown twice is a shared component. Board: one SVG, 100 units per tile; pawns = seat
   colour + shape; tiles and pawns animate with CSS transforms keyed by id; reduced motion honoured.
