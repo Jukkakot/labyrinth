@@ -1,6 +1,12 @@
-## MODIFIED Requirements
+## REMOVED Requirements
 
 ### Requirement: Rematch
+**Reason**: A rematch no longer keeps a private flag; replaced by "Rematch with the same seats".
+**Migration**: None; rematches work as before.
+
+## ADDED Requirements
+
+### Requirement: Rematch with the same seats
 In a finished game every seated person SHALL be offered "Pelaa uudelleen". The first tap of any
 player MUST create one new game with the same settings as the finished one: the same matchmaking
 pool, and a bot in every seat that held a bot when the finished game started, with the same bot
@@ -22,10 +28,6 @@ when:
 #### Scenario: Second player follows
 - **WHEN** Pekka then taps "Pelaa uudelleen" in the finished game
 - **THEN** Pekka joins Maija's new waiting room, and the finished game creates no second new game
-
-#### Scenario: Private stays private
-- **WHEN** a rematch is created (there are no private games any more)
-- **THEN** the new game is listed like any other game with a free seat
 
 #### Scenario: Quick bot game again
 - **WHEN** Maija taps "Pelaa uudelleen" after her 1v2 game against bots

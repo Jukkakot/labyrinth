@@ -1,6 +1,12 @@
-## MODIFIED Requirements
+## REMOVED Requirements
 
 ### Requirement: Running games to watch
+**Reason**: Private games are gone and games of bots to watch run on the device; replaced by "Started games to watch".
+**Migration**: None; the list works as before.
+
+## ADDED Requirements
+
+### Requirement: Started games to watch
 The start screen SHALL list, under "Käynnissä olevat pelit", the games on the server that have
 started and not finished. Each entry MUST show the host's nickname and the number of seated players
 (for example "Maija · 3 pelaajaa"). The list MUST update by itself like the open games list, and a
@@ -22,9 +28,11 @@ bot games, games of bots to watch, the daily puzzle) MUST NOT be listed.
 - **WHEN** a listed game finishes
 - **THEN** it is no longer in "Käynnissä olevat pelit"
 
-#### Scenario: Private games are not listed
+#### Scenario: Device games are not listed
 - **WHEN** a quick bot game or a game of bots to watch is running on someone's phone
 - **THEN** it is not in "Käynnissä olevat pelit"
+
+## MODIFIED Requirements
 
 ### Requirement: Watching a game of bots
 With the start screen's "Pelaan itse" switch off, the quick bot section SHALL offer "2 bottia",

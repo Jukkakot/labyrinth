@@ -1,7 +1,12 @@
-## RENAMED Requirements
+## REMOVED Requirements
 
-- FROM: `### Requirement: Private game and invite link`
-- TO: `### Requirement: Invite link`
+### Requirement: Open games list
+**Reason**: Private games are gone, so the list no longer hides them; replaced by "Open games to join".
+**Migration**: None; the list works as before.
+
+### Requirement: Private game and invite link
+**Reason**: Private games are no longer created; replaced by "Invite link".
+**Migration**: Invite friends with "Kutsu pelaajia" in the waiting room of any game.
 
 ## MODIFIED Requirements
 
@@ -47,7 +52,19 @@ told apart by pawn shape and colour.
 - **WHEN** two players both call themselves "Maija"
 - **THEN** both are seated, told apart by their pawns
 
-### Requirement: Open games list
+### Requirement: Game limit
+The server SHALL keep at most a fixed number of games open at a time. When that many games exist,
+creating a new game, including by quick play when no game has a free seat, MUST be refused, and the
+player MUST see a calm message that the server is full and to try again later ("Palvelin on täynnä –
+yritä hetken päästä uudelleen"). Joining an existing game MUST still work.
+
+#### Scenario: Server full
+- **WHEN** the game limit is reached and a player taps Play while no game has a free seat
+- **THEN** no game is created and the player sees the server-full message
+
+## ADDED Requirements
+
+### Requirement: Open games to join
 The start screen SHALL list the games on the server that are still in their waiting room and have a
 free seat. Each entry MUST show the host's nickname and how many of the 4 seats are taken, bots
 included (for example "Maija · 2/4"). The list MUST update by itself while the start screen is
@@ -73,9 +90,9 @@ listed.
 - **WHEN** the viewer taps an entry just after that game started
 - **THEN** the viewer stays on the start screen and sees "Peli ei ole enää avoinna"
 
-#### Scenario: Started and private games hidden
+#### Scenario: Started games hidden
 - **WHEN** a listed game starts
-- **THEN** it is no longer in the list (there are no private games to hide)
+- **THEN** it is no longer in the list
 
 ### Requirement: Invite link
 Every game on the server SHALL have an invite link that contains its game id; the waiting room's
@@ -87,7 +104,7 @@ screen. "Liity peliin" MUST seat the player in that game's waiting room. If the 
 any more, is full or has started, the player MUST see "Peli ei ole enää avoinna" and the normal
 start screen. After the invite link has been used, a reload MUST NOT use the link again.
 
-#### Scenario: Create a private game
+#### Scenario: No private game to create
 - **WHEN** a player looks at the start screen
 - **THEN** there is no "Luo yksityinen peli" action
 
@@ -99,16 +116,6 @@ start screen. After the invite link has been used, a reload MUST NOT use the lin
 - **WHEN** someone opens an invite link after that game has started
 - **THEN** they see "Peli ei ole enää avoinna" and the normal start screen
 
-#### Scenario: Quick play skips private games
+#### Scenario: Quick play finds every open game
 - **WHEN** Maija's game is in its waiting room with a free seat and another player taps Play
-- **THEN** the player is seated in Maija's game (no game on the server is hidden from quick play)
-
-### Requirement: Game limit
-The server SHALL keep at most a fixed number of games open at a time. When that many games exist,
-creating a new game, including by quick play when no game has a free seat, MUST be refused, and the
-player MUST see a calm message that the server is full and to try again later ("Palvelin on täynnä –
-yritä hetken päästä uudelleen"). Joining an existing game MUST still work.
-
-#### Scenario: Server full
-- **WHEN** the game limit is reached and a player taps Play while no game has a free seat
-- **THEN** no game is created and the player sees the server-full message
+- **THEN** the player is seated in Maija's game

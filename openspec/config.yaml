@@ -35,6 +35,7 @@ rules:
     - State which workspaces (rules, server, client) the change touches.
   specs:
     - Specs describe game rules and observable behavior, never library or class names.
+    - "When a change removes behaviour, do not keep an old scenario under MODIFIED with new content (openspec validate refuses dropping scenarios): write the old requirement under REMOVED (Reason, Migration) and the new one under ADDED with a new name."
   design:
     - Explain how the change meets openspec/context/nfr.md (logging, tests, limits).
   tasks:

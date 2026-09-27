@@ -65,7 +65,7 @@ pictures from the start screen and the settings (also during a game).
 
 ## Refinement round 1 (asked 2026-09-27)
 
-Foundations are done; the user trims and clarifies. Autopilot is off: each change stops for review.
+Foundations are done; the user trims and clarifies. Autopilot is on (switched back on 2026-09-27): changes run without review stops.
 In this order:
 
 1. `simpler-start-screen`: fewer choices on the start screen.
