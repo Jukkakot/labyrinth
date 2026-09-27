@@ -27,6 +27,16 @@
   stroke-width: 6;
 }
 
+/* Chosen (confirm move on): solid, thicker outline and a bigger dot. */
+.target[aria-pressed="true"] .outline {
+  stroke-dasharray: none;
+  stroke-width: 8;
+}
+
+.target[aria-pressed="true"] .dot {
+  r: 12px;
+}
+
 .target[aria-disabled="true"] {
   cursor: progress;
   opacity: 0.5;

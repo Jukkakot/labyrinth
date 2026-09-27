@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { hintTurn, homeTileId, insertionLine, isReachable, openings, reachableSquares, rotate, setupBoard, shiftBoard, square, squareIndex, TILE_SET, TREASURES, type Board, type TreasureId } from "@labyrinth/rules";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import i18n from "../i18n";
 import { botViewOf } from "../game/hint.ts";
 import { SpareTile } from "../game/SpareTile.tsx";
+import { DEFAULT_SETTINGS, updateSettings } from "../settings/settings.ts";
 import type { GameSession } from "../session/useGameSession.ts";
 import { toGameView, type SyncedState } from "../session/viewModel.ts";
 import { GameScreen } from "./GameScreen.tsx";
@@ -625,5 +626,40 @@ describe("board-view › Hint", () => {
   it("Not your turn: Vihje is shown disabled", () => {
     setup({ ...mine, turnSeat: 2 });
     expect(hintButton().disabled).toBe(true);
+  });
+});
+
+describe("settings › confirmations in the game", () => {
+  afterEach(() => {
+    updateSettings(DEFAULT_SETTINGS);
+  });
+
+  it("One-tap shift: with confirm shift off an arrow sends the shift at once", async () => {
+    updateSettings({ confirmShift: false });
+    const { shift } = setup();
+    await act(async () => {
+      fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+    });
+    expect(shift).toHaveBeenCalledExactlyOnceWith("N3", board.spare.rotation);
+  });
+
+  it("Confirmed move: with confirm move on the first tap only chooses, the second moves", async () => {
+    updateSettings({ confirmMove: true });
+    const target = reachableSquares(board, square(0, 0)).at(-1)!;
+    const { container, move } = setup({ phase: "move" });
+    const cell = () => container.querySelector(`[data-move-target="${target.row},${target.col}"]`)!;
+    fireEvent.click(cell());
+    expect(move).not.toHaveBeenCalled();
+    expect(cell().getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Kävele tänne" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Peru" }));
+    expect(screen.queryByRole("button", { name: "Kävele tänne" })).toBeNull();
+
+    fireEvent.click(cell());
+    await act(async () => {
+      fireEvent.click(cell());
+    });
+    expect(move).toHaveBeenCalledExactlyOnceWith(target);
   });
 });

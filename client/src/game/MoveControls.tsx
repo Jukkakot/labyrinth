@@ -22,10 +22,14 @@ export interface MoveControlsProps {
   /** Daily puzzle: "Peru siirto"; `canUndo` false shows it disabled. */
   onUndo?(): void;
   canUndo?: boolean;
+  /** Confirm move on: a square is chosen; "Kävele tänne" and "Peru" replace "Jää paikalleen". */
+  chosen?: boolean;
+  onGo?(): void;
+  onCancelChoice?(): void;
 }
 
 /** Under the board in the move step: the spare, what to do, and the Stay button. Same slot and width as the shift controls. */
-export function MoveControls({ spare, enabled, pending, target, onStay, onHint, onUndo, canUndo = false }: MoveControlsProps) {
+export function MoveControls({ spare, enabled, pending, target, onStay, onHint, onUndo, canUndo = false, chosen = false, onGo, onCancelChoice }: MoveControlsProps) {
   const { t } = useTranslation();
   return (
     <div className={styles.controls}>
@@ -34,7 +38,17 @@ export function MoveControls({ spare, enabled, pending, target, onStay, onHint, 
         {onUndo && <UndoButton disabled={!canUndo || pending} onUndo={onUndo} />}
         <HintButton disabled={!enabled || pending} onHint={onHint} />
       </div>
-      {enabled && (
+      {enabled && chosen && (
+        <div className={styles.actions}>
+          <Button variant="secondary" onClick={onCancelChoice} disabled={pending}>
+            {t("shift.cancel")}
+          </Button>
+          <Button onClick={onGo} disabled={pending} aria-busy={pending || undefined}>
+            {pending ? t("shift.waiting") : t("move.go")}
+          </Button>
+        </div>
+      )}
+      {enabled && !chosen && (
         <div className={styles.actions}>
           <p className={styles.lead}>{t("move.hint")}</p>
           <Button variant="secondary" className={styles.nowrap} onClick={onStay} disabled={pending} aria-busy={pending || undefined}>

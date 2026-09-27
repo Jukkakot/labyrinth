@@ -158,7 +158,8 @@
     "hint": "Tap a highlighted square",
     "stay": "Stay",
     "to": "Move to row {{row}}, column {{col}}",
-    "stayHere": "Your square – stay"
+    "stayHere": "Your square – stay",
+    "go": "Walk here"
   },
   "hint": {
     "button": "Hint",
@@ -268,5 +269,33 @@
     "handOver": "Let the bot play",
     "takeBack": "Take back",
     "playing": "The bot is playing for you. You can take over at any time."
+  },
+  "turnAlert": {
+    "title": "● Your turn – {{title}}"
+  },
+  "settings": {
+    "open": "Settings",
+    "title": "Settings",
+    "back": "Back",
+    "confirmations": "Confirmations",
+    "confirmShift": "Confirm push",
+    "confirmShiftNote": "Tapping an arrow shows a preview first; a second tap pushes.",
+    "confirmMove": "Confirm move",
+    "confirmMoveNote": "Tapping a square selects it; a second tap walks there.",
+    "theme": "Theme",
+    "themes": {
+      "system": "Device",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "feedback": "Sounds and turn notification",
+    "sounds": "Sounds",
+    "soundsNote": "A short sound when your turn begins or you find a treasure.",
+    "turnTitle": "Tab title",
+    "turnTitleNote": "While the game is in the background, the tab title tells you it is your turn.",
+    "vibration": "Vibration",
+    "vibrationNote": "A short vibration when your turn begins.",
+    "vibrationUnsupported": "This device cannot vibrate.",
+    "deviceOnly": "Settings are saved on this device only."
   }
 }

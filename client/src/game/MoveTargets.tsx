@@ -9,11 +9,13 @@ export interface MoveTargetsProps {
   reachable: readonly Square[];
   /** While a command waits for the server nothing is selectable. */
   busy?: boolean;
+  /** Confirm move on: the square chosen and waiting for a second tap. */
+  selected?: Square;
   onSelect(target: Square): void;
 }
 
 /** Tap targets for the move step: every reachable square outlined with a dot on its hub; the own square means stay. */
-export function MoveTargets({ reachable, busy = false, onSelect }: MoveTargetsProps) {
+export function MoveTargets({ reachable, busy = false, selected, onSelect }: MoveTargetsProps) {
   const { t } = useTranslation();
   const own = reachable[0];
   return (
@@ -38,6 +40,7 @@ export function MoveTargets({ reachable, busy = false, onSelect }: MoveTargetsPr
             tabIndex={0}
             aria-label={label}
             aria-disabled={busy || undefined}
+            aria-pressed={selected ? sameSquare(sq, selected) : undefined}
             data-move-target={`${sq.row},${sq.col}`}
             className={styles.target}
             onClick={activate}

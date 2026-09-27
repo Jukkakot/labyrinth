@@ -7,6 +7,7 @@ import { checkNickname, loadNickname, randomNickname } from "../session/nickname
 import type { ServerWake } from "../session/serverWake.ts";
 import type { OpenGames } from "../session/useOpenGames.ts";
 import type { GameSession } from "../session/useGameSession.ts";
+import { SettingsButton, SettingsScreen } from "../settings/SettingsScreen.tsx";
 import { TipsReset } from "../tips/TipsReset.tsx";
 import { Button } from "../ui/Button.tsx";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
@@ -76,6 +77,8 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
   const [daily] = useState(() => loadDailyRecord());
   const [dailyUnfinished] = useState(() => daily !== undefined && loadLocalGame(daily.roomId)?.game.step !== undefined && loadLocalGame(daily.roomId)?.game.step !== "finished");
   const waited = useSecondsWaited(wake.state === "waking" && status !== "connecting" && status !== "error");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  if (settingsOpen) return <SettingsScreen onClose={() => setSettingsOpen(false)} />;
 
   let content;
   if (status === "connecting") {
@@ -304,7 +307,12 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
   return (
     <Screen
       centered
-      end={<LanguageSwitcher />}
+      end={
+        <>
+          <SettingsButton onClick={() => setSettingsOpen(true)} />
+          <LanguageSwitcher />
+        </>
+      }
       footer={
         <>
           <div>{t("footer.rulesVersion", { version: RULES_VERSION })}</div>
