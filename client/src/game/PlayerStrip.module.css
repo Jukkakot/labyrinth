@@ -64,6 +64,11 @@
   white-space: nowrap;
 }
 
+/* Alone on the strip (the daily puzzle) a 16-character name fits whole. */
+.strip:has(> li:only-child) .name {
+  max-width: none;
+}
+
 .count {
   min-width: 2.2em;
 }
