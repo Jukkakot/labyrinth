@@ -1,11 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Settings on the device
-The player SHALL be able to open a settings screen from the start screen and return from it. The
+The player SHALL be able to open a settings screen from the start screen and, through a gear in the game's top bar, during a game, and return from it. During a game the settings screen covers the game while it keeps running, and it also holds the language choice (the game's top bar has no room for both). The
 settings SHALL be kept on the device and survive a reload and a reopened app; they MUST NOT change
 the game's rules or anything other players see. Without stored settings (or with unreadable ones)
 the defaults apply: confirm shift on, confirm move off, theme system, sounds on, tab title on,
 vibration on. A change takes effect at once.
+
+#### Scenario: Settings during a game
+- **WHEN** Maija taps the gear in the game's top bar
+- **THEN** the settings screen opens, and "Takaisin" returns to the same game
 
 #### Scenario: Setting remembered
 - **WHEN** Maija turns sounds off and reloads the page

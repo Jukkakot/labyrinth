@@ -15,9 +15,11 @@
 ## 3. Settings screen
 
 - [x] 3.1 `SettingsScreen` (confirmations, theme segmented choice, sounds, turn notification: title, vibration disabled where unsupported), gear button in the start screen's top bar, "Takaisin"; fi/en strings; render test
+- [x] 3.2 Gear in the game's top bar (instead of the language switcher) opens the settings over the game; inline theme script in `index.html`; render test
 
 ## 4. Docs
 
 - [x] 4.1 Wiki: `docs/architecture.md` client paragraph on device settings (store, theme attribute, generated sounds, turn alert)
 
 Notes: no UI check in this parallel job (the coordinator runs it); no in-game settings entry (placement left to the coordinator).
+- [x] 4.2 Roadmap item 21 marked done

@@ -663,3 +663,16 @@ describe("settings › confirmations in the game", () => {
     expect(move).toHaveBeenCalledExactlyOnceWith(target);
   });
 });
+
+describe("settings › Settings on the device (in the game)", () => {
+  it("Settings during a game: the gear opens the settings and Takaisin returns to the board", () => {
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "Asetukset" }));
+    expect(screen.queryByRole("region", { name: "Pelilauta" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Asetukset" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Takaisin" }));
+    expect(screen.queryByRole("heading", { name: "Asetukset" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Asetukset" })).toBeTruthy();
+  });
+});

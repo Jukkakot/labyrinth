@@ -232,8 +232,9 @@ client/src/
   the session or its transport.
 - **Device settings:** one localStorage record (`labyrinth.settings`), merged over the defaults
   and read through a small subscribe store, so a change applies at once; never sent to the server.
-  The settings screen opens from the start screen's gear. Theme = `data-theme` on `<html>` (set
-  before the first render; `tokens.css` holds the dark tokens for the media query and the forced
+  The settings screen opens from the gear on the start screen and in the game's top bar (in the game
+  it covers the board while the game runs on; the language choice lives there). Theme = `data-theme`
+  on `<html>` (set before the first paint by an inline script in `index.html`, then by `theme.ts`; `tokens.css` holds the dark tokens for the media query and the forced
   attribute). Sounds are generated with Web Audio (no files). The turn alert fires when the viewer's
   own turn begins (sound, vibration; the tab title only while the page is hidden).
 - **Early wake-up:** the start screen fetches `/health` once per page load (retries up to 90 s) so

@@ -23,10 +23,10 @@ import { nextTrace } from "../game/turnTrace.ts";
 import { NOTICE_MS, type GameSession } from "../session/useGameSession.ts";
 import type { GameView } from "../session/viewModel.ts";
 import { playSound } from "../settings/feedback.ts";
+import { SettingsButton, SettingsScreen } from "../settings/SettingsScreen.tsx";
 import { useSettings } from "../settings/settings.ts";
 import { useTurnAlert } from "../settings/turnAlert.ts";
 import { FirstGameTips } from "../tips/FirstGameTips.tsx";
-import { LanguageSwitcher } from "../ui/LanguageSwitcher.tsx";
 import { Notice } from "../ui/Notice.tsx";
 import { Screen } from "../ui/Screen.tsx";
 
@@ -60,6 +60,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
   const [selected, setSelected] = useState<InsertionId>();
   const [turns, setTurns] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { confirmShift, confirmMove } = useSettings();
   // Confirm move on: the tapped square waiting for a second tap or "Kävele tänne".
   const [chosen, setChosen] = useState<Square>();
@@ -203,6 +204,9 @@ export function GameScreen({ view, session }: GameScreenProps) {
         ? t("progress.left", { name: departed })
         : undefined;
 
+  // Settings (and the language) open over the game; the game keeps running underneath.
+  if (settingsOpen) return <SettingsScreen onClose={() => setSettingsOpen(false)} />;
+
   return (
     <Screen
       start={<GameIdBadge roomId={view.roomId} />}
@@ -211,7 +215,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
           <SpectatorCount count={view.spectators} />
           {setAutoplay && view.canAutoplay && !view.myAutoplay && <AutoplayButton disabled={pending} onClick={() => void setAutoplay(true)} />}
           <LeaveButton onClick={view.finished || view.spectating || view.daily ? leave : () => setLeaving(true)} />
-          <LanguageSwitcher />
+          <SettingsButton onClick={() => setSettingsOpen(true)} />
         </>
       }
     >

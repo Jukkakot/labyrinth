@@ -54,6 +54,13 @@ settings between devices, a settings entry inside a running game (see decision 2
    block both in the background anyway.
 9. **Vibration setting disabled where `navigator.vibrate` is missing** (iPhone, desktop), with a
    short note, per the "disabled, not hidden" UI rule.
+- **Settings during a game (coordinator)**: the game's top bar is full on a phone, so its language
+  switcher gave way to a gear; the gear opens the same settings screen over the game (it keeps
+  running underneath, turn alerts included) and that screen holds the language choice. Chosen over
+  a panel in the controls slot, which would hide the turn controls, and over start-screen only,
+  since confirmations are what a player wants to change mid-game.
+- **Theme before first paint (coordinator)**: a small inline script in `client/index.html` sets
+  `data-theme` from `labyrinth.settings`, so a forced theme does not flash the device's scheme.
 
 ## Risks / Trade-offs
 
