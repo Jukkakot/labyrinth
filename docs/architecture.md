@@ -172,11 +172,14 @@ client/src/
   anything shown twice is a shared component. Board: one SVG, 100 units per tile; pawns = seat
   colour + shape; tiles and pawns animate with CSS transforms keyed by id; reduced motion honoured.
 - **Session:** a per-tab reconnection token (sessionStorage) rejoins after a reload; the last
-  nickname is kept in localStorage only to prefill the field. `leave()` is local-first: the start
+  nickname is kept in localStorage only to prefill the field. A seated player's unfinished game is
+  also remembered in localStorage (token, room, last seen; refreshed every 15 s and on hide), so a
+  newly opened app offers "Jatka peliä" within the server's 5-minute seat hold. `leave()` is local-first: the start
   screen shows at once, then `room.leave()`. Close codes 4100/4101 and join failures become a
   start-screen notice.
 - **Early wake-up:** the start screen fetches `/health` once per page load (retries up to 90 s) so
-  a sleeping Render server wakes while the player types; join actions wait for it.
+  a sleeping Render server wakes while the player types; join actions wait for it, and the screen
+  counts the seconds waited.
 - **i18n:** Finnish is the key source of truth (type-checked), a test enforces fi/en parity.
   Language: `?lng=` → saved choice → Finnish.
 - **Logging:** pino browser build, batched to `POST /client-logs`; global error handlers and

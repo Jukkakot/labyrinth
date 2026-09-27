@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { serverUrl } from "../config.ts";
 import { log, setLogContext } from "../logging/logger.ts";
 import { loadNickname, randomNickname, saveNickname } from "./nickname.ts";
+import { clearResume, loadResume, saveResume, type ResumeRecord } from "./resumeRecord.ts";
 import { clearToken, loadToken, saveToken } from "./sessionToken.ts";
 import { toGameView, type GameView, type SyncedState } from "./viewModel.ts";
 
@@ -107,7 +108,10 @@ export type SessionStatus = "idle" | "connecting" | "playing" | "error";
  * What the start screen says about the last game or join attempt: removed by a kick, the host
  * closed the waiting room, the chosen game is no longer open, or the server is full.
  */
-export type StartNotice = "kicked" | "hostLeft" | "notOpen" | "serverFull";
+export type StartNotice = "kicked" | "hostLeft" | "notOpen" | "serverFull" | "resumeGone";
+
+/** Thrown by a resume attempt whose seat is no longer held. */
+const RESUME_GONE = "RESUME_GONE";
 
 /** SDK matchmaking codes for a game that is gone, locked (started or full), or a seat that expired. */
 const NOT_OPEN_CODES: readonly unknown[] = [522, 524];
@@ -115,6 +119,7 @@ const NOT_OPEN_CODES: readonly unknown[] = [522, 524];
 /** Why a join failed, as a calm start-screen notice; undefined for the generic error with retry. */
 export function joinFailure(err: unknown): StartNotice | undefined {
   const { message, code } = (err ?? {}) as { message?: unknown; code?: unknown };
+  if (message === RESUME_GONE) return "resumeGone";
   if (message === ("SERVER_FULL" satisfies JoinErrorCode)) return "serverFull";
   if (message === ("NOT_WATCHABLE" satisfies JoinErrorCode)) return "notOpen";
   if (NOT_OPEN_CODES.includes(code)) return "notOpen";
@@ -131,6 +136,9 @@ function quit(room: GameRoomLike): void {
 
 /** After this long in "connecting" the UI explains that the server may be waking up. */
 export const SLOW_CONNECT_MS = 5_000;
+
+/** How often a running game refreshes when the player was last seen, for resuming after closing the app. */
+export const RESUME_TOUCH_MS = 15_000;
 
 /** How long "Pelaa uudelleen" waits for the new game's id to arrive. */
 const REMATCH_WAIT_MS = 10_000;
@@ -174,6 +182,10 @@ export interface GameSession {
   rematching: boolean;
   /** The nickname to use for the next game: the last one used, else a random one. */
   nickname(): string;
+  /** A game left open when the app was closed, still within its seat hold: offered as "Jatka peliä". */
+  resumable?: ResumeRecord;
+  /** Rejoins the resumable game; if its seat is gone, the start screen gets the resumeGone notice. */
+  resume(): void;
   /** Repeats the last join attempt after the generic join error. */
   retry(): void;
   /** The host starts the game from the waiting room. Resolves undefined without sending while another command is pending. */
@@ -217,13 +229,19 @@ export function useGameSession(connector?: Connector): GameSession {
   /** A message to show once the join under way has succeeded. */
   const joinNotice = useRef<NoticeKey>(undefined);
   const [rematching, setRematching] = useState(false);
+  // A tab with its own token rejoins by itself; only a fresh tab or app offers the remembered game.
+  const [resumable, setResumable] = useState<ResumeRecord | undefined>(() => (loadToken() ? undefined : loadResume()));
+  /** The player holds a seat in an unfinished game: the game is worth resuming after closing. */
+  const resumableRef = useRef(false);
 
   const getConnector = () => (connectorRef.current ??= createConnector());
 
   /** Forgets the game locally and shows the start screen. */
   const detach = useCallback(() => {
     roomRef.current = undefined;
+    resumableRef.current = false;
     clearToken();
+    clearResume();
     setLogContext({});
     setView(undefined);
     setRematching(false);
@@ -238,12 +256,18 @@ export function useGameSession(connector?: Connector): GameSession {
       setLogContext({ room: room.roomId, player: room.sessionId });
       const update = (state: SyncedState) => {
         const next = toGameView(state, room.roomId, room.sessionId);
-        if (next) setView(next);
+        if (!next) return;
+        setView(next);
+        const worth = next.mySeat !== undefined && next.phase !== "finished";
+        if (worth && !resumableRef.current) saveResume(room.reconnectionToken, room.roomId);
+        if (!worth && resumableRef.current) clearResume();
+        resumableRef.current = worth;
       };
       room.onStateChange(update);
       room.onDrop(() => log.info("client.conn.lost", { room: room.roomId }));
       room.onReconnect(() => {
         saveToken(room.reconnectionToken);
+        if (resumableRef.current) saveResume(room.reconnectionToken, room.roomId);
         log.info("client.conn.restored", { room: room.roomId });
       });
       room.onLeave((code) => {
@@ -254,6 +278,7 @@ export function useGameSession(connector?: Connector): GameSession {
         if (code === CLOSE_CODES.HOST_LEFT) setStartNotice("hostLeft");
         log.info("client.conn.lost", { room: room.roomId, code, final: true });
       });
+      setResumable(undefined);
       update(room.state);
       setStatus("playing");
     },
@@ -275,6 +300,26 @@ export function useGameSession(connector?: Connector): GameSession {
       });
   }, [attach]);
 
+  // Keep the remembered game's last-seen time fresh, also as the page is hidden or closed.
+  useEffect(() => {
+    if (status !== "playing") return;
+    const touch = () => {
+      const room = roomRef.current;
+      if (room && resumableRef.current) saveResume(room.reconnectionToken, room.roomId);
+    };
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") touch();
+    };
+    const timer = setInterval(touch, RESUME_TOUCH_MS);
+    globalThis.addEventListener?.("pagehide", touch);
+    globalThis.document?.addEventListener("visibilitychange", onHidden);
+    return () => {
+      clearInterval(timer);
+      globalThis.removeEventListener?.("pagehide", touch);
+      globalThis.document?.removeEventListener("visibilitychange", onHidden);
+    };
+  }, [status]);
+
   // "Server may be waking up" hint while connecting.
   useEffect(() => {
     if (status !== "connecting") return;
@@ -294,6 +339,9 @@ export function useGameSession(connector?: Connector): GameSession {
         quit(current);
       }
       lastAttempt.current = { run, nickname };
+      // Any join replaces the remembered game; a resume that works remembers it again.
+      clearResume();
+      setResumable(undefined);
       setSlow(false);
       setStartNotice(undefined);
       setStatus("connecting");
@@ -354,6 +402,17 @@ export function useGameSession(connector?: Connector): GameSession {
     [connect],
   );
   const nickname = useCallback(() => lastAttempt.current?.nickname || loadNickname() || randomNickname("fi"), []);
+  const resume = useCallback(() => {
+    if (!resumable) return;
+    const { token } = resumable;
+    connect(async () => {
+      try {
+        return await getConnector().reconnect(token);
+      } catch {
+        throw new Error(RESUME_GONE);
+      }
+    }, nickname());
+  }, [resumable, connect, nickname]);
   const retry = useCallback(() => {
     const attempt = lastAttempt.current;
     if (attempt) connect(attempt.run, attempt.nickname);
@@ -468,6 +527,8 @@ export function useGameSession(connector?: Connector): GameSession {
     rematch,
     rematching,
     nickname,
+    resumable,
+    resume,
     retry,
     start,
     addBot,

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
@@ -23,6 +23,7 @@ function sessionOf(overrides: Partial<StartScreenProps["session"]> = {}): StartS
     watch: vi.fn(),
     watchBots: vi.fn(),
     retry: vi.fn(),
+    resume: vi.fn(),
     ...overrides,
   };
 }
@@ -92,7 +93,7 @@ describe("game-session › Quick play (early wake-up)", () => {
   it("Sleeping server is woken on open: Play disabled and the screen says so", () => {
     render(<StartScreen session={sessionOf(idle)} wake={{ state: "waking", slow: false }} />);
     expect(playButton().disabled).toBe(true);
-    expect(screen.getByRole("status").textContent).toBe("Herätetään palvelinta…");
+    expect(screen.getByRole("status").textContent).toContain("Herätetään palvelinta…");
   });
 
   it("adds that waking can take about a minute once it is slow", () => {
@@ -327,5 +328,44 @@ describe("lobby › Invite mode", () => {
     fireEvent.click(screen.getByRole("button", { name: "Muut pelit" }));
     expect(onInviteDone).toHaveBeenCalledTimes(1);
     expect(joinById).not.toHaveBeenCalled();
+  });
+});
+
+describe("game-session › Server wake-up progress", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("Waiting counts up: the time waited as m:ss, gone once the server answers", () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<StartScreen session={sessionOf()} wake={{ state: "waking", slow: false }} />);
+    expect(screen.getByRole("status").textContent).toContain("0:00");
+    act(() => vi.advanceTimersByTime(23_000));
+    expect(screen.getByRole("status").textContent).toContain("Odotettu 0:23");
+    rerender(<StartScreen session={sessionOf()} wake={ready} />);
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+});
+
+describe("game-session › Resume after closing the app (start screen)", () => {
+  const resumable = { token: "t", roomId: "brave-otters-sing", seenAt: 0 };
+
+  it("App reopened mid-game: Jatka peliä is the primary action and resumes; disabled while waking", () => {
+    const resume = vi.fn();
+    const { rerender } = render(<StartScreen session={sessionOf({ resumable, resume })} wake={{ state: "waking", slow: false }} />);
+    const button = () => screen.getByRole("button", { name: "Jatka peliä" }) as HTMLButtonElement;
+    expect(button().disabled).toBe(true);
+    rerender(<StartScreen session={sessionOf({ resumable, resume })} wake={ready} />);
+    expect(button().className).toMatch(/primary/);
+    expect(screen.getByRole("button", { name: "Pelaa" }).className).toMatch(/secondary/);
+    fireEvent.click(button());
+    expect(resume).toHaveBeenCalledTimes(1);
+  });
+
+  it("no offer without a remembered game or in invite mode; the gone notice is shown", () => {
+    render(<StartScreen session={sessionOf({ startNotice: "resumeGone" })} wake={ready} />);
+    expect(screen.queryByRole("button", { name: "Jatka peliä" })).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe("Peliä ei voi enää jatkaa");
+    cleanup();
+    render(<StartScreen session={sessionOf({ resumable })} wake={ready} invite="brave-otters-sing" />);
+    expect(screen.queryByRole("button", { name: "Jatka peliä" })).toBeNull();
   });
 });

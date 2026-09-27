@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { homeTileId, reachableSquares, setupBoard, tileOfTreasure } from "@labyrinth/rules";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadNickname } from "./nickname.ts";
+import { loadResume, saveResume } from "./resumeRecord.ts";
 import { loadToken, saveToken } from "./sessionToken.ts";
 import { CLOSE_CODES } from "@labyrinth/protocol";
 import { useGameSession, type Connector, type GameRoomLike } from "./useGameSession.ts";
@@ -697,5 +698,66 @@ describe("game-session › Rematch", () => {
     act(() => result.current.rematch());
     await waitFor(() => expect(result.current.notice).toBe("errors.SERVER_FULL"));
     expect(result.current.rematching).toBe(false);
+  });
+});
+
+describe("game-session › Resume after closing the app", () => {
+  it("a seated player's game is remembered; leaving forgets it", async () => {
+    const { result } = await playingWith(fakeRoom());
+    expect(loadResume()).toMatchObject({ token: "brave-otters-sing:token", roomId: "brave-otters-sing" });
+    act(() => result.current.leave());
+    expect(loadResume()).toBeUndefined();
+  });
+
+  it("a spectator's game and a finished game are not remembered", async () => {
+    await playingWith(fakeRoom({ state: syncedState({ a: 1, b: 2 }) }));
+    expect(loadResume()).toBeUndefined();
+    sessionStorage.clear();
+
+    let push: (state: SyncedState) => void = () => {};
+    await playingWith(fakeRoom({ onStateChange: vi.fn((cb: (state: SyncedState) => void) => (push = cb)) }));
+    expect(loadResume()).toBeDefined();
+    act(() => push(syncedState({ me: 1, other: 2 }, { phase: "finished" })));
+    expect(loadResume()).toBeUndefined();
+  });
+
+  it("App reopened mid-game: offered, and resuming reconnects with the remembered token", async () => {
+    saveResume("kept-token", "brave-otters-sing");
+    const connector = connectorWith({ reconnect: vi.fn(async () => fakeRoom()) });
+    const { result } = renderHook(() => useGameSession(connector));
+    expect(result.current.status).toBe("idle");
+    expect(result.current.resumable?.roomId).toBe("brave-otters-sing");
+
+    act(() => result.current.resume());
+    await waitFor(() => expect(result.current.status).toBe("playing"));
+    expect(connector.reconnect).toHaveBeenCalledWith("kept-token");
+    expect(result.current.resumable).toBeUndefined();
+    expect(loadResume()?.token).toBe("brave-otters-sing:token");
+  });
+
+  it("Seat already gone: the resumeGone notice, and the offer is gone", async () => {
+    saveResume("kept-token", "brave-otters-sing");
+    const connector = connectorWith({ reconnect: vi.fn(async () => Promise.reject(new Error("expired"))) });
+    const { result } = renderHook(() => useGameSession(connector));
+    act(() => result.current.resume());
+    await waitFor(() => expect(result.current.startNotice).toBe("resumeGone"));
+    expect(result.current.status).toBe("idle");
+    expect(result.current.resumable).toBeUndefined();
+    expect(loadResume()).toBeUndefined();
+  });
+
+  it("Another game started instead: the old game is forgotten", async () => {
+    saveResume("kept-token", "old-room");
+    const { result } = await playingWith(fakeRoom({ roomId: "new-room" }));
+    expect(result.current.resumable).toBeUndefined();
+    expect(loadResume()?.roomId).toBe("new-room");
+  });
+
+  it("a tab with its own token rejoins by itself and offers nothing", () => {
+    saveToken("tab-token");
+    saveResume("kept-token", "r");
+    const connector = connectorWith({ reconnect: vi.fn(() => new Promise<GameRoomLike>(() => {})) });
+    const { result } = renderHook(() => useGameSession(connector));
+    expect(result.current.resumable).toBeUndefined();
   });
 });

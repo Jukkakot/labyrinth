@@ -10,6 +10,62 @@
   margin: 0;
 }
 
+/* "Herätetään palvelinta…" with a spinner and the time waited so far. */
+.waking {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.waited {
+  font-variant-numeric: tabular-nums;
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+/* The unfinished game to continue: the screen's primary action while it is offered. */
+.resume {
+  width: min(100%, 22rem);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  text-align: left;
+}
+
+.resumeTitle {
+  margin: 0;
+  font-size: var(--text-m);
+}
+
+.resumeBody {
+  margin: 0;
+  color: var(--muted);
+}
+
 /* Why the last game ended (kicked): calm, but readable. */
 .ended {
   color: var(--text);

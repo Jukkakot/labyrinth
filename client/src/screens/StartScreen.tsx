@@ -1,6 +1,6 @@
 import { IconDice5 } from "@tabler/icons-react";
 import { RULES_VERSION } from "@labyrinth/rules";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { checkNickname, loadNickname, randomNickname } from "../session/nickname.ts";
 import type { ServerWake } from "../session/serverWake.ts";
@@ -16,7 +16,7 @@ import styles from "./StartScreen.module.css";
 export interface StartScreenProps {
   session: Pick<
     GameSession,
-    "status" | "slow" | "play" | "createPrivate" | "joinById" | "playBots" | "joinInvite" | "watch" | "watchBots" | "retry" | "startNotice"
+    "status" | "slow" | "play" | "createPrivate" | "joinById" | "playBots" | "joinInvite" | "watch" | "watchBots" | "retry" | "startNotice" | "resumable" | "resume"
   >;
   /** The early server wake-up: the join actions stay disabled until it is over. */
   wake: ServerWake;
@@ -35,6 +35,24 @@ const BOT_COUNTS = [1, 2, 3] as const;
 /** Games of bots only to watch: 2, 3 or 4 bots. */
 const WATCH_COUNTS = [2, 3, 4] as const;
 
+/** Whole seconds since `active` became true (0 while inactive), counted once a second. */
+function useSecondsWaited(active: boolean): number {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const since = Date.now();
+    setSeconds(0);
+    const timer = setInterval(() => setSeconds(Math.floor((Date.now() - since) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [active]);
+  return active ? seconds : 0;
+}
+
+/** Seconds as m:ss. */
+export function minutesSeconds(total: number): string {
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
 /**
  * Before a game: the nickname field and the ways in (quick play, a private game, a quick game
  * against bots, a game of bots to watch, the open games list, the running games to watch, or the
@@ -42,11 +60,12 @@ const WATCH_COUNTS = [2, 3, 4] as const;
  */
 export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInviteDone }: StartScreenProps) {
   const { t, i18n } = useTranslation();
-  const { status, slow, play, createPrivate, joinById, playBots, joinInvite, watch, watchBots, retry, startNotice } = session;
+  const { status, slow, play, createPrivate, joinById, playBots, joinInvite, watch, watchBots, retry, startNotice, resumable, resume } = session;
   // A new player gets a random name, so they can start at once; it is remembered only once used.
   const [input, setInput] = useState(() => loadNickname() || randomNickname(i18n.language));
   const [touched, setTouched] = useState(false);
   const nickname = checkNickname(input);
+  const waited = useSecondsWaited(wake.state === "waking" && status !== "connecting" && status !== "error");
 
   let content;
   if (status === "connecting") {
@@ -66,6 +85,7 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
     const disabled = waking || !nickname.ok;
     const name = nickname.ok ? nickname.nickname : "";
     const showHint = !nickname.ok && (touched || input !== "");
+    const offerResume = resumable !== undefined && !invite;
     const acceptInvite = () => {
       if (!invite) return;
       joinInvite(invite, name);
@@ -76,6 +96,18 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
         <Message title={t("app.title")}>
           <p>{invite ? t("start.invited") : t("app.tagline")}</p>
         </Message>
+
+        {offerResume && (
+          <section className={styles.resume} aria-labelledby="resume-title">
+            <h2 id="resume-title" className={styles.resumeTitle}>
+              {t("start.resumeTitle")}
+            </h2>
+            <p className={styles.resumeBody}>{t("start.resumeBody")}</p>
+            <Button disabled={waking} onClick={resume}>
+              {t("start.resume")}
+            </Button>
+          </section>
+        )}
 
         <form
           className={styles.form}
@@ -131,7 +163,7 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
               </>
             ) : (
               <>
-                <Button type="submit" disabled={disabled}>
+                <Button type="submit" variant={offerResume ? "secondary" : undefined} disabled={disabled}>
                   {t("start.play")}
                 </Button>
                 <Button variant="secondary" disabled={disabled} onClick={() => createPrivate(name)}>
@@ -177,7 +209,15 @@ export function StartScreen({ session, wake, openGames = NO_GAMES, invite, onInv
         {/* Always mounted so screen readers announce the change. */}
         <div role="status" className={styles.wake}>
           {startNotice && <p className={styles.ended}>{t(`start.${startNotice}`)}</p>}
-          {waking && <p>{t("start.waking")}</p>}
+          {waking && (
+            <p className={styles.waking}>
+              <span className={styles.spinner} aria-hidden="true" />
+              {t("start.waking")}
+              <span className={styles.waited} aria-hidden="true">
+                {t("start.wakingFor", { time: minutesSeconds(waited) })}
+              </span>
+            </p>
+          )}
           {waking && wake.slow && <p>{t("start.wakingSlow")}</p>}
           {wake.state === "failed" && <p>{t("start.wakeFailed")}</p>}
         </div>
