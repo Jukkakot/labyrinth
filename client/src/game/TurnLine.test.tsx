@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { render, screen } from "@testing-library/react";
 import { act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -148,7 +150,8 @@ describe("board-view › Player progress shown › names", () => {
   });
 
   it("the chip name is capped with an ellipsis so four chips fit 360 px", () => {
-    const css = readFileSync("src/game/PlayerStrip.module.css", "utf8");
+    // Resolved from this file, so the test runs from any working directory.
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "PlayerStrip.module.css"), "utf8");
     const rule = /\.name\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
     expect(rule).toMatch(/max-width:\s*5\.5em/);
     expect(rule).toMatch(/text-overflow:\s*ellipsis/);
