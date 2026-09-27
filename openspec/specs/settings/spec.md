@@ -1,7 +1,7 @@
 # settings Specification
 
 ## Purpose
-Device-only player settings: shift and move confirmations, theme, sounds and the turn notification
+Device-only player settings: how a turn is played (push and pick or a separate shift), move confirmation, theme, sounds and the turn notification
 (tab title, vibration), opened from the start screen and during a game.
 
 ## Requirements
@@ -10,7 +10,7 @@ Device-only player settings: shift and move confirmations, theme, sounds and the
 The player SHALL be able to open a settings screen from the start screen and, through a gear in the game's top bar, during a game, and return from it. During a game the settings screen covers the game while it keeps running, and it also holds the language choice (the game's top bar has no room for both). The
 settings SHALL be kept on the device and survive a reload and a reopened app; they MUST NOT change
 the game's rules or anything other players see. Without stored settings (or with unreadable ones)
-the defaults apply: confirm shift on, confirm move off, theme system, sounds on, tab title on,
+the defaults apply: separate shift off, confirm move off, theme system, sounds on, tab title on,
 vibration on. A change takes effect at once.
 
 #### Scenario: Settings during a game
@@ -25,25 +25,21 @@ vibration on. A change takes effect at once.
 - **WHEN** the stored settings cannot be read
 - **THEN** the defaults apply and the app works normally
 
-### Requirement: Shift confirmation setting
-With confirm shift on, tapping an edge arrow SHALL only preview the shift, and a second tap on the
-same arrow or the confirm button sends it. With confirm shift off, tapping an allowed edge arrow on
-the viewer's shift step SHALL send the shift at once with the spare's current rotation; the
-forbidden arrow stays unusable.
-
-#### Scenario: One-tap shift
-- **WHEN** confirm shift is off and Maija, on her shift step, taps an allowed arrow
-- **THEN** the shift is sent at once with the spare as currently rotated
-
 ### Requirement: Move confirmation setting
-With confirm move off, tapping a reachable square SHALL move there at once. With confirm move on,
-tapping a reachable square SHALL only mark it as chosen; tapping it again or "Kävele tänne" moves
-there, tapping another reachable square chooses that one instead, and "Peru" drops the choice. The
-choice is dropped when the board or turn changes.
+With confirm move off, tapping a reachable square SHALL move there at once (in push and pick: send
+the previewed shift and then the move). With confirm move on, tapping a reachable square SHALL only
+mark it as chosen; tapping it again or "Kävele tänne" moves there (after the previewed shift in push
+and pick), tapping another reachable square chooses that one instead, and "Peru" drops the choice.
+The choice is dropped when the board or turn changes, or when the previewed shift is moved or its
+tile rotated.
 
 #### Scenario: Confirmed move
 - **WHEN** confirm move is on and Maija taps a reachable square
 - **THEN** the square is marked and nothing is sent until she taps it again or "Kävele tänne"
+
+#### Scenario: Confirmed move in the preview
+- **WHEN** confirm move is on and Maija, previewing N3, taps a reachable square and then "Kävele tänne"
+- **THEN** the N3 shift is sent and then the move to that square
 
 ### Requirement: Theme setting
 The theme SHALL be one of system, light or dark. System follows the device's colour scheme; light
@@ -98,3 +94,18 @@ The settings screen SHALL have a "Vianilmoitus" / "Report a problem" section tha
 #### Scenario: Copying not possible
 - **WHEN** copying fails
 - **THEN** the line is shown in a selectable field
+
+### Requirement: Separate shift setting
+The setting "Työnnä erikseen" SHALL choose how a turn is played. Off (the default), the turn is push
+and pick: the previewed shift is sent together with the move when a reachable square is tapped. On,
+tapping an edge arrow only previews the shift, a second tap on the same arrow or "Työnnä" sends it,
+and the move follows in the move step. A value stored by earlier versions for shift confirmation
+MUST be ignored.
+
+#### Scenario: Back to the separate shift
+- **WHEN** Maija turns "Työnnä erikseen" on and taps an arrow and then "Työnnä"
+- **THEN** only the shift is sent and she walks in the move step
+
+#### Scenario: Old stored confirmation
+- **WHEN** the device has shift confirmation stored as on from an earlier version
+- **THEN** the game uses push and pick until the player turns "Työnnä erikseen" on

@@ -95,21 +95,6 @@ The game screen SHALL always show whose turn it is and which step it is in. On y
 - **WHEN** it is Maija's turn and her connection has dropped
 - **THEN** the turn line says that Maija's connection is lost
 
-### Requirement: Shift controls
-On the viewer's turn, each of the 12 insertion points SHALL be marked by an arrow on the board-edge tile where the spare would enter. The whole tile is the tap target. Tapping an arrow MUST preview the shift on the board: the line shown moved, the spare in place, and the tile that would drop out marked. Confirming the preview, by tapping the same arrow again or pressing the confirm button, MUST send the shift. Tapping another arrow MUST switch the preview, and a cancel button MUST return to the unshifted board. A rotate button next to the spare tile MUST turn the spare 90° clockwise, including during a preview. All controls MUST be at least 44 px to tap.
-
-#### Scenario: Preview then confirm
-- **WHEN** the viewer taps the N3 arrow and then presses "Työnnä"
-- **THEN** the board first shows column 3 moved down with the spare on (0,3), and after confirming the shift is sent once
-
-#### Scenario: Change of mind
-- **WHEN** the viewer taps the N3 arrow and then the W1 arrow
-- **THEN** the preview shows the W1 shift instead, and nothing has been sent
-
-#### Scenario: Rotate the spare
-- **WHEN** the viewer presses the rotate button twice
-- **THEN** the spare tile is shown turned 180°, and a following shift inserts it with rotation 180° relative to the rotation it had
-
 ### Requirement: Forbidden reverse shown
 The insertion point that would push straight back the previous shift SHALL be shown disabled and MUST NOT be selectable.
 
@@ -265,24 +250,6 @@ the marks are hidden.
 - **WHEN** the viewer's move step shows move targets and the hint while the last shift's marker is shown
 - **THEN** the edge marker sits outside the board and no last-turn mark is a ring or outline around a tile
 
-### Requirement: Reach shown in the shift preview
-While the viewer previews a shift on their own turn, every square their pawn could reach on the
-previewed board SHALL be marked, including a pawn carried by the previewed shift. The marks MUST
-look different from the tappable move targets and MUST NOT be tappable. Rotating the spare or
-choosing another arrow updates them at once; cancelling removes them.
-
-#### Scenario: Preview opens a corridor
-- **WHEN** the viewer previews W3 and that shift connects their square to four others
-- **THEN** those five squares carry the reach mark
-
-#### Scenario: Rotate the previewed spare
-- **WHEN** the viewer rotates the spare while a preview is shown
-- **THEN** the reach marks are recomputed for the rotated tile
-
-#### Scenario: Not tappable
-- **WHEN** the viewer taps a reach-marked square during the preview
-- **THEN** nothing is sent to the server
-
 ### Requirement: Hint
 Next to the spare tile, in both the shift and the move step, a "Vihje" button SHALL show the turn
 the bots' own strategy would choose for the viewer, without doing any of it. The hint MUST be
@@ -303,8 +270,8 @@ gentle pulse that stays still when the viewer prefers reduced motion.
 - **THEN** the board previews the hinted shift with its arrow selected and the spare turned, a ring marks the square to walk to, and nothing has been sent
 
 #### Scenario: Following the hint
-- **WHEN** the viewer confirms the hinted shift
-- **THEN** in the move step the ring still marks the hinted square until the viewer moves
+- **WHEN** after a hint for the shift the viewer taps the ringed square
+- **THEN** the hinted shift is sent and the pawn walks to that square
 
 #### Scenario: Hint for the move
 - **WHEN** it is the viewer's move step after their own shift and they press "Vihje"
@@ -356,3 +323,57 @@ In the waiting room and during a game, the game's readable identifier SHALL be s
 #### Scenario: Other game on the device
 - **WHEN** the player is in a quick game against bots on the device
 - **THEN** the badge reads "Oma peli" instead of the `local-…` identifier
+
+### Requirement: Push and pick shift controls
+On the viewer's turn, each of the 12 insertion points SHALL be marked by an arrow on the board-edge tile where the spare would enter. The whole tile is the tap target. Tapping an arrow MUST preview the shift on the board: the line shown moved, the spare in place, and the tile that would drop out marked. Tapping another arrow MUST switch the preview, and a cancel button ("Peru") MUST return to the unshifted board. A rotate button next to the spare tile MUST turn the spare 90° clockwise, including during a preview. Nothing is sent while the viewer only previews.
+
+By default (push and pick) the preview has no confirm step: every square the viewer's pawn could reach on the previewed board MUST be offered as a tap target, and tapping one MUST send the shift and then a move to that square; the square where the preview carries the pawn, or "Jää paikalleen" under the board, sends the shift and a stay. Tapping the previewed arrow again does nothing. An arrow whose edge tile is one of the offered squares is left out during the preview, so the whole tile stays the move's tap target; "Peru" brings it back. If the shift is rejected, no move is sent and the preview is dropped.
+
+With the setting "Työnnä erikseen" on, the preview is confirmed by tapping the same arrow again or pressing "Työnnä", which sends the shift, and the move follows in the move step. All controls MUST be at least 44 px to tap.
+
+#### Scenario: Push and pick
+- **WHEN** the viewer taps the N3 arrow and then a square their pawn could reach after that shift
+- **THEN** the board first shows column 3 moved down with the spare on (0,3) and the reachable squares as targets, and the tap sends the N3 shift once and then the move to that square
+
+#### Scenario: Shift and stay
+- **WHEN** the viewer taps the N3 arrow and then "Jää paikalleen"
+- **THEN** the N3 shift is sent, followed by a move to the square where the shift left the pawn
+
+#### Scenario: Change of mind
+- **WHEN** the viewer taps the N3 arrow and then the W1 arrow
+- **THEN** the preview shows the W1 shift with its reachable squares instead, and nothing has been sent
+
+#### Scenario: Offered square on an arrow tile
+- **WHEN** the viewer previews W1 and the square carrying the W1 arrow is reachable after it
+- **THEN** that arrow is not shown and tapping the square sends the shift and the move there; after "Peru" the arrow is back
+
+#### Scenario: Rejected shift
+- **WHEN** the viewer taps a reachable square in the preview and the server rejects the shift
+- **THEN** no move is sent and the unshifted board is shown with the rejection message
+
+#### Scenario: Separate shift
+- **WHEN** "Työnnä erikseen" is on and the viewer taps the N3 arrow and then presses "Työnnä"
+- **THEN** only the shift is sent, and the viewer then walks in the move step
+
+#### Scenario: Rotate the spare
+- **WHEN** the viewer presses the rotate button twice
+- **THEN** the spare tile is shown turned 180°, and a following shift inserts it with rotation 180° relative to the rotation it had
+
+### Requirement: Reach offered in the shift preview
+While the viewer previews a shift on their own turn, every square their pawn could reach on the
+previewed board SHALL be marked, including a pawn carried by the previewed shift. In push and pick
+the marks are the tap targets of the move (same look as the move step's targets). With "Työnnä
+erikseen" on, the marks MUST look different from the tappable move targets and MUST NOT be tappable.
+Rotating the spare or choosing another arrow updates them at once; cancelling removes them.
+
+#### Scenario: Preview opens a corridor
+- **WHEN** the viewer previews W3 and that shift connects their square to four others
+- **THEN** those five squares carry the reach mark
+
+#### Scenario: Rotate the previewed spare
+- **WHEN** the viewer rotates the spare while a preview is shown
+- **THEN** the reach marks are recomputed for the rotated tile
+
+#### Scenario: Not tappable with a separate shift
+- **WHEN** "Työnnä erikseen" is on and the viewer taps a reach-marked square during the preview
+- **THEN** nothing is sent to the server
