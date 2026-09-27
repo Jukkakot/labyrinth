@@ -72,9 +72,13 @@ export function arrange(room: GameRoom, seat: number, arrangement: Arrangement):
     seats: internals.game.seats.map((s) => {
       if (s.seat !== seat) return s;
       const found = arrangement.found ?? s.found;
-      const target = arrangement.target ?? targetOf(s) ?? "";
-      const rest = s.stack.filter((t) => !found.includes(t) && t !== target);
-      const stack = target ? [...found, target, ...rest] : [...found];
+      const unfound = s.stack.filter((t) => !found.includes(t));
+      // Without a given target the next unfound card is it, never one just marked found.
+      const target = arrangement.target ?? unfound[0] ?? "";
+      const rest = unfound.filter((t) => t !== target);
+      // Cards from another stack (the deal is random) push out the last ones: the stack keeps its size.
+      const size = Math.max(s.stack.length, found.length + (target ? 1 : 0));
+      const stack = (target ? [...found, target, ...rest] : [...found]).slice(0, size);
       return { ...s, pawn: arrangement.pawn ?? s.pawn, found, stack };
     }),
   };

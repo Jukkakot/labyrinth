@@ -73,9 +73,9 @@ describe("treasures in a room", () => {
     return { sq, treasure: treasureOf(tileAt(board, sq).id)! };
   };
 
-  /** Makes `target` the seat's last card: the rest of their stack counts as found. */
+  /** Makes `target` the seat's last card: all but one of the rest of their stack count as found (`target` may come from another stack). */
   const lastCard = (room: Parameters<typeof arrange>[0], seat: number, stack: TreasureId[], target: TreasureId) =>
-    arrange(room, seat, { found: stack.filter((t) => t !== target), target });
+    arrange(room, seat, { found: stack.filter((t) => t !== target).slice(0, stack.length - 1), target });
 
   describe("Treasure cards dealt evenly", () => {
     it("Four stacks of six: every seat gets its own 6, all 24 once, and the start is logged", async () => {
