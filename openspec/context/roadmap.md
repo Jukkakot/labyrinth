@@ -19,10 +19,30 @@ One OpenSpec change at a time, in this order. Adjust as we learn.
     game of 2–4 bots and follow it as a spectator, maybe with a speed choice. A watched game then
     ends when its last spectator leaves, not "when no person is seated". Also useful for comparing
     bot strategies by eye
-13. `autoplay` (requested 2026-09-27): a player can hand their seat to the bot for a while and take
+Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer extras after.
+
+13. `last-move-highlight`: after each turn, highlight for a moment the tile that was pushed in and
+    the pawn's from and to squares, so an opponent's turn is easy to follow. No event log (the user:
+    nobody reads it)
+14. `resume-game`: the start screen offers "Jatka peliä" when the app was closed mid-game and the
+    seat is still held
+15. `local-play-and-pwa`: games vs bots run in the browser with `packages/rules` (no server, no
+    wake-up wait, works offline) and the app installs to the home screen as a PWA. Multiplayer and
+    watching stay on the server
+16. `first-game-tips`: 3–4 hints during the first game (push a row from an arrow, walk to a
+    highlighted square, your target, return home); shown once, can be reset
+17. `smarter-bots` (**parallel candidate**: `packages/rules` only): a new `BotStrategy` with
+    look-ahead; it blocks **all** opponents evenly, the leader with a slightly higher priority,
+    while keeping its own target reachable; a bot tournament (simulation of many games) compares
+    strategies by win rate; maybe difficulty levels. Fair: no knowledge of others' targets
+18. `daily-puzzle`: one seed per day for everyone, solo: reach the treasure in as few turns as
+    possible; result shareable as text (Wordle style). Builds on local play
+19. `autoplay` (requested 2026-09-27): a player can hand their seat to the bot for a while and take
     it back; the chip shows it to everyone. Same fair `BotStrategy` as bots. To decide in the
     proposal: whether a dropped or timed-out player is auto-played instead of kicked
-14. `settings`: confirmations, theme, sounds, turn notification
+20. `settings`: confirmations, theme, sounds, **turn notification** (tab title, vibration, sound)
+21. `share-and-colors`: share the invite link through the phone's share sheet (Web Share API);
+    a player picks their own colour or avatar
 
 ## Improvement backlog
 
@@ -33,7 +53,3 @@ same area. Each becomes its own change (or joins a related one) when picked up.
   2026-09-27): while "Herätetään palvelinta…" is shown, count the seconds waited so far ("0:23"),
   and show a loading animation, so the player sees that something is waiting and progressing
   rather than stuck. Honour reduced motion.
-- **Smarter bots** (suggested 2026-09-27; the user wants bots as smart as possible eventually):
-  a new `BotStrategy` in `packages/rules` (look-ahead over the next players' shifts, blocking the
-  leader, keeping own target reachable), compared with the simple one in the bot simulation test;
-  maybe difficulty levels. Bots stay fair: no knowledge of others' targets.
