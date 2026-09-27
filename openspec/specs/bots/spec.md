@@ -84,6 +84,12 @@ shift and move onto the target. Otherwise it MUST look one turn ahead: it prefer
 which the most of its possible next shifts would bring the target within reach, and then the one
 that leaves it closest to the target on average, counting rows plus columns.
 
+Among its most promising choices, a bot MUST also look further ahead by playing the next round out
+many times: every opponent in turn and then the bot itself make a good turn each, the opponents
+heading for targets drawn at random from the treasures that could still be theirs (never their
+real targets). It prefers the choice with the best average outcome: its own progress towards its
+treasures, less the opponents' progress on the turns it minds them.
+
 On most turns (about four in five) a bot MUST also hold back its opponents: among its choices it
 prefers shifts that leave the opponents fewer treasures within reach of their next shift, counting
 only treasures that could still be an opponent's target (not its own target and not any treasure
@@ -92,7 +98,8 @@ slightly more, and when the next player has found every treasure and could get h
 shift, it MUST block that if it can without giving up collecting its own target. On the other
 turns it plays only for itself, so that blocking never locks a game. Among equally good choices it
 picks at random, and the choice MUST be reproducible from the game's recorded seed. A game among
-bots only MUST always come to an end.
+bots only MUST always come to an end. Choosing a turn MUST take well under a tenth of a second on
+a phone.
 
 #### Scenario: Target reachable this turn
 - **WHEN** a shift exists after which the bot's target tile is connected to its pawn
@@ -101,6 +108,10 @@ bots only MUST always come to an end.
 #### Scenario: Target out of reach
 - **WHEN** no shift connects the bot's pawn to its target
 - **THEN** the bot ends its move where the most of its next shifts would bring the target within reach, and among those as close to it as possible
+
+#### Scenario: Playing the next round out
+- **WHEN** the bot cannot collect and its best choices look about equally good for its next turn
+- **THEN** it prefers the one that works out best on average once every opponent has taken a turn with a sampled target
 
 #### Scenario: Blocking the opponents
 - **WHEN** the bot cannot collect and several shifts serve it about equally well

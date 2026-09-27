@@ -20,4 +20,4 @@
 ## 3. Docs
 
 - [x] 3.1 Wiki: `architecture.md` (rules modules), `development.md` (tournament)
-- [ ] 3.2 Roadmap backlog item marked done (coordinator, at archive)
+- [x] 3.2 Roadmap backlog item marked done (coordinator, at archive)

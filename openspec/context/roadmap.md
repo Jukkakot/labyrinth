@@ -73,7 +73,7 @@ same area. Each becomes its own change (or joins a related one) when picked up.
   the top bar on a phone. Idea: show a shorter label for games on the device (e.g. "Päivän pulma"
   / "Oma peli"), keep the full id in the copied bug-report line.
 - ~~**Hint ring stands out**~~ (done in `first-game-tips`): pulsing yellow ring on a dark halo.
-- **Smarter bots 2: sampling search** (asked 2026-09-27): today's look-ahead scores one own turn
+- ~~**Smarter bots 2: sampling search**~~ (done in `smarter-bots-2`): look-ahead's 10 best moves each played a round ahead with sampled opponent targets; wins 74/45/32 % vs look-ahead bots (2/3/4 players), ~11 ms a turn. Originally (asked 2026-09-27): today's look-ahead scores one own turn
   and each opponent's best next shift on the board it leaves, but never plays turns in alternation
   (opponents' shifts between its turns are ignored) and cannot know their targets. Idea: Monte
   Carlo search that samples opponents' targets from the treasures not yet found, plays a few turns
