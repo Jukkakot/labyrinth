@@ -40,6 +40,7 @@ Claude's judgement and does not want to approve every step. This overrides the r
 - Run the loop without asking: propose → apply → verify (checks + UI check where visible) →
   commit → archive (sync specs, update roadmap and wiki) → commit → propose the next roadmap item
   → apply → …
+  This also overrides the "planning only, stop after the artifacts" boundary in the OpenSpec skills.
 - Make UX and rule decisions yourself, using the rules of the original board game, the memory
   notes and the existing specs. Record each non-obvious one in the change's `design.md` and list
   them in the summary so the user can revisit them later.
@@ -67,23 +68,14 @@ everything works and is final.
 - UI checks: Playwright MCP `playwright-mobile` (Galaxy S24), **portrait only** by default. To
   reach a running bot game directly, open `/?dev=1v3` (1v1–1v3; development only). Check
   landscape and a narrow desktop only when a change reshapes a layout (new screen, new layout
-  structure). This overrides the global "test every UI change in three sizes" rule for this
-  project. Check facts with snapshots or DOM queries; screenshot only where the look needs judging. Save screenshots under `.playwright-mcp/` (git-ignored) and close the tabs you opened
-  when the check is done.
-- Dev servers stay running locally (the user's wish: faster to try things). Before a UI check or
-  E2E run, assume they are up and only check: PowerShell `Get-NetTCPConnection -LocalPort
-  2567,5173 -State Listen` and the owning process command line. This repo's `npm run dev`
-  (`tsx watch` + Vite) reloads by itself, so a running one is current; use it. Start it only when
-  nothing listens, detached so it outlives the session, through cmd (a bare `Start-Process npm`
-  dies at once): `Start-Process -WindowStyle Hidden cmd.exe -ArgumentList '/c','npm run dev >
-  "%TEMP%\labyrinth-dev.log" 2>&1' -WorkingDirectory <repo root>` (not a background task, which
-  leaves orphans when stopped). If only one side is up (e.g. the user's VS Code Vite on 5173),
-  start only the other: `npm run dev -w @labyrinth/server` (log `labyrinth-server.log`). Stop
-  anything that is not this checkout's dev server (an old build, another checkout). Claude may freely start, restart or stop both local servers (game server and Vite),
-  also ones the user started (e.g. VS Code's), whenever one is in the way; say so in the summary.
-  Leave the servers running at the end.
+  structure); this narrows the global default. Save screenshots under `.playwright-mcp/`.
+- Dev servers stay running locally (the user's wish). Before a UI check or E2E run, check that
+  this checkout's `npm run dev` listens on 2567/5173 and use it (it reloads by itself); otherwise
+  start, restart or stop servers as needed (also the user's) following
+  [docs/development.md → Local dev servers](../docs/development.md#local-dev-servers), say so in
+  the summary, and leave them running.
 - Before committing, run the check chain **once**, right before the commit (not after every task
-  group; while working, run only the tests of the workspace you touch):
+  group; while working, run only the tests of the workspace you touch; quick fixes skip it):
   `npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client`.
 - Changes may be large (a whole roadmap item at once); the user prefers progress over small steps.
 
@@ -115,22 +107,5 @@ What fits: items whose files barely overlap (e.g. `packages/rules` only vs. clie
 parallel: items that share hot files (`GameRoom.ts`, `GameScreen.tsx`, `useGameSession.ts`,
 `viewModel.ts`, `game-schema.ts`) or where one needs the other's decisions.
 
-Standard way (this session is the **coordinator**):
-
-1. Coordinator commits and pushes its own work first (clean `main`).
-2. Each job is a background `Agent` with `isolation: "worktree"`, one OpenSpec change per job, with
-   a short brief: change name, goal, files it may touch, and these rules — autopilot applies;
-   `npm ci` first; propose + apply + commit on its own branch; run only the touched workspace's
-   tests plus `lint` and `typecheck`; no dev servers, no UI check, no push, no archive, do not edit
-   `openspec/context/roadmap.md`; update the wiki pages it affects; answer in at most 10 lines
-   (branch, commits, decisions, open issues).
-3. The coordinator keeps working on its own item meanwhile and does not poll the jobs.
-4. When a job reports: merge its branch into `main` (rebase on conflicts; the coordinator
-   resolves them, typically i18n JSON and docs), run the full check chain **once** for everything
-   merged so far, do the UI check on the local dev servers if the job is visible, archive the
-   change (specs, roadmap), commit, push, remove the worktree and branch.
-5. One summary covers all jobs; the user sees decisions per change.
-
-If the user prefers to steer a job themselves, the coordinator instead creates the worktree
-(`git worktree add ../labyrintti-<change> -b <change>`) and gives a one-line start message for a
-new session there; the merge and archive steps stay the same.
+How to run it (coordinator, job briefs, merge and archive): the project skill `parallel-work`.
+Load it before starting a job.

@@ -12,6 +12,20 @@
   client). Add `?debug=1` to the client URL to also get its debug entries. Clear the file only
   while the server is stopped (it keeps the file open).
 
+### Local dev servers
+
+Dev servers are kept running between sessions. Before a UI check or E2E run:
+
+- Check what listens (PowerShell): `Get-NetTCPConnection -LocalPort 2567,5173 -State Listen`,
+  then the owning process's command line. This checkout's `npm run dev` (`tsx watch` + Vite)
+  reloads by itself, so a running one is current.
+- Nothing listens: start it detached through cmd, so it outlives the session (a bare
+  `Start-Process npm` dies at once; a background task leaves orphans when stopped):
+  `Start-Process -WindowStyle Hidden cmd.exe -ArgumentList '/c','npm run dev > "%TEMP%\labyrinth-dev.log" 2>&1' -WorkingDirectory <repo root>`.
+- Only one side up (e.g. VS Code's Vite on 5173): start only the other,
+  `npm run dev -w @labyrinth/server` (log `%TEMP%\labyrinth-server.log`).
+- Anything else on those ports (an old build, another checkout): stop it by process id.
+
 ## Checks — Implemented
 
 Run before every commit (CI runs the same):
