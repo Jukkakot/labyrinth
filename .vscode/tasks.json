@@ -13,8 +13,9 @@
           "regexp": "^$"
         },
         "background": {
+          "activeOnStart": true,
           "beginsPattern": "VITE",
-          "endsPattern": "ready in"
+          "endsPattern": "Local:"
         }
       }
     }
