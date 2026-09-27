@@ -86,3 +86,51 @@ everything works and is final.
   group; while working, run only the tests of the workspace you touch):
   `npm run lint && npm run typecheck && npm test && npm run build && npm run size -w @labyrinth/client`.
 - Changes may be large (a whole roadmap item at once); the user prefers progress over small steps.
+
+## Handover (overrides the global handover format)
+
+The next session rebuilds the state itself (session start: roadmap, `openspec list`, the change's
+`tasks.md`), so a handover repeats none of it. It is at most two lines:
+
+```
+Jatka: /opsx:apply <change> (seuraava <task no.>)      ← or /opsx:propose <roadmap item>, /opsx:archive <change>
+Huom: <only what is not in the repo: a half-formed idea, a bug seen, an open question>
+```
+
+Keep the `Huom` line empty by writing decisions into `design.md` and notes into `tasks.md` as they
+happen. Commit and push before handing over, so the working tree is clean.
+
+## Parallel work
+
+Parallel work is opt-in per situation: sometimes the user saves tokens, sometimes they have tokens
+but little time. Modes (the user switches them with a word; default **ask**):
+
+- **ask**: when a clear chance turns up (a roadmap or backlog item that touches other files than
+  the current work), ask once with AskUserQuestion: parallel or one after another, with a
+  one-line estimate of the extra cost. Do not ask again for the same items.
+- **säästö** ("säästötila"): never offer parallel work; sequential only.
+- **rinnakkain** ("rinnakkaistila"): do not ask; run every suitable item in parallel (up to 3 jobs).
+
+What fits: items whose files barely overlap (e.g. `packages/rules` only vs. client screens). Not
+parallel: items that share hot files (`GameRoom.ts`, `GameScreen.tsx`, `useGameSession.ts`,
+`viewModel.ts`, `game-schema.ts`) or where one needs the other's decisions.
+
+Standard way (this session is the **coordinator**):
+
+1. Coordinator commits and pushes its own work first (clean `main`).
+2. Each job is a background `Agent` with `isolation: "worktree"`, one OpenSpec change per job, with
+   a short brief: change name, goal, files it may touch, and these rules — autopilot applies;
+   `npm ci` first; propose + apply + commit on its own branch; run only the touched workspace's
+   tests plus `lint` and `typecheck`; no dev servers, no UI check, no push, no archive, do not edit
+   `openspec/context/roadmap.md`; update the wiki pages it affects; answer in at most 10 lines
+   (branch, commits, decisions, open issues).
+3. The coordinator keeps working on its own item meanwhile and does not poll the jobs.
+4. When a job reports: merge its branch into `main` (rebase on conflicts; the coordinator
+   resolves them, typically i18n JSON and docs), run the full check chain **once** for everything
+   merged so far, do the UI check on the local dev servers if the job is visible, archive the
+   change (specs, roadmap), commit, push, remove the worktree and branch.
+5. One summary covers all jobs; the user sees decisions per change.
+
+If the user prefers to steer a job themselves, the coordinator instead creates the worktree
+(`git worktree add ../labyrintti-<change> -b <change>`) and gives a one-line start message for a
+new session there; the merge and archive steps stay the same.
