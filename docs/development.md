@@ -11,7 +11,8 @@
 - Quick games against bots (and `?dev=1vN`) run in the browser without the server; online play,
   watching (`?dev=0vN`) and the waiting room need it.
 - PWA: the service worker is off in `npm run dev`. To try install and offline start:
-  `npm run build -w @labyrinth/client && npm run preview -w @labyrinth/client` (port 4173), then
+  `VITE_SERVER_URL=http://localhost:2567 npm run build -w @labyrinth/client && npm run preview -w
+  @labyrinth/client` (port 4173; without the URL a production build shows the crash screen), then
   DevTools → Application. Icons: edit `client/public/favicon.svg`, run
   `npm run icons -w @labyrinth/client`, commit the PNGs.
 - Logs: the terminal shows pretty lines; `logs/dev.log` has the same entries as JSON (server and
