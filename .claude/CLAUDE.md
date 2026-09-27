@@ -73,9 +73,11 @@ everything works and is final.
   E2E run, assume they are up and only check: PowerShell `Get-NetTCPConnection -LocalPort
   2567,5173 -State Listen` and the owning process command line. This repo's `npm run dev`
   (`tsx watch` + Vite) reloads by itself, so a running one is current; use it. Start it only when
-  nothing listens, detached so it outlives the session: `Start-Process -WindowStyle Hidden npm
-  -ArgumentList 'run','dev'` in the repo root (not a background task, which leaves orphans when
-  stopped). Stop something only if it is not this checkout's dev server (an old build, another
+  nothing listens, detached so it outlives the session, through cmd (a bare `Start-Process npm`
+  dies at once): `Start-Process -WindowStyle Hidden cmd.exe -ArgumentList '/c','npm run dev >
+  "%TEMP%\labyrinth-dev.log" 2>&1' -WorkingDirectory <repo root>` (not a background task, which
+  leaves orphans when stopped). If only one side is up (e.g. the user's VS Code Vite on 5173),
+  start only the other: `npm run dev -w @labyrinth/server` (log `labyrinth-server.log`). Stop something only if it is not this checkout's dev server (an old build, another
   checkout). Never stop the user's own processes; leave the servers running at the end.
 - Before committing, run the check chain **once**, right before the commit (not after every task
   group; while working, run only the tests of the workspace you touch):
