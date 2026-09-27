@@ -49,4 +49,4 @@ operations:
   archive:
     guidance:
       - Before archiving, check that the docs/ wiki reflects the change (Planned → Implemented, new pages or sections, updated environments/procedures) and that roadmap.md marks the item done; fix gaps first.
-      - After archiving, replace the "Purpose: TBD" line of any spec the archive created with one or two sentences on what the capability covers, and include it in the archive commit (no separate commit).
+      - "After archiving, replace the `Purpose: TBD` line of any spec the archive created with one or two sentences on what the capability covers, and include it in the archive commit (no separate commit)."
