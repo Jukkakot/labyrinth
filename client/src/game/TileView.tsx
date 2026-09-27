@@ -19,15 +19,17 @@ export interface TileViewProps {
   highlight?: boolean;
   /** This tile is the viewer's target: a treasure to collect, or home. */
   target?: "treasure" | "home";
+  /** The treasure is already collected: drawn as a plain tile. Ignored on a target tile. */
+  treasureHidden?: boolean;
 }
 
 /**
  * One tile in the corridor style: plain tile, corridors from the centre to each open side, treasure icon.
  * Positioned with a CSS transform so a tile that moves (same key, new x/y) slides there.
  */
-export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false, target }: TileViewProps) {
+export function TileView({ tile, fixed = false, x = 0, y = 0, highlight = false, target, treasureHidden = false }: TileViewProps) {
   const { t } = useTranslation();
-  const treasure = TILE_SET[tile.id]?.treasure;
+  const treasure = treasureHidden && !target ? undefined : TILE_SET[tile.id]?.treasure;
   const Icon = treasure ? TREASURE_ICONS[treasure] : undefined;
   const open = openings(tile);
   const name = treasure ? t(`treasures.${treasure}`) : undefined;

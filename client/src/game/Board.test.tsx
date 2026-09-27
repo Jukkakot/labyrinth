@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
-import { setupBoard, TILE_SET } from "@labyrinth/rules";
+import { setupBoard, TILE_SET, type TreasureId } from "@labyrinth/rules";
 import { describe, expect, it } from "vitest";
 import "../i18n";
 import { Board } from "./Board.tsx";
+import { collectedTreasures } from "./collected.ts";
 import { SpareTile } from "./SpareTile.tsx";
 import { TileView } from "./TileView.tsx";
 
@@ -86,5 +87,42 @@ describe("board-view › Spare tile shown", () => {
     render(<SpareTile tile={{ id: chestTile.id, kind: chestTile.kind, rotation: 0 }} />);
     expect(screen.getByText("Ylimääräinen laatta")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Aarre: lohikäärme" })).toBeTruthy();
+  });
+
+  it("Spare with a collected treasure: corridors without the icon", () => {
+    const dragon = TILE_SET.find((t) => t.treasure === "dragon")!;
+    const { container } = render(
+      <SpareTile tile={{ id: dragon.id, kind: dragon.kind, rotation: 0 }} collected={collectedTreasures([{ found: ["dragon"] }])} />,
+    );
+    expect(screen.queryByRole("img", { name: "Aarre: lohikäärme" })).toBeNull();
+    expect(container.querySelectorAll("[data-arm]").length).toBeGreaterThan(0);
+  });
+});
+
+describe("board-view › Treasures shown as icons (collected)", () => {
+  const board = setupBoard(1);
+  const withTreasure = board.squares.filter((tile) => TILE_SET[tile.id]?.treasure);
+  const [first, second] = [withTreasure[0]!, withTreasure[1]!];
+  const firstTreasure = TILE_SET[first.id]!.treasure!;
+  const seat = (no: number, isMe: boolean, found: TreasureId[]) => ({
+    seat: no, sessionId: `s${no}`, name: `P${no}`, connected: true, isMe, isBot: false, cards: 5, found, square: { row: 0, col: 0 },
+  });
+  const tileEl = (container: HTMLElement, id: number) => container.querySelector(`[data-tile-id="${id}"]`)!;
+
+  it("Collected treasure hidden: another player's find is drawn as a plain tile", () => {
+    const { container } = render(<Board board={board} seats={[seat(1, true, []), seat(2, false, [firstTreasure])]} />);
+    expect(tileEl(container, first.id).getAttribute("aria-hidden")).toBe("true");
+    expect(tileEl(container, first.id).querySelector("svg")).toBeNull();
+    expect(tileEl(container, second.id).querySelector("svg")).not.toBeNull();
+  });
+
+  it("Own target always shown, even when its treasure is in a found list", () => {
+    const { container } = render(
+      <Board board={board} seats={[seat(1, true, [firstTreasure])]} target={{ tileId: first.id, home: false }} />,
+    );
+    const el = tileEl(container, first.id);
+    expect(el.getAttribute("data-target")).toBe("treasure");
+    expect(el.getAttribute("aria-label")).toBeTruthy();
+    expect(el.querySelectorAll("svg")).toHaveLength(2); // treasure icon + target badge
   });
 });

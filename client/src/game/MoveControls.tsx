@@ -5,6 +5,7 @@ import { HintButton } from "./HintButton.tsx";
 import { UndoButton } from "./UndoButton.tsx";
 import styles from "./ShiftControls.module.css";
 import { SpareTile } from "./SpareTile.tsx";
+import type { Collected } from "./collected.ts";
 import type { TargetMark } from "./target.ts";
 
 export interface MoveControlsProps {
@@ -16,6 +17,8 @@ export interface MoveControlsProps {
   pending: boolean;
   /** The viewer's target, marked if it is the spare. */
   target?: TargetMark;
+  /** Collected treasures: not drawn on the spare tiles. */
+  collected?: Collected;
   onStay(): void;
   /** Shows the hinted square. */
   onHint(): void;
@@ -29,12 +32,12 @@ export interface MoveControlsProps {
 }
 
 /** Under the board in the move step: the spare, what to do, and the Stay button. Same slot and width as the shift controls. */
-export function MoveControls({ spare, enabled, pending, target, onStay, onHint, onUndo, canUndo = false, chosen = false, onGo, onCancelChoice }: MoveControlsProps) {
+export function MoveControls({ spare, enabled, pending, target, collected, onStay, onHint, onUndo, canUndo = false, chosen = false, onGo, onCancelChoice }: MoveControlsProps) {
   const { t } = useTranslation();
   return (
     <div className={styles.controls}>
       <div className={styles.tiles}>
-        <SpareTile tile={spare} target={target} />
+        <SpareTile tile={spare} target={target} collected={collected} />
         {onUndo && <UndoButton disabled={!canUndo || pending} onUndo={onUndo} />}
         <HintButton disabled={!enabled || pending} onHint={onHint} />
       </div>

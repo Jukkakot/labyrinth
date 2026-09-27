@@ -6,6 +6,7 @@ import { HintButton } from "./HintButton.tsx";
 import { UndoButton } from "./UndoButton.tsx";
 import styles from "./ShiftControls.module.css";
 import { SpareTile } from "./SpareTile.tsx";
+import type { Collected } from "./collected.ts";
 import type { TargetMark } from "./target.ts";
 
 export interface ShiftControlsProps {
@@ -19,6 +20,8 @@ export interface ShiftControlsProps {
   pending: boolean;
   /** The viewer's target, marked if it is the spare or the tile dropping out. */
   target?: TargetMark;
+  /** Collected treasures: not drawn on the spare tiles. */
+  collected?: Collected;
   onRotate(): void;
   /** Shows the hinted shift and square. */
   onHint(): void;
@@ -30,13 +33,13 @@ export interface ShiftControlsProps {
 }
 
 /** Under the board: the spare with its rotate button, and either a hint or the confirm/cancel pair of a preview. */
-export function ShiftControls({ spare, outgoing, enabled, pending, target, onRotate, onHint, onUndo, canUndo = false, onConfirm, onCancel }: ShiftControlsProps) {
+export function ShiftControls({ spare, outgoing, enabled, pending, target, collected, onRotate, onHint, onUndo, canUndo = false, onConfirm, onCancel }: ShiftControlsProps) {
   const { t } = useTranslation();
   const previewing = outgoing !== undefined;
   return (
     <div className={styles.controls}>
       <div className={styles.tiles}>
-        <SpareTile tile={spare} target={target} />
+        <SpareTile tile={spare} target={target} collected={collected} />
         <Button
           variant="secondary"
           className={styles.icon}
@@ -51,7 +54,7 @@ export function ShiftControls({ spare, outgoing, enabled, pending, target, onRot
         <HintButton disabled={!enabled || pending} onHint={onHint} />
         {outgoing && (
           <div className={styles.outgoing}>
-            <SpareTile tile={outgoing} caption={t("shift.newSpare")} outgoing target={target} />
+            <SpareTile tile={outgoing} caption={t("shift.newSpare")} outgoing target={target} collected={collected} />
           </div>
         )}
       </div>

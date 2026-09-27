@@ -6,6 +6,7 @@ import styles from "./Board.module.css";
 import { MoveTargets, type MoveTargetsProps } from "./MoveTargets.tsx";
 import { PawnLayer } from "./PawnLayer.tsx";
 import { ShiftTargets, type ShiftTargetsProps } from "./ShiftTargets.tsx";
+import { collectedTreasures, isCollected } from "./collected.ts";
 import { targetOf, type TargetMark } from "./target.ts";
 import { TILE_UNITS, TileView } from "./TileView.tsx";
 import { HintMark, PushMark, ReachMarks, RouteTrace } from "./TurnMarks.tsx";
@@ -36,6 +37,7 @@ export interface BoardProps {
 export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target, trace, reach, hint }: BoardProps) {
   const { t } = useTranslation();
   const clipId = useId();
+  const collected = collectedTreasures(seats);
   // The last turn's marks are drawn in the mover's pawn colour.
   const traceLook = trace?.seat === undefined ? undefined : (seats.find((s) => s.seat === trace.seat)?.look ?? trace.seat);
   return (
@@ -57,6 +59,7 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
               y={row * TILE_UNITS}
               highlight={tile.id === highlightTileId}
               target={targetOf(tile.id, target)}
+              treasureHidden={isCollected(tile.id, collected)}
             />
           );
         })}

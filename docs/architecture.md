@@ -205,6 +205,8 @@ client/src/
 - **UI foundation:** every colour, spacing and radius is a token (light and dark); CSS Modules;
   anything shown twice is a shared component. Board: one SVG, 100 units per tile; pawns = seat
   colour + shape; tiles and pawns animate with CSS transforms keyed by id; reduced motion honoured.
+  Tiles draw only treasures still in play: the collected set is the union of every seat's `found`
+  (synced to players and spectators), except that the viewer's target tile always shows its treasure.
 - **Session:** a per-tab reconnection token (sessionStorage) rejoins after a reload; the last
   nickname is kept in localStorage only to prefill the field. A seated player's unfinished game is
   also remembered in localStorage (token, room, last seen; refreshed every 15 s and on hide), so a
