@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { chooseBotTurn, greedyBotTurn } from "./bot.js";
+import { greedyBotTurn } from "./bot.js";
+import { lookaheadStrategy } from "./botLookahead.js";
+import { samplingStrategy } from "./botSampling.js";
 import { runTournament } from "./botTournament.js";
 
 // The rules package has no Node types; the test runner is Node all the same.
@@ -8,13 +10,13 @@ const env = (globalThis as { process?: { env: Record<string, string | undefined>
 const log = (globalThis as { console?: { log(text: string): void } }).console?.log ?? (() => undefined);
 const GAMES = Number(env.BOT_TOURNAMENT ?? 0);
 
-const strategies = { lookahead: chooseBotTurn, greedy: greedyBotTurn };
+const strategies = { sampling: samplingStrategy(), lookahead: lookaheadStrategy(), greedy: greedyBotTurn };
 const lineups: string[][] = [
+  ["sampling", "lookahead"],
+  ["sampling", "lookahead", "lookahead"],
+  ["sampling", "lookahead", "lookahead", "lookahead"],
   ["lookahead", "greedy"],
-  ["lookahead", "greedy", "greedy"],
-  ["lookahead", "greedy", "greedy", "greedy"],
-  ["lookahead", "lookahead"],
-  ["greedy", "greedy", "greedy", "greedy"],
+  ["sampling", "sampling", "sampling", "sampling"],
   ["lookahead", "lookahead", "lookahead", "lookahead"],
 ];
 

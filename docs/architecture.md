@@ -161,11 +161,14 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 the 24 treasures), `rng` + `setup` (seeded board; draw order pinned by a golden test), `shift`
 (`shiftBoard`, insertion ids, reverse rule), `move` (reachability, shortest path), `treasures`
 (deals, collect and win), `turns` (next seat, kick rule, clock limits), `bot` (the replaceable
-`BotStrategy` over a fair `BotView`, `chooseBotTurn` = the look-ahead bot in `botLookahead`
-(typed-array board, one own turn plus every next shift, averaged opponent blocking; a few ms per
-turn; each seat's optional public `foundTreasures` rules those out as an opponent's targets), the
-old greedy one kept as a baseline, `botSeed`), `botHint` (the "Vihje" hint: the look-ahead in the
-viewer's seat, always blocking, rng seeded from the position; `hintTurn` for the shift step,
+`BotStrategy` over a fair `BotView`, `chooseBotTurn` = the sampling bot in `botSampling`: the
+look-ahead in `botLookahead` (typed-array board, one own turn plus every next shift, averaged
+opponent blocking; each seat's optional public `foundTreasures` rules those out as an opponent's
+targets) proposes its best choices, and each is played out one round ahead with greedy turns for
+everyone against opponents' targets sampled from the treasures still possible; fixed work per turn,
+~11 ms on a desktop; the look-ahead and the old greedy one are kept for the tournament, `botSeed`),
+`botHint` (the "Vihje" hint: the bots' strategy in the viewer's seat, always blocking, rng seeded
+from the position; `hintTurn` for the shift step,
 `hintMove` for the move step after a shift; the client maps its view to a `BotView` with only
 its own target in `client/src/game/hint.ts`), `game` (a whole game as JSON-serialisable data: `startGame`, `applyShift`, `applyMove` with the
 server's rejection codes and order, `removeSeat`, `endGame`, `botViewOf`, `botRngFor`; the one

@@ -13,7 +13,7 @@ import { nextSeat } from "./turns.js";
  * the rules package; the result is checked against the ordinary rules by the tests.
  */
 
-const SIZE = BOARD_SIZE * BOARD_SIZE;
+export const SIZE = BOARD_SIZE * BOARD_SIZE;
 const N = 1;
 const E = 2;
 const S = 4;
@@ -27,12 +27,12 @@ const MASK: readonly (readonly number[])[] = TILE_KINDS.map((kind) =>
 const KIND_INDEX = new Map<TileKind, number>(TILE_KINDS.map((k, i) => [k, i]));
 
 /** Each insertion's line of square indices, entry first, exit last. */
-const LINES: readonly Int8Array[] = INSERTIONS.map((id) => Int8Array.from(insertionLine(id).map(squareIndex)));
-const INSERTION_INDEX = new Map<InsertionId, number>(INSERTIONS.map((id, i) => [id, i]));
-const REVERSE: readonly number[] = INSERTIONS.map((id) => INSERTION_INDEX.get(reverseOf(id))!);
+export const LINES: readonly Int8Array[] = INSERTIONS.map((id) => Int8Array.from(insertionLine(id).map(squareIndex)));
+export const INSERTION_INDEX = new Map<InsertionId, number>(INSERTIONS.map((id, i) => [id, i]));
+export const REVERSE: readonly number[] = INSERTIONS.map((id) => INSERTION_INDEX.get(reverseOf(id))!);
 
 /** Where a pawn on each square ends after each insertion (it rides along; pushed off, it wraps to the entry). */
-const PAWN_AFTER: readonly Int8Array[] = LINES.map((line) => {
+export const PAWN_AFTER: readonly Int8Array[] = LINES.map((line) => {
   const map = Int8Array.from({ length: SIZE }, (_, i) => i);
   for (let k = 0; k < line.length; k++) map[line[k]!] = k === line.length - 1 ? line[0]! : line[k + 1]!;
   return map;
@@ -41,10 +41,10 @@ const PAWN_AFTER: readonly Int8Array[] = LINES.map((line) => {
 /** The one treasure bit of each tile id (0 for a tile without a treasure). */
 const TREASURE_BIT: readonly number[] = TILE_SET.map((t) => (t.treasure === undefined ? 0 : 2 ** TREASURES.indexOf(t.treasure)));
 
-const ROW: readonly number[] = ALL_SQUARES.map((sq) => sq.row);
-const COL: readonly number[] = ALL_SQUARES.map((sq) => sq.col);
+export const ROW: readonly number[] = ALL_SQUARES.map((sq) => sq.row);
+export const COL: readonly number[] = ALL_SQUARES.map((sq) => sq.col);
 
-interface Fast {
+export interface Fast {
   masks: Uint8Array;
   kinds: Uint8Array;
   ids: Uint8Array;
@@ -52,11 +52,11 @@ interface Fast {
   spareId: number;
 }
 
-function newFast(): Fast {
+export function newFast(): Fast {
   return { masks: new Uint8Array(SIZE), kinds: new Uint8Array(SIZE), ids: new Uint8Array(SIZE), spareKind: 0, spareId: 0 };
 }
 
-function toFast(board: Board): Fast {
+export function toFast(board: Board): Fast {
   const f = newFast();
   board.squares.forEach((tile, i) => {
     const kind = KIND_INDEX.get(tile.kind)!;
@@ -70,7 +70,7 @@ function toFast(board: Board): Fast {
 }
 
 /** `dst` becomes `src` with the spare pushed in at insertion `ins`, turned `rot` quarter turns. */
-function shiftInto(src: Fast, dst: Fast, ins: number, rot: number): void {
+export function shiftInto(src: Fast, dst: Fast, ins: number, rot: number): void {
   dst.masks.set(src.masks);
   dst.kinds.set(src.kinds);
   dst.ids.set(src.ids);
@@ -90,8 +90,8 @@ function shiftInto(src: Fast, dst: Fast, ins: number, rot: number): void {
   dst.ids[line[0]!] = src.spareId;
 }
 
-/** The distinct rotations (quarter turns) of a spare of kind `kind`: a straight has only two. */
-function distinctRotations(kind: number): number[] {
+/** The distinct rotations (quarter turns) of a spare of each kind: a straight has only two. */
+export const DISTINCT_ROTATIONS: readonly (readonly number[])[] = TILE_KINDS.map((_, kind) => {
   const seen = new Set<number>();
   return [0, 1, 2, 3].filter((r) => {
     const m = MASK[kind]![r]!;
@@ -99,15 +99,16 @@ function distinctRotations(kind: number): number[] {
     seen.add(m);
     return true;
   });
-}
+});
+const distinctRotations = (kind: number) => DISTINCT_ROTATIONS[kind]!;
 
-const queue = new Int8Array(SIZE);
+export const queue = new Int8Array(SIZE);
 
 /**
  * Breadth-first search over connected corridors from `start`: marks every reached square in
  * `seen` with `stamp` and returns how many there are; they are `queue[0…count-1]`.
  */
-function reach(f: Fast, start: number, seen: Int32Array, stamp: number): number {
+export function reach(f: Fast, start: number, seen: Int32Array, stamp: number): number {
   const m = f.masks;
   let head = 0;
   let tail = 0;
@@ -169,10 +170,10 @@ export interface LookaheadWeights {
 
 export const DEFAULT_WEIGHTS: LookaheadWeights = { reach: 1, distance: 0.1, block: 0.5, leader: 0.25, home: 3, blockChance: 0.8 };
 
-const COLLECT = 100;
-const WIN = 1000;
+export const COLLECT = 100;
+export const WIN = 1000;
 /** Distance counted when the target is out on the spare after a shift. */
-const OFF_BOARD_DISTANCE = 7;
+export const OFF_BOARD_DISTANCE = 7;
 const EPSILON = 1e-9;
 
 /**
@@ -202,7 +203,7 @@ function lookaheadTurn(view: BotView, rng: { int(min: number, max: number): numb
 }
 
 /** Bits of every treasure found by anyone: no one's target any more (the deck has no repeats). */
-function foundBits(view: BotView): number {
+export function foundBits(view: BotView): number {
   let bits = 0;
   for (const seat of view.seats) for (const t of seat.foundTreasures ?? []) bits |= 2 ** TREASURES.indexOf(t);
   return bits;
@@ -214,6 +215,29 @@ function foundBits(view: BotView): number {
  * the shift) and only the squares to walk to are compared.
  */
 function search(view: BotView, rng: { int(min: number, max: number): number }, w: LookaheadWeights, fixed: boolean): BotTurn {
+  return scoreTurns(view, rng, w, fixed).best;
+}
+
+/** A turn with its look-ahead score. */
+export interface ScoredTurn {
+  readonly turn: BotTurn;
+  readonly score: number;
+}
+
+export interface ScoredTurns {
+  /** The look-ahead's own choice (ties broken with the rng). */
+  readonly best: BotTurn;
+  /** Every choice it compared, with its score, in the order compared. */
+  readonly all: readonly ScoredTurn[];
+  /** Whether this turn minds the opponents (drawn first, from the rng). */
+  readonly blocking: boolean;
+}
+
+/**
+ * The look-ahead's scores of every choice (see `search`), for strategies that refine its best
+ * few choices. Draws from `rng` exactly as the look-ahead turn does.
+ */
+export function scoreTurns(view: BotView, rng: { int(min: number, max: number): number }, w: LookaheadWeights, fixed: boolean): ScoredTurns {
   const own = view.seats.find((s) => s.seat === view.seat);
   if (!own) throw new Error(`Seat ${view.seat} is not in the view`);
   const heading = view.target === undefined;
@@ -249,7 +273,9 @@ function search(view: BotView, rng: { int(min: number, max: number): number }, w
 
   let best: BotTurn[] = [];
   let bestScore = -Infinity;
+  const all: ScoredTurn[] = [];
   const offer = (score: number, turn: BotTurn) => {
+    all.push({ turn, score });
     if (score > bestScore + EPSILON) {
       bestScore = score;
       best = [turn];
@@ -348,5 +374,5 @@ function search(view: BotView, rng: { int(min: number, max: number): number }, w
       }
     }
   }
-  return best[rng.int(0, best.length - 1)]!;
+  return { best: best[rng.int(0, best.length - 1)]!, all, blocking };
 }
