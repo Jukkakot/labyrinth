@@ -64,6 +64,9 @@ same area. Each becomes its own change (or joins a related one) when picked up.
   last push started (the tile was pushed in from there); show the walk as a route with a distinct
   start and end point and a dashed line; draw all of a turn's marks in the colour of the player
   who made it. Aim: fewer ring/highlight marks, each kind of mark looks different.
+- **Game id badge in local games** (seen 2026-09-27): `local-daily-…` ids wrap to two lines in
+  the top bar on a phone. Idea: show a shorter label for games on the device (e.g. "Päivän pulma"
+  / "Oma peli"), keep the full id in the copied bug-report line.
 - ~~**Hint ring stands out**~~ (done in `first-game-tips`): pulsing yellow ring on a dark halo.
 - **Smarter bots 2: sampling search** (asked 2026-09-27): today's look-ahead scores one own turn
   and each opponent's best next shift on the board it leaves, but never plays turns in alternation
