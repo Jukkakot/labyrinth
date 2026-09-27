@@ -87,8 +87,8 @@ and upload with `tools/axiom/axiom.ps1` (see the script header), not by hand in 
 token "labyrinth ingest (Render server)" in Render's `AXIOM_TOKEN`. Claude administers Axiom
 (datasets, tokens, dashboards, monitors) through its REST API with the user's personal token
 `AXIOM_PAT` + `AXIOM_ORG_ID` from the Windows user environment (`tools/axiom/axiom.ps1` reads them
-there, as a running VS Code may not have inherited them). Not set up yet: an error alert (monitor)
-— it needs a notifier, e.g. the user's email.
+there, as a running VS Code may not have inherited them). No error alerts or
+emails (the user's choice for a hobby project): errors are found on the dashboard.
 
 **Format:** one JSON object per line, keys in this order:
 
