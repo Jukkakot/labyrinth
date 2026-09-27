@@ -49,8 +49,10 @@ Agreed before any capability was specified. Once a capability has a spec under
   device: Samsung Galaxy S24 (360×780 CSS px, DPR 3) — the default for design
   checks and mobile tests.
   A dedicated landscape layout only if the board gets too small.
-- Shift: tap an edge arrow → ghost preview → tap again / Confirm. Move: reachable
-  tiles are highlighted, tapping one moves immediately; "Stay" is a button.
+- Turn (push and pick): tap an edge arrow → ghost preview with the reachable squares
+  as targets (another arrow or rotating still allowed) → tapping a square pushes and
+  walks there at once; "Stay" pushes and stays. With "Push separately" on: preview →
+  tap again / Push, then the move step (tap a highlighted square; "Stay" button).
 - The player's own target tile is always highlighted on the board.
 - During a game the room's readable id (e.g. `brave-otters-sing`) is shown small in
   the top area. Tapping it copies "game id · local date and time · app version"
@@ -62,8 +64,8 @@ Agreed before any capability was specified. Once a capability has a spec under
 - Styling: CSS Modules on shared design tokens; reusable components for
   everything shown in more than one place (buttons, badges, tiles, pawns).
 - Players are distinguished by colour-blind-safe colour + pawn shape.
-- Per-user settings (browser-local, never affect rules): confirm shift (default
-  on), confirm move (default off), language, theme (system/light/dark), sounds,
+- Per-user settings (browser-local, never affect rules): push separately (default
+  off), confirm move (default off), language, theme (system/light/dark), sounds,
   vibration. New comfort toggles of the same kind go here.
 - Subtle sounds + vibration (Android). Turn notification when backgrounded: tab
   title + sound. No push notifications.

@@ -200,6 +200,9 @@ client/src/
 
 - **Server state is the truth.** `toGameView()` turns synced state into an immutable `GameView`;
   components render it. Previews (shift and the reach after it) are computed locally with the same rules functions;
+  in push and pick (the default turn flow) a tap on a square of the previewed reach sends the two existing
+  commands back to back, `shift` and, once accepted, `move` (no combined command; "Työnnä erikseen" in the
+  settings brings back a separately confirmed shift);
   the last turn's marks (where the tile was pushed in, marked outside the board edge; walked route) are derived by comparing successive views.
 - **UI foundation:** every colour, spacing and radius is a token (light and dark); CSS Modules;
   anything shown twice is a shared component. Board: one SVG, 100 units per tile; pawns = seat

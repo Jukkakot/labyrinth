@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadSeenTips, pickTip, resetTips, saveSeenTips, type TipId, type TipSituation } from "./tips.ts";
+import { isRelevant, loadSeenTips, pickTip, resetTips, saveSeenTips, type TipId, type TipSituation } from "./tips.ts";
 
 const playing: TipSituation = { playing: true, isMyTurn: false, step: "shift", heading: "treasure" };
 const seen = (...tips: TipId[]) => new Set(tips);
@@ -41,6 +41,12 @@ describe("first-game-tips › One-time tips in the first game", () => {
   it("Walk on the own move step, nothing on another player's turn once the target is known", () => {
     expect(pickTip({ ...playing, isMyTurn: true, step: "move" }, seen("target", "push"))).toBe("walk");
     expect(pickTip(playing, seen("target"))).toBeUndefined();
+  });
+
+  it("Tip passes with its moment: a previewed shift ends the push tip and brings the walk tip", () => {
+    const previewing = { ...playing, isMyTurn: true, previewing: true };
+    expect(isRelevant("push", previewing)).toBe(false);
+    expect(pickTip(previewing, seen("target"))).toBe("walk");
   });
 
   it("Heading home: the home tip", () => {

@@ -28,12 +28,43 @@ export interface ShiftControlsProps {
   /** Daily puzzle: "Peru siirto"; `canUndo` false shows it disabled. */
   onUndo?(): void;
   canUndo?: boolean;
+  /** Separate shift: sends the previewed shift. */
   onConfirm(): void;
   onCancel(): void;
+  /** Push and pick: the preview's reachable squares are the move; no "Työnnä". */
+  picking?: boolean;
+  /** Push and pick: shift and stay. */
+  onStay?(): void;
+  /** Push and pick with confirm move: a square is chosen; "Kävele tänne" and "Peru" replace the stay pair. */
+  chosen?: boolean;
+  onGo?(): void;
+  onCancelChoice?(): void;
 }
 
-/** Under the board: the spare with its rotate button, and either a hint or the confirm/cancel pair of a preview. */
-export function ShiftControls({ spare, outgoing, enabled, pending, target, collected, onRotate, onHint, onUndo, canUndo = false, onConfirm, onCancel }: ShiftControlsProps) {
+/**
+ * Under the board: the spare with its rotate button, and either a hint or the actions of a preview:
+ * push and pick offers "Peru" and "Jää paikalleen" (or "Peru" and "Kävele tänne" for a chosen square),
+ * a separate shift the "Peru" and "Työnnä" pair.
+ */
+export function ShiftControls({
+  spare,
+  outgoing,
+  enabled,
+  pending,
+  target,
+  collected,
+  onRotate,
+  onHint,
+  onUndo,
+  canUndo = false,
+  onConfirm,
+  onCancel,
+  picking = false,
+  onStay,
+  chosen = false,
+  onGo,
+  onCancelChoice,
+}: ShiftControlsProps) {
   const { t } = useTranslation();
   const previewing = outgoing !== undefined;
   return (
@@ -58,7 +89,28 @@ export function ShiftControls({ spare, outgoing, enabled, pending, target, colle
           </div>
         )}
       </div>
-      {enabled && previewing && (
+      {enabled && previewing && picking && chosen && (
+        <div className={styles.actions}>
+          <Button variant="secondary" onClick={onCancelChoice} disabled={pending}>
+            {t("shift.cancel")}
+          </Button>
+          <Button onClick={onGo} disabled={pending} aria-busy={pending || undefined}>
+            {pending ? t("shift.waiting") : t("move.go")}
+          </Button>
+        </div>
+      )}
+      {enabled && previewing && picking && !chosen && (
+        <div className={styles.actions}>
+          <p className={styles.lead}>{t("shift.pickHint")}</p>
+          <Button variant="secondary" className={styles.nowrap} onClick={onCancel} disabled={pending}>
+            {t("shift.cancel")}
+          </Button>
+          <Button variant="secondary" className={styles.nowrap} onClick={onStay} disabled={pending} aria-busy={pending || undefined}>
+            {pending ? t("shift.waiting") : t("move.stay")}
+          </Button>
+        </div>
+      )}
+      {enabled && previewing && !picking && (
         <div className={styles.actions}>
           <Button variant="secondary" onClick={onCancel} disabled={pending}>
             {t("shift.cancel")}

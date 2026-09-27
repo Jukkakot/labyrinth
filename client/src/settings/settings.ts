@@ -7,8 +7,11 @@ import { useSyncExternalStore } from "react";
 export type Theme = "system" | "light" | "dark";
 
 export interface Settings {
-  /** Tapping an edge arrow only previews; a second tap or "Työnnä" sends. Off: one tap shifts. */
-  confirmShift: boolean;
+  /**
+   * Tapping an edge arrow only previews; a second tap or "Työnnä" sends the shift, then the move step.
+   * Off (push and pick): the preview's reachable squares are tapped to send the shift and the move together.
+   */
+  separateShift: boolean;
   /** Tapping a reachable square only chooses it; a second tap or "Kävele tänne" moves. */
   confirmMove: boolean;
   theme: Theme;
@@ -21,7 +24,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  confirmShift: true,
+  separateShift: false,
   confirmMove: false,
   theme: "system",
   sounds: true,
@@ -48,7 +51,8 @@ export function loadSettings(storage?: Storage): Settings {
     const r = raw as Record<string, unknown>;
     const flag = (name: keyof Omit<Settings, "theme">) => (typeof r[name] === "boolean" ? (r[name] as boolean) : DEFAULT_SETTINGS[name]);
     return {
-      confirmShift: flag("confirmShift"),
+      // Earlier versions stored `confirmShift`, mostly as the saved default: ignored.
+      separateShift: flag("separateShift"),
       confirmMove: flag("confirmMove"),
       theme: THEMES.includes(r.theme as Theme) ? (r.theme as Theme) : DEFAULT_SETTINGS.theme,
       sounds: flag("sounds"),

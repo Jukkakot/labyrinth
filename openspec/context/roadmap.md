@@ -94,8 +94,9 @@ In this order:
      reachable squares (move step) nudge gently toward the board; no text. Reduced motion: none.
    - E3 reachable squares: a dot on the corridor hub, hollow in the shift preview, filled in the
      move step (replaces preview rings and the move step's dashed squares); the whole tile stays
-     the tap target.
-5. `push-and-pick` (asked 2026-09-27): smoother turn. Placing the tile at an arrow at once shows
+     the tap target. (`push-and-pick`, built first, already offers the preview's reach as tappable
+     move targets; E3 restyles them, and the rings remain only with "Työnnä erikseen".)
+5. ~~`push-and-pick`~~ (done): placing the tile at an arrow offers the squares reachable after it; one tap on a square sends shift + move, "Jää paikalleen" shifts and stays; "Työnnä erikseen" setting (off) brings back the confirmed shift. Originally (asked 2026-09-27): smoother turn. Placing the tile at an arrow at once shows
    where you can walk (E3 dots) and the player can still move the tile to another arrow or rotate
    it; tapping a reachable square commits shift + move together, so the shift needs no separate
    confirm. A setting switches back to today's flow (confirm shift, then move). To decide in the

@@ -71,9 +71,17 @@ const at = (row: number, col: number) => `translate(${col * 100}px, ${row * 100}
 
 const arrow = (name: string) => screen.getByRole("button", { name });
 
-describe("board-view › Shift controls", () => {
-  it("Preview then confirm: N3 previews column 4 moved down, Työnnä sends once", async () => {
-    const { container, shift } = setup();
+describe("board-view › Push and pick shift controls", () => {
+  const corners = [square(0, 0), square(0, 6)];
+  const reachAfter = (insertion: string, rotation = board.spare.rotation) => {
+    const previewed = shiftBoard(board, insertion as "N3", rotation, corners);
+    return reachableSquares(previewed.board, previewed.pawns[0]!);
+  };
+  const moveTarget = (container: HTMLElement, sq: { row: number; col: number }) =>
+    container.querySelector(`[data-move-target="${sq.row},${sq.col}"]`)!;
+
+  it("Push and pick: N3 previews column 4 moved down with its reach as targets; a square sends the shift and then the move", async () => {
+    const { container, shift, move } = setup();
     fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
 
     expect(tilePosition(container, board.spare.id)).toBe(at(0, 3));
@@ -82,31 +90,83 @@ describe("board-view › Shift controls", () => {
     const outgoing = board.squares[squareIndex(square(6, 3))]!;
     expect(tilePosition(container, outgoing.id)).toBeUndefined();
     expect(screen.getByRole("group", { name: "Tippuu pois" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Työnnä" })).toBeNull();
+    const reach = reachAfter("N3");
+    expect([...container.querySelectorAll("[data-move-target]")].map((el) => el.getAttribute("data-move-target"))).toEqual(
+      reach.map((sq) => `${sq.row},${sq.col}`),
+    );
+    expect(container.querySelector("[data-reach]")).toBeNull();
     expect(shift).not.toHaveBeenCalled();
 
+    const target = reach.at(-1)!;
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Työnnä" }));
+      fireEvent.click(moveTarget(container, target));
     });
-    expect(shift).toHaveBeenCalledTimes(1);
-    expect(shift).toHaveBeenCalledWith("N3", board.spare.rotation);
+    expect(shift).toHaveBeenCalledExactlyOnceWith("N3", board.spare.rotation);
+    expect(move).toHaveBeenCalledExactlyOnceWith(target);
+    expect(shift.mock.invocationCallOrder[0]!).toBeLessThan(move.mock.invocationCallOrder[0]!);
   });
 
-  it("tapping the selected arrow again confirms", async () => {
-    const { shift } = setup();
+  it("Shift and stay: Jää paikalleen sends the shift and a move to where the shift left the pawn", async () => {
+    const { shift, move } = setup({ mine: { row: 2, col: 3 } });
+    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Jää paikalleen" }));
+    });
+    expect(shift).toHaveBeenCalledExactlyOnceWith("N3", board.spare.rotation);
+    expect(move).toHaveBeenCalledExactlyOnceWith(square(3, 3));
+  });
+
+  it("an arrow on an offered square is left out during the preview, and Peru brings it back", () => {
+    // A preview whose reach includes its own entry tile (the pushed-in spare).
+    const { container } = setup();
+    const insertion = (["N1", "N3", "N5", "W1", "W3", "W5", "S1", "S3", "S5", "E1", "E3", "E5"] as const).find((id) =>
+      reachAfter(id).some((sq) => {
+        const entry = insertionLine(id)[0]!;
+        return sq.row === entry.row && sq.col === entry.col;
+      }),
+    )!;
+    expect(insertion).toBeDefined();
+    fireEvent.click(container.querySelector(`[data-insertion="${insertion}"]`)!);
+    const entry = insertionLine(insertion)[0]!;
+    expect(container.querySelector(`[data-insertion="${insertion}"]`)).toBeNull();
+    expect(moveTarget(container, entry)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Peru" }));
+    expect(container.querySelector(`[data-insertion="${insertion}"]`)).not.toBeNull();
+  });
+
+  it("tapping the previewed arrow again sends nothing", async () => {
+    const { container, shift } = setup();
     fireEvent.click(arrow("Työnnä vasemmalta riviin 2"));
     await act(async () => {
       fireEvent.click(arrow("Työnnä vasemmalta riviin 2"));
     });
-    expect(shift).toHaveBeenCalledExactlyOnceWith("W1", board.spare.rotation);
+    expect(shift).not.toHaveBeenCalled();
+    expect(tilePosition(container, board.spare.id)).toBe(at(1, 0));
   });
 
-  it("Change of mind: N3 then W1 previews W1 and sends nothing; Peru restores the board", () => {
+  it("Rejected shift: no move is sent and the preview is dropped", async () => {
+    const shift = vi.fn(async () => ({ ok: false as const, code: "NOT_YOUR_TURN" }));
+    const { container, move } = setup({}, { shift });
+    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 2"));
+    await act(async () => {
+      fireEvent.click(moveTarget(container, reachAfter("N1")[0]!));
+    });
+    expect(shift).toHaveBeenCalledTimes(1);
+    expect(move).not.toHaveBeenCalled();
+    expect(tilePosition(container, board.spare.id)).toBeUndefined();
+  });
+
+  it("Change of mind: N3 then E5 previews E5 with its reach and sends nothing; Peru restores the board", () => {
     const { container, shift } = setup();
     fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
-    fireEvent.click(arrow("Työnnä vasemmalta riviin 2"));
+    fireEvent.click(arrow("Työnnä oikealta riviin 6"));
 
-    expect(tilePosition(container, board.spare.id)).toBe(at(1, 0));
-    const expected = shiftBoard(board, "W1", board.spare.rotation).board;
+    expect(tilePosition(container, board.spare.id)).toBe(at(5, 6));
+    expect([...container.querySelectorAll("[data-move-target]")].map((el) => el.getAttribute("data-move-target"))).toEqual(
+      reachAfter("E5").map((sq) => `${sq.row},${sq.col}`),
+    );
+    const expected = shiftBoard(board, "E5", board.spare.rotation).board;
     expected.squares.forEach((tile, i) => {
       expect(tilePosition(container, tile.id)).toBe(at(Math.floor(i / 7), i % 7));
     });
@@ -132,7 +192,7 @@ describe("board-view › Shift controls", () => {
     expect(inserted?.querySelector("[data-highlight]")).not.toBeNull();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Työnnä" }));
+      fireEvent.click(screen.getByRole("button", { name: "Jää paikalleen" }));
     });
     expect(shift).toHaveBeenCalledWith("E3", turned.rotation);
   });
@@ -209,15 +269,6 @@ describe("board-view › Rejected command message", () => {
     expect(container.querySelector("[data-insertion='N1']")!.getAttribute("aria-disabled")).toBe("true");
     expect((screen.getByRole("button", { name: "Käännä laattaa" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText("Ei ole sinun vuorosi").closest("[role=status]")).not.toBeNull();
-  });
-
-  it("a rejected shift drops the preview", async () => {
-    const { container } = setup({}, { shift: vi.fn(async () => ({ ok: false as const, code: "NOT_YOUR_TURN" })) });
-    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 2"));
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Työnnä" }));
-    });
-    expect(tilePosition(container, board.spare.id)).toBeUndefined();
   });
 });
 
@@ -560,8 +611,13 @@ describe("spectators › game screen", () => {
   });
 });
 
-describe("board-view › Reach shown in the shift preview", () => {
-  it("Preview opens a corridor: N3 marks every square reachable on the previewed board; Peru removes them", () => {
+describe("board-view › Reach offered in the shift preview", () => {
+  afterEach(() => {
+    updateSettings(DEFAULT_SETTINGS);
+  });
+
+  it("Not tappable with a separate shift: N3 marks every square reachable on the previewed board; Peru removes them", () => {
+    updateSettings({ separateShift: true });
     const { container } = setup();
     fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
     const previewed = shiftBoard(board, "N3", board.spare.rotation, [square(0, 0), square(0, 6)]);
@@ -623,6 +679,17 @@ describe("board-view › Hint", () => {
     expect(container.querySelector("[data-hint]")).toBeNull();
   });
 
+  it("Following the hint: tapping the ringed square sends the hinted shift and the walk", async () => {
+    const { container, shift, move } = setup(mine);
+    const turn = hintTurn(botViewOf(view(mine))!);
+    fireEvent.click(hintButton());
+    await act(async () => {
+      fireEvent.click(container.querySelector(`[data-move-target="${turn.to.row},${turn.to.col}"]`)!);
+    });
+    expect(shift).toHaveBeenCalledExactlyOnceWith(turn.insertion, turn.rotation);
+    expect(move).toHaveBeenCalledExactlyOnceWith(turn.to);
+  });
+
   it("Not your turn: Vihje is shown disabled", () => {
     setup({ ...mine, turnSeat: 2 });
     expect(hintButton().disabled).toBe(true);
@@ -634,13 +701,49 @@ describe("settings › confirmations in the game", () => {
     updateSettings(DEFAULT_SETTINGS);
   });
 
-  it("One-tap shift: with confirm shift off an arrow sends the shift at once", async () => {
-    updateSettings({ confirmShift: false });
-    const { shift } = setup();
+  it("Separate shift: an arrow previews, Työnnä sends only the shift", async () => {
+    updateSettings({ separateShift: true });
+    const { shift, move } = setup();
+    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+    expect(shift).not.toHaveBeenCalled();
     await act(async () => {
-      fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+      fireEvent.click(screen.getByRole("button", { name: "Työnnä" }));
     });
     expect(shift).toHaveBeenCalledExactlyOnceWith("N3", board.spare.rotation);
+    expect(move).not.toHaveBeenCalled();
+  });
+
+  it("Separate shift: tapping the selected arrow again confirms", async () => {
+    updateSettings({ separateShift: true });
+    const { shift } = setup();
+    fireEvent.click(arrow("Työnnä vasemmalta riviin 2"));
+    await act(async () => {
+      fireEvent.click(arrow("Työnnä vasemmalta riviin 2"));
+    });
+    expect(shift).toHaveBeenCalledExactlyOnceWith("W1", board.spare.rotation);
+  });
+
+  it("Confirmed move in the preview: the first tap chooses, Kävele tänne sends the shift and the move; rotating drops the choice", async () => {
+    updateSettings({ confirmMove: true });
+    const { container, shift, move } = setup();
+    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+    const previewed = shiftBoard(board, "N3", board.spare.rotation, [square(0, 0), square(0, 6)]);
+    const target = reachableSquares(previewed.board, previewed.pawns[0]!).at(-1)!;
+    const cell = () => container.querySelector(`[data-move-target="${target.row},${target.col}"]`)!;
+    fireEvent.click(cell());
+    expect(cell().getAttribute("aria-pressed")).toBe("true");
+    expect(shift).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Käännä laattaa" }));
+    expect(screen.queryByRole("button", { name: "Kävele tänne" })).toBeNull();
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: "Käännä laattaa" }));
+
+    fireEvent.click(cell());
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Kävele tänne" }));
+    });
+    expect(shift).toHaveBeenCalledExactlyOnceWith("N3", board.spare.rotation);
+    expect(move).toHaveBeenCalledExactlyOnceWith(target);
   });
 
   it("Confirmed move: with confirm move on the first tap only chooses, the second moves", async () => {

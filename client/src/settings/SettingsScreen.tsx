@@ -120,7 +120,7 @@ export function SettingsScreen({
           <h2 id="settings-confirm" className={styles.heading}>
             {t("settings.confirmations")}
           </h2>
-          <Toggle name="confirmShift" />
+          <Toggle name="separateShift" />
           <Toggle name="confirmMove" />
         </section>
 

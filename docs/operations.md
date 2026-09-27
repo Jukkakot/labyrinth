@@ -38,7 +38,8 @@ stale client when checking a deploy, compare the footer's "Client …" build tim
    "<name> · 1/4". Tap it → both tabs list two players; the host taps "Aloita peli" → both see the
    board, same game id.
 3. Tap the game id → the share sheet (or "Linkki kopioitu") with a `?game=<id>` link.
-4. On the current player's tab tap an edge arrow, then "Työnnä" → the line slides in both tabs.
+4. On the current player's tab tap an edge arrow, then a marked square → the line slides and the
+   pawn walks in both tabs.
 5. In Render logs (`list_logs`, text = the game id) find `game.setup`; its seed reproduces the
    starting board: `boardToText(setupBoard(seed))`. `game.started` has the `dealSeed`, seats and
    start seat. Each `cmd.accepted` `shift` line then replays one shift with `shiftBoard`.

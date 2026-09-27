@@ -38,6 +38,8 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
   const { t } = useTranslation();
   const clipId = useId();
   const collected = collectedTreasures(seats);
+  // Push and pick offers move targets during the shift preview: an edge square that is both keeps only its move.
+  const covered = shiftTargets && moveTargets ? new Set(moveTargets.reachable.map((sq) => `${sq.row},${sq.col}`)) : undefined;
   // The last turn's marks are drawn in the mover's pawn colour.
   const traceLook = trace?.seat === undefined ? undefined : (seats.find((s) => s.seat === trace.seat)?.look ?? trace.seat);
   return (
@@ -73,7 +75,7 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
       <g className={styles.pawns}>
         <PawnLayer seats={seats} board={board} />
       </g>
-      {shiftTargets && <ShiftTargets {...shiftTargets} />}
+      {shiftTargets && <ShiftTargets {...shiftTargets} covered={covered} />}
     </svg>
   );
 }

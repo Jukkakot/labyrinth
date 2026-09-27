@@ -8,6 +8,8 @@ export interface TipSituation {
   playing: boolean;
   isMyTurn: boolean;
   step: "shift" | "move";
+  /** The viewer previews a shift of their own (push and pick: the reachable squares are offered). */
+  previewing?: boolean;
   /** What the viewer looks for: a treasure, or home once every treasure is found; undefined before it is known. */
   heading?: "treasure" | "home";
 }
@@ -19,9 +21,9 @@ export function isRelevant(tip: TipId, s: TipSituation): boolean {
     case "target":
       return s.heading === "treasure";
     case "push":
-      return s.isMyTurn && s.step === "shift";
+      return s.isMyTurn && s.step === "shift" && !s.previewing;
     case "walk":
-      return s.isMyTurn && s.step === "move";
+      return s.isMyTurn && (s.step === "move" || s.previewing === true);
     case "home":
       return s.heading === "home";
   }

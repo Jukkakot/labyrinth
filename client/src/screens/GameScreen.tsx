@@ -44,8 +44,10 @@ export interface GameScreenProps {
 /**
  * The game: whose turn it is, the board and the controls of the current step.
  * Shift step: tapping an edge arrow previews the shift (with the same rule the
- * server uses); tapping it again or "Työnnä" sends it. Move step: tapping a
- * highlighted square moves there at once; "Jää paikalleen" stays. The viewer's
+ * server uses) and offers the squares reachable after it; tapping one sends the
+ * shift and then the move (push and pick), "Jää paikalleen" shifts and stays. With
+ * "Työnnä erikseen" on, tapping the arrow again or "Työnnä" sends only the shift.
+ * Move step: tapping a highlighted square moves there at once; "Jää paikalleen" stays. The viewer's
  * target is marked wherever its tile is; a finished game shows the result with
  * "Pelaa uudelleen" and "Alkuun". A spectator gets no step controls: "Katsot peliä", the bots'
  * speed while only bots play, every player's target, and "Uusi bottipeli" after a bot-only game. Once the current player's time is up, the others get the kick
@@ -62,7 +64,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
   const [turns, setTurns] = useState(0);
   const [leaving, setLeaving] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { confirmShift, confirmMove } = useSettings();
+  const { separateShift, confirmMove } = useSettings();
   // Confirm move on: the tapped square waiting for a second tap or "Kävele tänne".
   const [chosen, setChosen] = useState<Square>();
   useTurnAlert(view);
@@ -97,6 +99,8 @@ export function GameScreen({ view, session }: GameScreenProps) {
   const forbidden = view.lastInsertion ? reverseOf(view.lastInsertion) : undefined;
   const shifting = view.isMyTurn && view.step === "shift";
   const canAct = shifting && !pending;
+  // Push and pick: the preview's reachable squares are the move, sent together with the shift.
+  const picking = shifting && preview !== undefined && !separateShift;
 
   // Hint: once asked for, it stays on for the rest of the viewer's turn (the move step follows by itself).
   // A solo puzzle player is always on turn, so a new turn number ends it too.
@@ -120,6 +124,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
     const turn = shiftHint(view);
     if (!turn) return;
     setShiftHinted(turn);
+    setChosen(undefined);
     setSelected(turn.insertion);
     setTurns(quarterTurns(view.board.spare.rotation, turn.rotation));
   };
@@ -142,12 +147,27 @@ export function GameScreen({ view, session }: GameScreenProps) {
 
   const select = (insertion: InsertionId) => {
     if (!canAct || insertion === forbidden) return;
-    if (insertion === selected || !confirmShift) void confirm(insertion);
-    else setSelected(insertion);
+    if (insertion !== selected) {
+      setSelected(insertion);
+      setChosen(undefined);
+    } else if (separateShift) void confirm(insertion);
+  };
+  const rotateSpare = () => {
+    setTurns((n) => n + 1);
+    setChosen(undefined);
   };
 
+  // Push and pick: the move is sent once the previewed shift is accepted (a rejection drops the preview).
+  const pick = async (insertion: InsertionId, target: Square) => {
+    const result = await shift(insertion, spare.rotation);
+    if (!result) return;
+    if (result.ok) await move(target);
+    else setSelected(undefined);
+  };
   const moveTo = (target: Square) => {
-    if (!pending) void move(target);
+    if (pending) return;
+    if (picking && selected) void pick(selected, target);
+    else void move(target);
   };
   const choose = (target: Square) => {
     if (!confirmMove || (chosen && sameSquare(chosen, target))) moveTo(target);
@@ -234,10 +254,16 @@ export function GameScreen({ view, session }: GameScreenProps) {
               ? undefined
               : nextTraced
         }
-        reach={reach}
+        reach={picking ? undefined : reach}
         hint={hintSquare}
         shiftTargets={shifting ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
-        moveTargets={view.reachable ? { reachable: view.reachable, busy: pending, selected: chosen, onSelect: choose } : undefined}
+        moveTargets={
+          picking && reach
+            ? { reachable: reach, busy: pending, selected: chosen, onSelect: choose }
+            : view.reachable
+              ? { reachable: view.reachable, busy: pending, selected: chosen, onSelect: choose }
+              : undefined
+        }
       />
       {view.finished ? (
         view.spectating ? (
@@ -300,12 +326,17 @@ export function GameScreen({ view, session }: GameScreenProps) {
           target={target}
           enabled={view.isMyTurn}
           pending={pending}
-          onRotate={() => setTurns((n) => n + 1)}
+          onRotate={rotateSpare}
           onHint={showHint}
           onUndo={view.daily ? () => void undo?.() : undefined}
           canUndo={view.undoable && !preview}
           onConfirm={() => selected && void confirm(selected)}
           onCancel={() => setSelected(undefined)}
+          picking={picking}
+          onStay={() => preview && myIndex >= 0 && moveTo(preview.pawns[myIndex]!)}
+          chosen={chosen !== undefined}
+          onGo={() => chosen && moveTo(chosen)}
+          onCancelChoice={() => setChosen(undefined)}
         />
       )}
       <Notice message={message} />
@@ -313,6 +344,7 @@ export function GameScreen({ view, session }: GameScreenProps) {
         playing={!view.spectating && view.phase === "playing" && !view.finished}
         isMyTurn={view.isMyTurn}
         step={view.step}
+        previewing={shifting && preview !== undefined}
         heading={view.myTarget === undefined ? undefined : view.myTarget === "home" ? "home" : "treasure"}
       />
     </Screen>

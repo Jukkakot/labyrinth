@@ -19,17 +19,20 @@ export interface ShiftTargetsProps {
   forbidden?: InsertionId;
   /** While a command waits for the server nothing is selectable. */
   busy?: boolean;
+  /** Squares ("row,col") taken by move targets: their arrows are left out, the square wins the tap. */
+  covered?: ReadonlySet<string>;
   onSelect(insertion: InsertionId): void;
 }
 
 /** Tap targets for the 12 insertion points: the whole entry tile, marked by an arrow at its outer edge. */
-export function ShiftTargets({ selected, forbidden, busy = false, onSelect }: ShiftTargetsProps) {
+export function ShiftTargets({ selected, forbidden, busy = false, covered, onSelect }: ShiftTargetsProps) {
   const { t } = useTranslation();
   return (
     <g>
       {INSERTIONS.map((id) => {
         const side = id[0] as keyof typeof ARROWS;
         const entry = insertionLine(id)[0]!;
+        if (covered?.has(`${entry.row},${entry.col}`)) return null;
         // People count lines from 1.
         const base = t(`shift.from${side}`, { line: Number(id.slice(1)) + 1 });
         const isForbidden = id === forbidden;

@@ -28,6 +28,12 @@ for the tappable squares; E3 restyles them later); a combined server command.
 - **Staying:** the own square (where the preview carries the pawn) is a target, and "Jää paikalleen"
   under the board sends the shift and stays. The controls of a preview are "Peru" (drop the preview)
   and "Jää paikalleen", with the line "Napauta ruutua, jonne kävelet". "Työnnä" is not shown.
+- **Arrow vs. square on the same edge tile: the square wins.** Arrows sit on the 12 edge entry tiles
+  and use the whole tile as their tap target; in the preview those tiles are often reachable (always
+  when the pawn can step onto the pushed-in tile). Splitting the tile would put both targets under
+  44 px on a phone, so during the preview an arrow on an offered square is left out; the square walks,
+  and "Peru" brings every arrow back (one extra tap only when switching to such an arrow). Found in
+  the UI check. `clearer-board-marks` may revisit this if it moves arrows or marks outside the board.
 - **Tapping the selected arrow again does nothing** in push and pick (no hidden confirm gesture); a
   different arrow moves the preview, the rotate button turns the tile.
 - **Setting "Työnnä erikseen" (`separateShift`, default off) replaces `confirmShift`.** On = today's

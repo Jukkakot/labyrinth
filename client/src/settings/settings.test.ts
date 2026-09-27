@@ -27,7 +27,7 @@ afterEach(() => {
 describe("settings › Settings on the device", () => {
   it("defaults without stored settings", () => {
     expect(loadSettings(memoryStorage())).toEqual(DEFAULT_SETTINGS);
-    expect(DEFAULT_SETTINGS).toMatchObject({ confirmShift: true, confirmMove: false, theme: "system", sounds: true, turnTitle: true, vibration: true });
+    expect(DEFAULT_SETTINGS).toMatchObject({ separateShift: false, confirmMove: false, theme: "system", sounds: true, turnTitle: true, vibration: true });
   });
 
   it("Broken storage: garbage, wrong types and a throwing storage fall back to the defaults", () => {
@@ -37,6 +37,12 @@ describe("settings › Settings on the device", () => {
     expect(partly).toEqual({ ...DEFAULT_SETTINGS, sounds: false });
     const throwing = { getItem: () => { throw new Error("blocked"); } } as unknown as Storage;
     expect(loadSettings(throwing)).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it("Old stored confirmation: confirmShift from earlier versions is ignored", () => {
+    const old = loadSettings(memoryStorage({ "labyrinth.settings": JSON.stringify({ confirmShift: true, sounds: false }) }));
+    expect(old).toEqual({ ...DEFAULT_SETTINGS, sounds: false });
+    expect(old).not.toHaveProperty("confirmShift");
   });
 
   it("Setting remembered: a change applies at once, notifies and survives a reload", () => {

@@ -137,7 +137,8 @@
     "fromS": "Push into column {{line}} from the bottom",
     "fromW": "Push into row {{line}} from the left",
     "fromE": "Push into row {{line}} from the right",
-    "forbidden": "{{label}} – not allowed, it would push the tile straight back"
+    "forbidden": "{{label}} – not allowed, it would push the tile straight back",
+    "pickHint": "Pick a square"
   },
   "errors": {
     "NOT_SEATED": "You are not in this game",
@@ -276,8 +277,8 @@
     "title": "Settings",
     "back": "Back",
     "confirmations": "Confirmations",
-    "confirmShift": "Confirm push",
-    "confirmShiftNote": "Tapping an arrow shows a preview first; a second tap pushes.",
+    "separateShift": "Push separately",
+    "separateShiftNote": "Tapping an arrow shows a preview first; a second tap or Push pushes, and then you walk. Off: one tap on a square pushes and walks.",
     "confirmMove": "Confirm move",
     "confirmMoveNote": "Tapping a square selects it; a second tap walks there.",
     "theme": "Theme",
@@ -308,12 +309,12 @@
     },
     "push": {
       "title": "Push a tile",
-      "body": "Every turn starts with a push: tap an arrow on the edge of the board and the spare tile slides in, moving the whole row. You can turn the tile first.",
+      "body": "Every turn starts with a push: tap an arrow on the board edge and the spare tile slides in, showing at once where you can go. You can still pick another arrow or rotate the tile.",
       "more": "The tile pushed out at the other end is the next spare. A pawn pushed out comes back at the other end of the row. You may not undo the previous push by pushing the same row straight back."
     },
     "walk": {
       "title": "Walk",
-      "body": "After the push, walk along open corridors as far as you like – or stay where you are. The squares you can reach are marked."
+      "body": "Tap a marked square: the tile is pushed in and your pawn walks there along the open corridors – or choose Stay."
     },
     "treasure": {
       "title": "Treasures",

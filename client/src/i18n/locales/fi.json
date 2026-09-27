@@ -137,7 +137,8 @@
     "fromS": "Työnnä alhaalta sarakkeeseen {{line}}",
     "fromW": "Työnnä vasemmalta riviin {{line}}",
     "fromE": "Työnnä oikealta riviin {{line}}",
-    "forbidden": "{{label}} – ei sallittu, työntäisi laatan takaisin"
+    "forbidden": "{{label}} – ei sallittu, työntäisi laatan takaisin",
+    "pickHint": "Valitse ruutu"
   },
   "errors": {
     "NOT_SEATED": "Et ole mukana tässä pelissä",
@@ -276,8 +277,8 @@
     "title": "Asetukset",
     "back": "Takaisin",
     "confirmations": "Vahvistukset",
-    "confirmShift": "Vahvista työntö",
-    "confirmShiftNote": "Nuolen napautus näyttää ensin esikatselun, toinen napautus työntää.",
+    "separateShift": "Työnnä erikseen",
+    "separateShiftNote": "Nuoli näyttää ensin esikatselun, toinen napautus tai Työnnä työntää, ja vasta sitten kävellään. Pois päältä työntö ja kävely tehdään yhdellä ruudun napautuksella.",
     "confirmMove": "Vahvista siirto",
     "confirmMoveNote": "Ruudun napautus valitsee sen, toinen napautus kävelee sinne.",
     "theme": "Teema",
@@ -308,12 +309,12 @@
     },
     "push": {
       "title": "Työnnä laatta",
-      "body": "Vuoro alkaa aina työnnöllä: napauta nuolta laudan reunalla, niin vapaa laatta liukuu sisään ja koko rivi siirtyy. Voit kääntää laattaa ensin.",
+      "body": "Vuoro alkaa aina työnnöllä: napauta nuolta laudan reunalla, niin vapaa laatta asettuu sisään ja näet heti, mihin pääset. Voit vielä vaihtaa nuolta tai kääntää laattaa.",
       "more": "Toisesta päästä ulos työntynyt laatta on seuraava vapaa laatta. Jos nappula työntyy ulos, se palaa rivin toiseen päähän. Edellistä työntöä ei saa kumota työntämällä samaa riviä heti takaisin."
     },
     "walk": {
       "title": "Kävele",
-      "body": "Työnnön jälkeen kävele avoimia käytäviä pitkin niin pitkälle kuin haluat – tai jää paikallesi. Ruudut, joihin pääset, on merkitty."
+      "body": "Napauta merkittyä ruutua: laatta työntyy sisään ja nappulasi kävelee avoimia käytäviä pitkin sinne – tai valitse Jää paikalleen."
     },
     "treasure": {
       "title": "Aarteet",
