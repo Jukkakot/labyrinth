@@ -63,6 +63,27 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
 Extras done outside the numbered list: ~~`how-to-play`~~ (done): "Näin pelaat" rules screen with
 pictures from the start screen and the settings (also during a game).
 
+## Refinement round 1 (asked 2026-09-27)
+
+Foundations are done; the user trims and clarifies. Autopilot is off: each change stops for review.
+In this order:
+
+1. `simpler-start-screen`: fewer choices on the start screen.
+   - Remove "Luo yksityinen peli". Friends still join through the waiting room's invite link;
+     private games (hidden from the lobby) are no longer created from the UI.
+   - Remove "Katso bottien peliä". Instead the bot quick play gets a "Pelaan itse" toggle (default
+     on). Off = a bot-only game to watch (2–4 bots, speed choice as today). To decide in the
+     proposal: whether the watched game runs on the device like quick play (no wake-up) or stays
+     on the server as today.
+   - Remove "Jaa tulos" from the daily puzzle.
+   Prune the specs, i18n keys, code and wiki of what is removed (no dead paths left).
+2. `hide-found-treasures`: treasures already collected (by anyone) are no longer drawn on the
+   board tiles, so the board shows only what is still in play. Hint and bots already skip them.
+3. `clearer-board-marks`: a first-time player must understand every mark on the board (target,
+   reachable squares, hint ring, last push/route, shift preview reach). Start by listing each mark
+   with a screenshot and asking the user which ones confuse; options: fewer/distinct marks, a
+   short label or legend, tie them to the first-game tips.
+
 ## Improvement backlog
 
 Ideas for existing features, picked up after the roadmap items above or when a change touches the

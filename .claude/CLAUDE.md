@@ -32,7 +32,7 @@ initiative whenever they fit; do not wait to be asked. When unsure whether one f
   update the wiki if it affects it).
 - After finishing a step, name the natural next OpenSpec step.
 
-## Autopilot (foundation phase — currently ON)
+## Autopilot (foundation phase — currently OFF since 2026-09-27, refinement round)
 
 While we are building roadmap features for the first time ("laying foundations"), the user trusts
 Claude's judgement and does not want to approve every step. This overrides the review stops above:
