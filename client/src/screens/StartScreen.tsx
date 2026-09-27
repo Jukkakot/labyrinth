@@ -41,15 +41,17 @@ function useSecondsWaited(active: boolean): number {
   useEffect(() => {
     if (!active) return;
     const since = Date.now();
-    setSeconds(0);
     const timer = setInterval(() => setSeconds(Math.floor((Date.now() - since) / 1000)), 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      setSeconds(0);
+    };
   }, [active]);
   return active ? seconds : 0;
 }
 
 /** Seconds as m:ss. */
-export function minutesSeconds(total: number): string {
+function minutesSeconds(total: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
