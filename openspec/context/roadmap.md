@@ -53,7 +53,9 @@ Direction (decided 2026-09-27): **single player first** (vs bots); multiplayer e
     device games, not in the daily puzzle. Originally: a player can hand their seat to the bot for a while and take
     it back; the chip shows it to everyone. Same fair `BotStrategy` as bots. To decide in the
     proposal: whether a dropped or timed-out player is auto-played instead of kicked
-21. `settings`: confirmations, theme, sounds, **turn notification** (tab title, vibration, sound)
+21. ~~`settings`~~ (done): settings screen from the start screen and a gear in the game's top bar
+    (language moved there): confirm shift/move, theme, generated sounds, turn notification (tab
+    title while hidden, vibration). Originally: confirmations, theme, sounds, **turn notification** (tab title, vibration, sound)
 22. `share-and-colors`: share the invite link through the phone's share sheet (Web Share API);
     a player picks their own colour or avatar
 
