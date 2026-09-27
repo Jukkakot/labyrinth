@@ -190,15 +190,15 @@ When the viewer collects a treasure, the game screen SHALL briefly show which tr
 - **THEN** a short message names the dragon and the target highlight moves to the next target
 
 ### Requirement: Game result shown
-When the game finishes, the turn line SHALL be replaced by the result: "Voitit!" for the winner, and "Maija voitti" (the winner's nickname) with the winner's pawn shape and colour for everyone else. Shift and move controls MUST NOT be offered any more. A "Uusi peli" button MUST leave the finished game and return to the start screen.
+When the game finishes, the turn line SHALL be replaced by the result: "Voitit!" for the winner, and "Maija voitti" (the winner's nickname) with the winner's pawn shape and colour for everyone else. Shift and move controls MUST NOT be offered any more. A seated player MUST be offered "Pelaa uudelleen" as the primary action (see the rematch requirement of game-session) and "Alkuun", which leaves the finished game and returns to the start screen.
 
 #### Scenario: Viewer wins
 - **WHEN** the viewer's move wins the game
-- **THEN** the screen says "Voitit!", no controls are offered, and "Uusi peli" is shown
+- **THEN** the screen says "Voitit!", no step controls are offered, and "Pelaa uudelleen" and "Alkuun" are shown
 
 #### Scenario: Someone else wins
 - **WHEN** Maija in seat 2 wins and the viewer is in seat 1
-- **THEN** the screen says "Maija voitti" with her pawn, and "Uusi peli" returns the viewer to the start screen
+- **THEN** the screen says "Maija voitti" with her pawn, and "Alkuun" returns the viewer to the start screen
 
 ### Requirement: Kick control
 When the current player's turn time is up, every other seated player SHALL be offered, in place of the step controls under the board, a button that names the slow player by nickname ("Poista Maija"). Tapping it MUST ask for confirmation ("Poistetaanko Maija pelistä?" with "Poista" and "Peru") before the kick is sent. The control MUST NOT be offered to the current player, before the time is up, or in a finished game. While the kick waits for the server, the buttons MUST show that it is pending. If the turn passes before the kick is confirmed, the control MUST disappear.
