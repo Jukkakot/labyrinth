@@ -145,8 +145,10 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
 the 24 treasures), `rng` + `setup` (seeded board; draw order pinned by a golden test), `shift`
 (`shiftBoard`, insertion ids, reverse rule), `move` (reachability, shortest path), `treasures`
 (deals, collect and win), `turns` (next seat, kick rule, clock limits), `bot` (the replaceable
-`BotStrategy` over a fair `BotView`, the greedy `chooseBotTurn`, `botSeed`; a whole-game bot
-simulation test takes the strategy as a parameter, to compare smarter ones later). Test fixtures in
+`BotStrategy` over a fair `BotView`, `chooseBotTurn` = the look-ahead bot in `botLookahead`
+(typed-array board, one own turn plus every next shift, averaged opponent blocking; a few ms per
+turn), the old greedy one kept as a baseline, `botSeed`), `botTournament` (whole games among
+strategies, win rates and ms per turn; not in the package entry). Test fixtures in
 `@labyrinth/rules/testing` (`boardFromRows`, `boardToText`). Board coordinates: `(row, col)`
 0–6 from the top-left; tile ids never change, which is what the client animates by.
 

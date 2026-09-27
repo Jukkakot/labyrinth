@@ -1,4 +1,5 @@
 import type { Board } from "./board.js";
+import { lookaheadStrategy } from "./botLookahead.js";
 import { ALL_SQUARES, type Square } from "./geometry.js";
 import { reachableSquares } from "./move.js";
 import { MAX_SEED, type Rng } from "./rng.js";
@@ -48,11 +49,11 @@ export function allowedShifts(last: InsertionId | undefined): { insertion: Inser
 const distance = (a: Square, b: Square) => Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
 
 /**
- * The first, greedy strategy: reach the target this turn if any allowed shift lets it,
- * otherwise end as close to it as possible (rows plus columns). A target pushed onto the spare
- * is out of reach for that shift. Ties are broken with `rng`; other pawns never block.
+ * The first, greedy strategy, kept as the tournament baseline: reach the target this turn if any
+ * allowed shift lets it, otherwise end as close to it as possible (rows plus columns). A target
+ * pushed onto the spare is out of reach for that shift. Ties are broken with `rng`.
  */
-export const chooseBotTurn: BotStrategy = (view, rng) => {
+export const greedyBotTurn: BotStrategy = (view, rng) => {
   const own = view.seats.find((s) => s.seat === view.seat);
   if (!own) throw new Error(`Seat ${view.seat} is not in the view`);
   const tileId = targetTileId(view.seat, view.target);
@@ -77,6 +78,9 @@ export const chooseBotTurn: BotStrategy = (view, rng) => {
   }
   return best[rng.int(0, best.length - 1)]!;
 };
+
+/** The bots' strategy: the look-ahead one (see `botLookahead.ts`). */
+export const chooseBotTurn: BotStrategy = lookaheadStrategy();
 
 /** A seed for one bot's rng, mixed from the game's deal seed and the bot's seat. */
 export function botSeed(dealSeed: number, seat: number): number {
