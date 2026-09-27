@@ -5,7 +5,8 @@
 
 /*
  * The last turn, all in the mover's colour and never a ring around a tile: the walk is a dashed line
- * from a small hollow start ring to an arrowhead at the pawn; the push is an arrowhead outside the board.
+ * from a small hollow start ring to an arrowhead at the pawn; the push is the pushed-in tile drawn small
+ * outside the board edge, framed, with a pointer toward the board.
  */
 .route {
   fill: none;
@@ -27,16 +28,20 @@
 }
 
 .push {
-  stroke: var(--surface);
-  stroke-width: 2;
-  stroke-linejoin: round;
+  stroke: none;
 }
 
-/* Reach in a preview: hollow rings, unlike the move step's dashed outline with a filled dot. */
-.reach {
+/* Frame of the small pushed-in tile (in tile units, drawn at the mark's scale). */
+.pushedFrame {
   fill: none;
+  stroke-width: 12;
+}
+
+/* Reach in a preview that cannot be tapped (separate shift): hollow dots, unlike the filled move dots. */
+.reach {
+  fill: var(--surface);
   stroke: var(--highlight);
-  stroke-width: 4;
+  stroke-width: 5;
 }
 
 /*
@@ -57,6 +62,16 @@
   stroke: var(--hint);
   stroke-width: 7;
   animation: breathe 1.2s ease-in-out infinite alternate;
+}
+
+.hintBadge {
+  fill: var(--hint);
+  stroke: var(--hint-halo);
+  stroke-width: 3;
+}
+
+.hintBulb {
+  color: var(--hint-halo);
 }
 
 @keyframes breathe {

@@ -138,6 +138,7 @@
     "fromW": "Työnnä vasemmalta riviin {{line}}",
     "fromE": "Työnnä oikealta riviin {{line}}",
     "forbidden": "{{label}} – ei sallittu, työntäisi laatan takaisin",
+    "forbiddenWhy": "Tästä ei voi työntää: laatta palaisi juuri sinne, mistä edellinen tippui.",
     "pickHint": "Valitse ruutu"
   },
   "errors": {

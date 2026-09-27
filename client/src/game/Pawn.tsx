@@ -19,6 +19,8 @@ export interface PawnProps {
   /** The player's nickname, for assistive technology. */
   name?: string;
   isMe?: boolean;
+  /** The viewer's own turn: the own ring pulses slowly. */
+  pulse?: boolean;
   connected?: boolean;
   /** Top-left of the square it stands on, in board units. */
   x?: number;
@@ -29,8 +31,11 @@ export interface PawnProps {
   crowded?: boolean;
 }
 
-/** A player's pawn: its colour + shape (never colour alone); the viewer's own pawn gets a ring. The seat only picks the crowd quadrant. */
-export function Pawn({ seat, look = seat, name = "", isMe = false, connected = true, x = 0, y = 0, moveMs = 0, crowded = false }: PawnProps) {
+/**
+ * A player's pawn: its colour + shape (never colour alone); the viewer's own pawn gets a ring in its
+ * colour, pulsing on the viewer's turn. The seat only picks the crowd quadrant.
+ */
+export function Pawn({ seat, look = seat, name = "", isMe = false, pulse = false, connected = true, x = 0, y = 0, moveMs = 0, crowded = false }: PawnProps) {
   const { t } = useTranslation();
   const label = t(isMe ? "board.pawnMe" : "board.pawn", { name });
   const [dx, dy] = CROWD_OFFSET[seat] ?? [0, 0];
@@ -46,7 +51,12 @@ export function Pawn({ seat, look = seat, name = "", isMe = false, connected = t
       className={connected ? undefined : styles.away}
     >
       <g transform={crowded ? `translate(${50 + dx} ${50 + dy}) scale(${CROWD_SCALE}) translate(-50 -50)` : undefined}>
-        {isMe && <circle cx={50} cy={50} r={34} className={styles.ring} />}
+        {isMe && (
+          <g className={pulse ? styles.pulse : undefined} data-pulse={pulse || undefined}>
+            <circle cx={50} cy={50} r={34} className={styles.ringUnder} />
+            <circle cx={50} cy={50} r={34} className={styles.ring} style={{ stroke: `var(--seat-${look})` }} />
+          </g>
+        )}
         <path d={SHAPES[look]} className={styles.pawn} style={{ fill: `var(--seat-${look})` }} />
       </g>
     </g>

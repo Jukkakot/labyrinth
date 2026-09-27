@@ -249,6 +249,7 @@ describe("board-view › Forbidden reverse shown", () => {
     fireEvent.click(s1);
     expect(tilePosition(container, board.spare.id)).toBeUndefined();
     expect(shift).not.toHaveBeenCalled();
+    expect(screen.getByText("Tästä ei voi työntää: laatta palaisi juuri sinne, mistä edellinen tippui.")).toBeTruthy();
     expect(container.querySelector("[data-insertion='N1']")!.getAttribute("aria-disabled")).toBeNull();
   });
 });
@@ -647,6 +648,11 @@ describe("board-view › Last turn shown (game screen)", () => {
     const push = container.querySelector("[data-push]");
     expect(push?.getAttribute("data-push")).toBe("N3");
     expect(push?.getAttribute("data-look")).toBe("2");
+    // The pushed-in tile (now on N3's entry square) is drawn small outside the board, in its rotation.
+    const pushedIn = shifted.board.squares[squareIndex(insertionLine("N3")[0]!)]!;
+    const small = push?.querySelector(`[data-pushed-tile="${pushedIn.id}"]`);
+    expect(small?.querySelector("[data-tile-id]")?.getAttribute("data-openings")).toBe(openings(pushedIn).join(""));
+    expect(small?.getAttribute("transform")).toMatch(/translate\(332 -46\) scale\(0\.36\)/);
     expect(container.querySelector("[data-route-start]")).toBeTruthy();
     expect(container.querySelector("[data-route-end]")).toBeTruthy();
     const route = container.querySelector("[data-route]")?.getAttribute("data-route")?.split(" ");
@@ -672,6 +678,7 @@ describe("board-view › Hint", () => {
     expect(tilePosition(container, board.spare.id)).toBe(at(entry.row, entry.col));
     expect(container.querySelector("[data-hint]")?.getAttribute("data-hint")).toBe(`${turn.to.row},${turn.to.col}`);
     expect(screen.getByRole("img", { name: `Vihje: kävele ruutuun rivi ${turn.to.row + 1}, sarake ${turn.to.col + 1}` })).toBeTruthy();
+    expect(container.querySelector("[data-hint] [data-hint-badge]")).not.toBeNull();
     expect(shift).not.toHaveBeenCalled();
 
     const other = [...container.querySelectorAll<HTMLElement>('[aria-label="Pelilauta"] [aria-pressed="false"]')].find((el) => el.getAttribute("aria-disabled") !== "true")!;
@@ -777,5 +784,65 @@ describe("settings › Settings on the device (in the game)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Takaisin" }));
     expect(screen.queryByRole("heading", { name: "Asetukset" })).toBeNull();
     expect(screen.getByRole("button", { name: "Asetukset" })).toBeTruthy();
+  });
+});
+
+describe("board-view › Pawns on their squares (own ring)", () => {
+  it("Own pawn on the viewer's turn: a ring in the pawn's colour pulses; on another's turn it is still", () => {
+    const { container, rerender } = setup();
+    const own = () => container.querySelector('[aria-label="Pelilauta"] [data-me]')!;
+    expect(own().querySelector("[data-pulse]")).not.toBeNull();
+    expect(own().innerHTML).toContain("var(--seat-1)");
+    rerender(<GameScreen view={view({ turnSeat: 2 })} session={{ ...extra, shift: vi.fn(), move: vi.fn(), kick: vi.fn(), leave: vi.fn(), pending: false }} />);
+    expect(own().querySelector("[data-pulse]")).toBeNull();
+  });
+});
+
+describe("board-view › Idle guide", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("Waiting on the shift step: the arrows nudge after 10 s; tapping an arrow stops it and the offered squares nudge 10 s later", () => {
+    vi.useFakeTimers();
+    const { container } = setup();
+    const arrowsNudge = () => container.querySelector("[data-insertion]")?.parentElement?.getAttribute("data-nudge");
+    act(() => {
+      vi.advanceTimersByTime(9_000);
+    });
+    expect(arrowsNudge()).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(arrowsNudge()).toBe("true");
+
+    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+    const dotsNudge = () => container.querySelector("[data-move-target]")?.parentElement?.getAttribute("data-nudge");
+    expect(dotsNudge()).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(dotsNudge()).toBe("true");
+  });
+
+  it("no nudge on another player's turn", () => {
+    vi.useFakeTimers();
+    const { container } = setup({ turnSeat: 2, phase: "move" });
+    act(() => {
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(container.querySelector("[data-nudge]")).toBeNull();
+  });
+});
+
+describe("board-view › Move controls (dots)", () => {
+  it("Dots mark where to walk: each offered square has a filled hub dot and no outline", () => {
+    const { container } = setup({ phase: "move" });
+    const targets = [...container.querySelectorAll("[data-move-target]")];
+    expect(targets.length).toBeGreaterThan(0);
+    for (const target of targets) {
+      expect(target.querySelectorAll("rect")).toHaveLength(1);
+      expect(target.querySelector("circle[r='13']")).not.toBeNull();
+    }
   });
 });

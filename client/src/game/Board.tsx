@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { BOARD_SIZE, isFixed, type Board as BoardModel, type Square } from "@labyrinth/rules";
+import { BOARD_SIZE, insertionLine, isFixed, squareIndex, type Board as BoardModel, type Square } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import type { SeatView } from "../session/viewModel.ts";
 import styles from "./Board.module.css";
@@ -9,7 +9,7 @@ import { ShiftTargets, type ShiftTargetsProps } from "./ShiftTargets.tsx";
 import { collectedTreasures, isCollected } from "./collected.ts";
 import { targetOf, type TargetMark } from "./target.ts";
 import { TILE_UNITS, TileView } from "./TileView.tsx";
-import { HintMark, PushMark, ReachMarks, RouteTrace } from "./TurnMarks.tsx";
+import { BOARD_MARGIN, HintMark, PushedTileMark, ReachMarks, RouteTrace } from "./TurnMarks.tsx";
 import type { TurnTrace } from "./turnTrace.ts";
 
 const SIZE = BOARD_SIZE * TILE_UNITS;
@@ -31,10 +31,12 @@ export interface BoardProps {
   reach?: readonly Square[];
   /** The hinted square to walk to. */
   hint?: Square;
+  /** The viewer's own turn: their pawn's ring pulses. */
+  myTurn?: boolean;
 }
 
 /** The 7×7 board as one scalable SVG, with the pawns on their squares and the controls of the current step. */
-export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target, trace, reach, hint }: BoardProps) {
+export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target, trace, reach, hint, myTurn = false }: BoardProps) {
   const { t } = useTranslation();
   const clipId = useId();
   const collected = collectedTreasures(seats);
@@ -43,7 +45,7 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
   // The last turn's marks are drawn in the mover's pawn colour.
   const traceLook = trace?.seat === undefined ? undefined : (seats.find((s) => s.seat === trace.seat)?.look ?? trace.seat);
   return (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className={styles.board} aria-label={t("board.label")} role="group">
+    <svg viewBox={`${-BOARD_MARGIN} ${-BOARD_MARGIN} ${SIZE + 2 * BOARD_MARGIN} ${SIZE + 2 * BOARD_MARGIN}`} className={styles.board} aria-label={t("board.label")} role="group">
       {/* Corridors open toward the board edge end at the tiles' outer edge instead of sticking out. */}
       <clipPath id={clipId}>
         <rect x={3} y={3} width={SIZE - 6} height={SIZE - 6} rx={10} />
@@ -66,14 +68,16 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
           );
         })}
       </g>
-      {trace?.insertion && traceLook !== undefined && <PushMark insertion={trace.insertion} look={traceLook} />}
+      {trace?.insertion && traceLook !== undefined && (
+        <PushedTileMark insertion={trace.insertion} tile={board.squares[squareIndex(insertionLine(trace.insertion)[0]!)]!} look={traceLook} />
+      )}
       {trace?.route && traceLook !== undefined && <RouteTrace route={trace.route} look={traceLook} />}
       {reach && <ReachMarks squares={reach} />}
       {moveTargets && <MoveTargets {...moveTargets} />}
       {hint && <HintMark square={hint} />}
       {/* Pawns never catch taps: a move target under a pawn must stay tappable. */}
       <g className={styles.pawns}>
-        <PawnLayer seats={seats} board={board} />
+        <PawnLayer seats={seats} board={board} myTurn={myTurn} />
       </g>
       {shiftTargets && <ShiftTargets {...shiftTargets} covered={covered} />}
     </svg>

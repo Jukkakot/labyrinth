@@ -24,7 +24,7 @@
   /* The viewer's own target: solid ring + badge (move targets are dashed, previews orange) */
   --target: #7b2cbf;
   --target-contrast: #fffaf0;
-  /* The hint's square: yellow ring with a dark halo, apart from the orange reach rings */
+  /* The hint's square: yellow ring with a dark halo, apart from the orange reach and move dots */
   --hint: #f0e442;
   --hint-halo: var(--text);
 

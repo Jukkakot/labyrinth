@@ -138,6 +138,7 @@
     "fromW": "Push into row {{line}} from the left",
     "fromE": "Push into row {{line}} from the right",
     "forbidden": "{{label}} – not allowed, it would push the tile straight back",
+    "forbiddenWhy": "You can't push here: the tile would go straight back to where the last one dropped out.",
     "pickHint": "Pick a square"
   },
   "errors": {

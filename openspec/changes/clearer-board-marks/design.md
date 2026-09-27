@@ -61,3 +61,11 @@ the route trace or the tile look; moving the arrows off the board.
   real tile is on the board.
 - Widening into the gutter means the board no longer lines up exactly with the controls below
   (~16 px wider on each side at most); acceptable.
+
+## Found in the UI check
+
+- 360×780 portrait: a tile is ~45 px (was ~47 px), page has no horizontal scroll; a side push's
+  small tile sits ~2 px from the screen edge. Landscape (780×360) boards were already capped by
+  height (60dvh); the margin makes their tiles ~25 px (was ~31 px); landscape is not the reference.
+- The forbidden-arrow notice going away must not restart the idle wait: the idle key counts taps,
+  not whether the notice is shown.

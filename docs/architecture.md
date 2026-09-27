@@ -203,9 +203,9 @@ client/src/
   in push and pick (the default turn flow) a tap on a square of the previewed reach sends the two existing
   commands back to back, `shift` and, once accepted, `move` (no combined command; "Työnnä erikseen" in the
   settings brings back a separately confirmed shift);
-  the last turn's marks (where the tile was pushed in, marked outside the board edge; walked route) are derived by comparing successive views.
+  the last turn's marks (the pushed-in tile drawn small outside the board edge; walked route) are derived by comparing successive views.
 - **UI foundation:** every colour, spacing and radius is a token (light and dark); CSS Modules;
-  anything shown twice is a shared component. Board: one SVG, 100 units per tile; pawns = seat
+  anything shown twice is a shared component. Board: one SVG, 100 units per tile, with a 48-unit margin around the board for the pushed-tile mark (on a phone the SVG reaches into the page gutter); reachable squares are hub dots (filled = tappable), the idle guide nudges them or the arrows after 10 s; pawns = seat
   colour + shape; tiles and pawns animate with CSS transforms keyed by id; reduced motion honoured.
   Tiles draw only treasures still in play: the collected set is the union of every seat's `found`
   (synced to players and spectators), except that the viewer's target tile always shows its treasure.

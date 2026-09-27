@@ -79,7 +79,7 @@ In this order:
    Prune the specs, i18n keys, code and wiki of what is removed (no dead paths left).
 2. ~~`hide-found-treasures`~~ (done): collected treasures hidden on board and spare tiles, the own target always shown. Originally: treasures already collected (by anyone) are no longer drawn on the
    board tiles, so the board shows only what is still in play. Hint and bots already skip them.
-3. `clearer-board-marks`: a first-time player must understand every mark on the board. Marks
+3. ~~`clearer-board-marks`~~ (done): pushed-in tile drawn small outside the board edge, own pawn ring in its colour (pulsing on your turn), hint bulb badge, forbidden arrow explains itself, 10 s idle nudge, reachable squares as hub dots. Originally: a first-time player must understand every mark on the board. Marks
    listed and variants shown to the user as mock-ups (artifact "Laudan merkit",
    https://claude.ai/artifact/EsTs5XeSs9a8kcogcnZrbW). **The user picked (2026-09-27): A2, B2, C1, D2, E3:**
    - A2 last push: the pushed-in tile drawn small just outside the board edge where it came in, in

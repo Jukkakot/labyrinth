@@ -1,11 +1,14 @@
-/* Square and as large as fits: full width on a phone, capped by height on short or wide screens. */
+/*
+ * Square and as large as fits: full width on a phone, capped by height on short or wide screens.
+ * The drawing keeps a margin around the board for the pushed-tile mark; on a phone it reaches into
+ * the page gutter (centred overflow), so the board itself shrinks only a little.
+ */
 .board {
   display: block;
-  width: min(100%, 60dvh, 640px);
+  flex-shrink: 0;
+  width: min(100% + 2 * var(--space-4), 60dvh, 640px);
   aspect-ratio: 1;
   height: auto;
-  /* The last push is marked just outside the board edge, in the page gutter. */
-  overflow: visible;
 }
 
 .pawns {

@@ -45,3 +45,54 @@
 .target[aria-disabled="true"]:not(.forbidden) {
   cursor: progress;
 }
+
+/* Idle guide: the arrow badge swings gently toward the board and back. */
+.mark {
+  transform-box: fill-box;
+}
+
+.nudgeN .mark {
+  animation: nudgeDown 1.4s ease-in-out infinite;
+}
+
+.nudgeS .mark {
+  animation: nudgeUp 1.4s ease-in-out infinite;
+}
+
+.nudgeW .mark {
+  animation: nudgeRight 1.4s ease-in-out infinite;
+}
+
+.nudgeE .mark {
+  animation: nudgeLeft 1.4s ease-in-out infinite;
+}
+
+@keyframes nudgeDown {
+  50% {
+    transform: translateY(8px);
+  }
+}
+
+@keyframes nudgeUp {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes nudgeRight {
+  50% {
+    transform: translateX(8px);
+  }
+}
+
+@keyframes nudgeLeft {
+  50% {
+    transform: translateX(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark {
+    animation: none !important;
+  }
+}

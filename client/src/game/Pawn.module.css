@@ -4,11 +4,33 @@
   stroke-linejoin: round;
 }
 
+/* The viewer's own pawn: a ring in its own colour on a light under-stroke, so it reads on any tile. */
+.ringUnder {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 9;
+}
+
 .ring {
   fill: none;
-  stroke: var(--text);
-  stroke-width: 4;
-  stroke-dasharray: 8 6;
+  stroke-width: 5;
+}
+
+/* On the viewer's turn the ring breathes slowly. */
+.pulse {
+  animation: ownPulse 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes ownPulse {
+  to {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
 }
 
 /* Disconnected player: still shown, visibly faded. */

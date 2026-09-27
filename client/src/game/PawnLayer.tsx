@@ -26,7 +26,7 @@ const squareKey = (sq: Square) => `${sq.row},${sq.col}`;
  * (wrap-around, no path, reduced motion). A newer change finishes a walk in
  * progress at once.
  */
-export function PawnLayer({ seats, board }: { seats: SeatView[]; board: Board }) {
+export function PawnLayer({ seats, board, myTurn = false }: { seats: SeatView[]; board: Board; /** The viewer's own turn: their ring pulses. */ myTurn?: boolean }) {
   const key = `${board.spare.id}|${seats.map((s) => `${s.sessionId}@${squareKey(s.square)}`).join(";")}`;
   const [seen, setSeen] = useState(() => ({ key, spare: board.spare.id, squares: new Map(seats.map((s) => [s.sessionId, s.square])) }));
   const [shown, setShown] = useState<Record<string, Shown>>({});
@@ -82,6 +82,7 @@ export function PawnLayer({ seats, board }: { seats: SeatView[]; board: Board })
             look={s.look}
             name={s.name}
             isMe={s.isMe}
+            pulse={s.isMe && myTurn}
             connected={s.connected}
             x={square.col * TILE_UNITS}
             y={square.row * TILE_UNITS}

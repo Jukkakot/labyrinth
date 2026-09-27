@@ -11,15 +11,17 @@ export interface MoveTargetsProps {
   busy?: boolean;
   /** Confirm move on: the square chosen and waiting for a second tap. */
   selected?: Square;
+  /** Idle guide: the dots nudge gently. */
+  nudge?: boolean;
   onSelect(target: Square): void;
 }
 
-/** Tap targets for the move step: every reachable square outlined with a dot on its hub; the own square means stay. */
-export function MoveTargets({ reachable, busy = false, selected, onSelect }: MoveTargetsProps) {
+/** Tap targets for the move: every reachable square marked by a filled dot on its hub, the whole tile tappable; the own square means stay. */
+export function MoveTargets({ reachable, busy = false, selected, nudge = false, onSelect }: MoveTargetsProps) {
   const { t } = useTranslation();
   const own = reachable[0];
   return (
-    <g>
+    <g data-nudge={nudge || undefined}>
       {reachable.map((sq) => {
         const isOwn = own !== undefined && sameSquare(sq, own);
         // People count rows and columns from 1.
@@ -42,13 +44,13 @@ export function MoveTargets({ reachable, busy = false, selected, onSelect }: Mov
             aria-disabled={busy || undefined}
             aria-pressed={selected ? sameSquare(sq, selected) : undefined}
             data-move-target={`${sq.row},${sq.col}`}
-            className={styles.target}
+            className={nudge ? `${styles.target} ${styles.nudge}` : styles.target}
             onClick={activate}
             onKeyDown={onKeyDown}
           >
             <rect width={TILE_UNITS} height={TILE_UNITS} className={styles.hit} />
-            <rect x={8} y={8} width={84} height={84} rx={8} className={styles.outline} />
-            <circle cx={50} cy={50} r={7} className={styles.dot} />
+            <circle cx={50} cy={50} r={26} className={styles.ring} />
+            <circle cx={50} cy={50} r={13} className={styles.dot} />
           </g>
         );
       })}

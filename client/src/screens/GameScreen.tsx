@@ -21,6 +21,7 @@ import { SpectatorCount, SpectatorPanel } from "../game/SpectatorControls.tsx";
 import type { TargetMark } from "../game/target.ts";
 import { TurnLine } from "../game/TurnLine.tsx";
 import { nextTrace } from "../game/turnTrace.ts";
+import { useIdle } from "../game/idle.ts";
 import { NOTICE_MS, type GameSession } from "../session/useGameSession.ts";
 import type { GameView } from "../session/viewModel.ts";
 import { playSound } from "../settings/feedback.ts";
@@ -175,6 +176,19 @@ export function GameScreen({ view, session }: GameScreenProps) {
   };
   const me = view.seats.find((s) => s.isMe);
 
+  // A tap on the forbidden arrow explains why for a moment (a newer tap restarts the time).
+  const [forbiddenTaps, setForbiddenTaps] = useState(0);
+  const [explained, setExplained] = useState(false);
+  useEffect(() => {
+    if (!explained) return;
+    const timer = setTimeout(() => setExplained(false), NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [explained, forbiddenTaps]);
+
+  // Idle guide: after a while without any action on the viewer's turn, what to tap next nudges.
+  const idleKey = [boardKey, selected ?? "", turns, chosen ? `${chosen.row},${chosen.col}` : "", hinted, forbiddenTaps].join("|");
+  const idle = useIdle(idleKey, view.isMyTurn && !view.myAutoplay && !view.finished && !pending && !leaving);
+
   // The best route's replay on a solved puzzle: the board shows its frames instead; nothing is sent.
   const [replay, setReplay] = useState<{ frames: ReplayFrame[]; index: number }>();
   const openReplay = () => {
@@ -219,11 +233,13 @@ export function GameScreen({ view, session }: GameScreenProps) {
 
   const message = notice
     ? t(notice)
-    : collected
-      ? t("progress.collected", { name: t(`treasures.${collected}`) })
-      : departed !== undefined
-        ? t("progress.left", { name: departed })
-        : undefined;
+    : explained
+      ? t("shift.forbiddenWhy")
+      : collected
+        ? t("progress.collected", { name: t(`treasures.${collected}`) })
+        : departed !== undefined
+          ? t("progress.left", { name: departed })
+          : undefined;
 
   // Settings (and the language) open over the game; the game keeps running underneath.
   if (settingsOpen) return <SettingsScreen roomId={view.roomId} onClose={() => setSettingsOpen(false)} />;
@@ -256,12 +272,27 @@ export function GameScreen({ view, session }: GameScreenProps) {
         }
         reach={picking ? undefined : reach}
         hint={hintSquare}
-        shiftTargets={shifting ? { selected, forbidden, busy: pending, onSelect: select } : undefined}
+        myTurn={view.isMyTurn && !view.myAutoplay && !view.finished}
+        shiftTargets={
+          shifting
+            ? {
+                selected,
+                forbidden,
+                busy: pending,
+                nudge: idle && !preview,
+                onForbidden: () => {
+                  setForbiddenTaps((n) => n + 1);
+                  setExplained(true);
+                },
+                onSelect: select,
+              }
+            : undefined
+        }
         moveTargets={
           picking && reach
-            ? { reachable: reach, busy: pending, selected: chosen, onSelect: choose }
+            ? { reachable: reach, busy: pending, selected: chosen, nudge: idle, onSelect: choose }
             : view.reachable
-              ? { reachable: view.reachable, busy: pending, selected: chosen, onSelect: choose }
+              ? { reachable: view.reachable, busy: pending, selected: chosen, nudge: idle && view.isMyTurn, onSelect: choose }
               : undefined
         }
       />
