@@ -2,8 +2,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n";
-import { GameIdBadge } from "../game/GameIdBadge.tsx";
-import { clientVersion } from "../logging/logger.ts";
 import type { ServerWake } from "../session/serverWake.ts";
 import { BuildInfo } from "./BuildInfo.tsx";
 import { StartScreen, type StartScreenProps } from "./StartScreen.tsx";
@@ -32,37 +30,6 @@ function sessionOf(overrides: Partial<StartScreenProps["session"]> = {}): StartS
 // A returning player: the remembered nickname makes the join actions available.
 beforeEach(() => localStorage.setItem("labyrinth.nickname", "Maija"));
 afterEach(() => localStorage.clear());
-
-describe("board-view › Game identifier badge", () => {
-  it("Copy for a bug report: copies id, local date and time and version, then confirms", async () => {
-    const copy = vi.fn(async (_text: string) => {});
-    render(<GameIdBadge roomId="brave-otters-sing" copy={copy} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /brave-otters-sing/ }));
-    });
-
-    expect(copy).toHaveBeenCalledTimes(1);
-    // Version comes from the build (a commit id in CI, "dev" locally); the time separator depends on ICU.
-    const line = copy.mock.calls[0]![0];
-    expect(line).toMatch(/^Peli brave-otters-sing · \d{1,2}\.\d{1,2}\.\d{4} \d{2}[.:]\d{2} · v \S+$/);
-    expect(line.endsWith("v " + clientVersion())).toBe(true);
-    expect(screen.getByRole("status").textContent).toBe("Kopioitu");
-  });
-
-  it("shows the line selectable when copying is not possible", async () => {
-    const copy = vi.fn(async () => Promise.reject(new Error("denied")));
-    render(<GameIdBadge roomId="brave-otters-sing" copy={copy} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /brave-otters-sing/ }));
-    });
-
-    const input = screen.getByRole("textbox") as HTMLInputElement;
-    expect(input.value).toContain("brave-otters-sing");
-    expect(input.readOnly).toBe(true);
-  });
-});
 
 describe("game-session › Quick play (start screen)", () => {
   it("offers a single Play action", () => {

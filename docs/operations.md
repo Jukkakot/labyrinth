@@ -37,7 +37,7 @@ stale client when checking a deploy, compare the footer's "Client …" build tim
 2. Open the same page in a second tab or device: the game shows in "Avoimet pelit" as
    "<name> · 1/4". Tap it → both tabs list two players; the host taps "Aloita peli" → both see the
    board, same game id.
-3. Tap the game id → "Kopioitu".
+3. Tap the game id → the share sheet (or "Linkki kopioitu") with a `?game=<id>` link.
 4. On the current player's tab tap an edge arrow, then "Työnnä" → the line slides in both tabs.
 5. In Render logs (`list_logs`, text = the game id) find `game.setup`; its seed reproduces the
    starting board: `boardToText(setupBoard(seed))`. `game.started` has the `dealSeed`, seats and
@@ -148,7 +148,8 @@ server and client together.
 ## Investigating a reported bug
 
 Report shape: "around 14:30 in game brave-otters-sing, X happened". Games on the device show
-"Päivän pulma" / "Oma peli" in the badge, but the copied line carries their full `local-…` id;
+"Päivän pulma" / "Oma peli" in the badge. The player copies the line from Asetukset →
+Vianilmoitus → "Kopioi pelin tiedot" (id, local time, version); it carries the full `local-…` id;
 they have no server room, so only client logs can have it (`client.local.*` / `client.daily.*`
 info lines ship only with `?debug=1`).
 
