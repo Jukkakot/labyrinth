@@ -1,6 +1,8 @@
-import { IconChevronRight, IconSettings } from "@tabler/icons-react";
+import { IconChevronRight, IconCopy, IconSettings } from "@tabler/icons-react";
 import { useId, useState } from "react";
+import { useCopyLine } from "../game/copyLine.ts";
 import { HowToPlay } from "../howto/HowToPlay.tsx";
+import { useCopyFeedback } from "../ui/copyFeedback.ts";
 import { BackButton } from "../ui/BackButton.tsx";
 import { useTranslation } from "react-i18next";
 import { Button } from "../ui/Button.tsx";
@@ -50,11 +52,59 @@ function Toggle({ name, disabled = false, note }: { name: Flag; disabled?: boole
   );
 }
 
+export type CopyFn = (text: string) => Promise<void>;
+const clipboardCopy: CopyFn = (text) => navigator.clipboard.writeText(text);
+
+/** The bug-report line (game id when in a game, date and time, version): shown, and copied on tap. */
+function ReportLine({ roomId, copy }: { roomId?: string; copy: CopyFn }) {
+  const { t } = useTranslation();
+  const line = useCopyLine(roomId);
+  const [state, setState] = useCopyFeedback();
+  const onTap = async () => {
+    const text = line();
+    try {
+      await copy(text);
+      setState({ kind: "copied" });
+    } catch {
+      setState({ kind: "fallback", text });
+    }
+  };
+  return (
+    <>
+      <button type="button" className={styles.row} onClick={() => void onTap()}>
+        <span className={styles.text}>
+          <span className={styles.name}>{t("settings.copyDetails")}</span>
+          <span className={styles.note}>{line()}</span>
+        </span>
+        <IconCopy size={20} aria-hidden="true" className={styles.chevron} />
+      </button>
+      <span className={styles.status} role="status">
+        {state.kind === "copied" ? t("game.copied") : ""}
+      </span>
+      {state.kind === "fallback" && (
+        <label className={styles.fallback}>
+          {t("game.copyFallback")}
+          <input readOnly value={state.text} onFocus={(e) => e.currentTarget.select()} autoFocus />
+        </label>
+      )}
+    </>
+  );
+}
+
 /**
- * The device's settings: confirmations, theme, sounds and the turn notification. Every change
- * applies at once and is remembered on this device only.
+ * The device's settings: confirmations, theme, sounds, the turn notification and the bug-report
+ * line. Every change applies at once and is remembered on this device only.
  */
-export function SettingsScreen({ onClose }: { onClose(): void }) {
+export function SettingsScreen({
+  onClose,
+  roomId,
+  copy = clipboardCopy,
+}: {
+  onClose(): void;
+  /** The game the settings were opened from, for the bug-report line. */
+  roomId?: string;
+  copy?: CopyFn;
+}) {
   const { t } = useTranslation();
   const { theme } = useSettings();
   const vibrationOk = canVibrate();
@@ -112,6 +162,13 @@ export function SettingsScreen({ onClose }: { onClose(): void }) {
             <span className={styles.name}>{t("howTo.open")}</span>
             <IconChevronRight size={20} aria-hidden="true" className={styles.chevron} />
           </button>
+        </section>
+
+        <section className={styles.group} aria-labelledby="settings-report">
+          <h2 id="settings-report" className={styles.heading}>
+            {t("settings.report")}
+          </h2>
+          <ReportLine roomId={roomId} copy={copy} />
         </section>
 
         <p className={styles.footnote}>{t("settings.deviceOnly")}</p>

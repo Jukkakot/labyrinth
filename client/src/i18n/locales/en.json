@@ -105,12 +105,14 @@
     "watchBotsLabel": "Watch a game of {{count}} bots"
   },
   "game": {
-    "idLabel": "Game {{id}}. Tap to copy.",
     "copyLine": "Game {{id}} · {{date}} {{time}} · v {{ver}}",
     "copied": "Copied",
     "localLabel": "Own game",
-    "localIdLabel": "{{label}}. Tap to copy the game id.",
-    "copyFallback": "Copy this line into your bug report:"
+    "copyFallback": "Copy this line into your bug report:",
+    "linkLabel": "Game {{id}}. Tap to share the game's link.",
+    "watchShareText": "Watch my Labyrinth game",
+    "linkFallback": "Copy the game's link:",
+    "copyLineNoGame": "{{date}} {{time}} · v {{ver}}"
   },
   "turn": {
     "mine": "Your turn – push a tile",
@@ -298,7 +300,9 @@
     "vibrationNote": "A short vibration when your turn begins.",
     "vibrationUnsupported": "This device cannot vibrate.",
     "deviceOnly": "Settings are saved on this device only.",
-    "help": "Help"
+    "help": "Help",
+    "report": "Report a problem",
+    "copyDetails": "Copy game details"
   },
   "howTo": {
     "open": "How to play",

@@ -105,12 +105,14 @@
     "watchBotsLabel": "Katso {{count}} botin peliä"
   },
   "game": {
-    "idLabel": "Peli {{id}}. Napauta kopioidaksesi.",
     "copyLine": "Peli {{id}} · {{date}} {{time}} · v {{ver}}",
     "copied": "Kopioitu",
     "localLabel": "Oma peli",
-    "localIdLabel": "{{label}}. Napauta kopioidaksesi pelin tunnus.",
-    "copyFallback": "Kopioi tämä rivi bugiraporttiin:"
+    "copyFallback": "Kopioi tämä rivi bugiraporttiin:",
+    "linkLabel": "Peli {{id}}. Napauta jakaaksesi pelin linkin.",
+    "watchShareText": "Katso Labyrintti-peliäni",
+    "linkFallback": "Kopioi pelin linkki:",
+    "copyLineNoGame": "{{date}} {{time}} · v {{ver}}"
   },
   "turn": {
     "mine": "Sinun vuorosi – työnnä laatta",
@@ -298,7 +300,9 @@
     "vibrationNote": "Lyhyt värinä, kun vuorosi alkaa.",
     "vibrationUnsupported": "Tämä laite ei tue värinää.",
     "deviceOnly": "Asetukset tallentuvat vain tähän laitteeseen.",
-    "help": "Ohjeet"
+    "help": "Ohjeet",
+    "report": "Vianilmoitus",
+    "copyDetails": "Kopioi pelin tiedot"
   },
   "howTo": {
     "open": "Näin pelaat",
