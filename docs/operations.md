@@ -122,7 +122,7 @@ emails (the user's choice for a hobby project): errors are found on the dashboar
 | `player.joined` / `left` / `dropped` / `reconnected` | connection changes (a dropped seat is held 5 min); `joined` carries the nickname `name` |
 | `player.removed` | a player is taken out of a game, `{ seat, reason, by? }` (`left`, `kicked` by seat `by`, `timeout` after 5 min disconnected) |
 | `game.setup` | a new game's seed |
-| `game.started` | the game started, `{ dealSeed, seats, startSeat, quick?, watch? }` (reproduces the deal and who began; seed never synced; `quick: true` for a quick game against bots, `watch: true` for a bot-only game created to watch) |
+| `game.started` | the game started, `{ dealSeed, seats, startSeat, watch? }` (reproduces the deal and who began; seed never synced; `watch: true` for a bot-only game created to watch) |
 | `treasure.collected` | a player collects their target, `{ seat, treasure, found, cards }` |
 | `game.finished` | the game ended, `{ winner, reason }` (seat; `home` or `lastPlayer`; `noPeople` with winner 0 when only bots were left and nobody watched) |
 | `game.rematch` | a finished game created its rematch game, `{ rematchRoom }` (follow the group into that room) |

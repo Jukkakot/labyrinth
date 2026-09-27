@@ -6,7 +6,7 @@ import appConfig from "../src/app.config.js";
 import { configureLogger } from "../src/logging/logger.js";
 import type { GameState, Player } from "../src/rooms/schema/GameState.js";
 import { captureLogs } from "./support/captureLogs.js";
-import { startedGame, type TestClient as Client } from "./support/game.js";
+import { arrange, startedGame, type TestClient as Client } from "./support/game.js";
 
 const boardOf = (state: GameState) => {
   const tile = (t: { id: number; rotation: number }) => ({ id: t.id, kind: tileSpec(t.id).kind, rotation: t.rotation as Rotation });
@@ -36,11 +36,10 @@ describe("pawn-movement in a room", () => {
   const game = (players: number) => startedGame(colyseus, players);
 
   /** Puts seat 1's pawn on a square that has somewhere to go (the random board decides where that is). */
-  function placeOnCorridor(state: GameState, pawn: Player): Square[] {
-    const board = boardOf(state);
+  function placeOnCorridor(room: Parameters<typeof arrange>[0], seat: number): Square[] {
+    const board = boardOf(room.state);
     const from = ALL_SQUARES.find((sq) => reachableSquares(board, sq).length > 1)!;
-    pawn.row = from.row;
-    pawn.col = from.col;
+    arrange(room, seat, { pawn: from });
     return reachableSquares(board, from);
   }
 
@@ -56,9 +55,8 @@ describe("pawn-movement in a room", () => {
     });
 
     it("Pawn rides a shift on the server, and every player sees it", async () => {
-      const { clients, player } = await game(2);
-      player(1).row = 2;
-      player(1).col = 3;
+      const { room, clients, player } = await game(2);
+      arrange(room, 2, { pawn: { row: 2, col: 3 } });
       expect(await shift(clients[0]!, { insertion: "N3", rotation: 0 })).toEqual({ ok: true });
       expect(squareOf(player(1))).toEqual({ row: 3, col: 3 });
 
@@ -67,9 +65,8 @@ describe("pawn-movement in a room", () => {
     });
 
     it("a pawn pushed off the board lands on the inserted tile", async () => {
-      const { clients, player } = await game(2);
-      player(0).row = 6;
-      player(0).col = 3;
+      const { room, clients, player } = await game(2);
+      arrange(room, 1, { pawn: { row: 6, col: 3 } });
       await shift(clients[0]!, { insertion: "N3", rotation: 0 });
       expect(squareOf(player(0))).toEqual({ row: 0, col: 3 });
     });
@@ -77,10 +74,9 @@ describe("pawn-movement in a room", () => {
     it("Shared square", async () => {
       const { room, clients, player } = await game(2);
       await shift(clients[0]!, { insertion: "N1", rotation: 0 });
-      const reach = placeOnCorridor(room.state, player(0));
+      const reach = placeOnCorridor(room, 1);
       const target = reach[1]!;
-      player(1).row = target.row;
-      player(1).col = target.col;
+      arrange(room, 2, { pawn: { row: target.row, col: target.col } });
 
       expect(await move(clients[0]!, target)).toEqual({ ok: true });
       expect(squareOf(player(0))).toEqual(target);
@@ -92,7 +88,7 @@ describe("pawn-movement in a room", () => {
     it("Move along a corridor", async () => {
       const { room, clients, player } = await game(2);
       await shift(clients[0]!, { insertion: "N1", rotation: 0 });
-      const target = placeOnCorridor(room.state, player(0)).at(-1)!;
+      const target = placeOnCorridor(room, 1).at(-1)!;
 
       expect(await move(clients[0]!, target)).toEqual({ ok: true });
       expect(squareOf(player(0))).toEqual(target);
@@ -164,9 +160,8 @@ describe("pawn-movement in a room", () => {
     });
 
     it("a stay after a wrapping shift uses the carried square", async () => {
-      const { clients, player } = await game(2);
-      player(0).row = 6;
-      player(0).col = 1;
+      const { room, clients, player } = await game(2);
+      arrange(room, 1, { pawn: { row: 6, col: 1 } });
       await shift(clients[0]!, { insertion: "N1", rotation: 0 });
       expect(sameSquare(squareOf(player(0)), { row: 0, col: 1 })).toBe(true);
       expect(await move(clients[0]!, { row: 0, col: 1 })).toEqual({ ok: true });

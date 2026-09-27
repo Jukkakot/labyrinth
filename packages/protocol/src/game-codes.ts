@@ -98,8 +98,8 @@ export interface JoinOptions {
   /** Create a private game: never listed and never picked by quick play. */
   private?: boolean;
   /**
-   * Quick game against 1–3 bots, or with `watch` a game of 2–4 bots only: the room is created
-   * private and starts as soon as its creator joins.
+   * With `watch`, a game of 2–4 bots only: the room is created private and starts as soon as its
+   * creator joins. (Quick games against bots run on the device, not on the server.)
    */
   bots?: number;
   /** The joiner watches instead of taking a seat (a bot-only game they create, or a running game). */

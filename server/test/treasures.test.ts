@@ -12,14 +12,13 @@ import {
   TREASURES,
   treasureOf,
   type Rotation,
-  type Square,
   type TreasureId,
 } from "@labyrinth/rules";
 import appConfig from "../src/app.config.js";
 import { configureLogger } from "../src/logging/logger.js";
 import type { GameState, Player } from "../src/rooms/schema/GameState.js";
 import { captureLogs } from "./support/captureLogs.js";
-import { forceStartSeat, NAMES, startedGame, waitingRoom, type TestClient as Client } from "./support/game.js";
+import { arrange, forceStartSeat, gameOf, NAMES, startedGame, waitingRoom, type TestClient as Client } from "./support/game.js";
 
 /** What a client decodes about a player. */
 interface DecodedPlayer {
@@ -35,10 +34,6 @@ interface DecodedState {
 const boardOf = (state: GameState) => {
   const tile = (t: { id: number; rotation: number }) => ({ id: t.id, kind: tileSpec(t.id).kind, rotation: t.rotation as Rotation });
   return createBoard({ squares: [...state.squares].map(tile), spare: tile(state.spare) });
-};
-const place = (p: Player, sq: Square) => {
-  p.row = sq.row;
-  p.col = sq.col;
 };
 const here = (p: Player): MovePayload => ({ row: p.row, col: p.col });
 
@@ -61,12 +56,10 @@ describe("treasures in a room", () => {
     logs = captureLogs();
   });
 
-  const stacksOf = (room: unknown) => (room as { stacks: Map<number, TreasureId[]> }).stacks;
-
   async function game(players: number) {
     const g = await startedGame(colyseus, players);
     /** The stack of `seat`. */
-    const stack = (seat: number) => stacksOf(g.room).get(seat)!;
+    const stack = (seat: number) => [...gameOf(g.room).seats.find((s) => s.seat === seat)!.stack];
     return { ...g, stack };
   }
 
@@ -80,11 +73,9 @@ describe("treasures in a room", () => {
     return { sq, treasure: treasureOf(tileAt(board, sq).id)! };
   };
 
-  /** Makes `target` the player's last card: the rest of their stack counts as found. */
-  const lastCard = (p: Player, stack: TreasureId[], target: TreasureId) => {
-    stack.filter((t) => t !== target).slice(0, p.cards - 1).forEach((t) => p.found.push(t));
-    p.target = target;
-  };
+  /** Makes `target` the seat's last card: the rest of their stack counts as found. */
+  const lastCard = (room: Parameters<typeof arrange>[0], seat: number, stack: TreasureId[], target: TreasureId) =>
+    arrange(room, seat, { found: stack.filter((t) => t !== target), target });
 
   describe("Treasure cards dealt evenly", () => {
     it("Four stacks of six: every seat gets its own 6, all 24 once, and the start is logged", async () => {
@@ -115,7 +106,7 @@ describe("treasures in a room", () => {
       expect(await clients[0]!.request("start", {})).toEqual({ ok: true });
       expect(player(0).cards).toBe(12);
       expect(player(2).cards).toBe(12);
-      expect([...stacksOf(room).keys()]).toEqual([1, 3]);
+      expect(gameOf(room).seats.map((s) => s.seat)).toEqual([1, 3]);
       expect(logs.byEvt("game.started")[0]).toMatchObject({ seats: [1, 3] });
     });
 
@@ -136,8 +127,8 @@ describe("treasures in a room", () => {
 
   describe("Secret current target", () => {
     it("Own target, and other players' targets hidden, but card counts and found treasures public", async () => {
-      const { clients, player } = await game(2);
-      player(1).found.push("crown");
+      const { room, clients, player } = await game(2);
+      arrange(room, 2, { found: ["crown"] });
       const [a, b] = clients as [Client, Client];
       const seen = (c: Client) => c.state as DecodedState;
       await vi.waitFor(() => {
@@ -157,8 +148,7 @@ describe("treasures in a room", () => {
       client.reconnection.minUptime = 0;
       client.connection.close(4010);
       await vi.waitFor(() => expect(logs.byEvt("player.reconnected")).toHaveLength(1), { timeout: 10_000 });
-      const p = room.state.players.get(client.sessionId)!;
-      p.target = "deer";
+      arrange(room, 1, { target: "deer" });
       await vi.waitFor(() => expect((client.state as DecodedState).players.get(client.sessionId)?.target).toBe("deer"));
     });
   });
@@ -169,8 +159,7 @@ describe("treasures in a room", () => {
       await shiftFirst(clients[0]!);
       const { sq, treasure } = treasureSquare(room.state);
       const p = player(0);
-      p.target = treasure;
-      place(p, sq);
+      arrange(room, 1, { target: treasure, pawn: sq });
       expect(await move(clients[0]!, here(p))).toEqual({ ok: true });
       expect([...p.found]).toEqual([treasure]);
       expect(p.target).toBe(stack(1)[1]);
@@ -186,9 +175,8 @@ describe("treasures in a room", () => {
       const from = ALL_SQUARES.find((s) => reachableSquares(board, s).some((r) => !sameSquare(r, s) && treasureOf(tileAt(board, r).id)))!;
       const to = reachableSquares(board, from).find((r) => !sameSquare(r, from) && treasureOf(tileAt(board, r).id))!;
       const p = player(0);
-      place(p, from);
-      p.target = treasureOf(tileAt(board, to).id)!;
-      const treasure = p.target;
+      const treasure = treasureOf(tileAt(board, to).id)!;
+      arrange(room, 1, { pawn: from, target: treasure });
       expect(await move(clients[0]!, to)).toEqual({ ok: true });
       expect([...p.found]).toEqual([treasure]);
     });
@@ -197,9 +185,8 @@ describe("treasures in a room", () => {
       const { room, clients, player } = await game(2);
       await shiftFirst(clients[0]!);
       const { sq, treasure } = treasureSquare(room.state);
-      player(1).target = treasure;
-      player(0).target = TREASURES.find((t) => t !== treasure)!;
-      place(player(0), sq);
+      arrange(room, 2, { target: treasure });
+      arrange(room, 1, { target: TREASURES.find((t) => t !== treasure)!, pawn: sq });
       expect(await move(clients[0]!, here(player(0)))).toEqual({ ok: true });
       expect([...player(0).found]).toEqual([]);
       expect([...player(1).found]).toEqual([]);
@@ -210,8 +197,7 @@ describe("treasures in a room", () => {
       const { room, clients, player } = await game(2);
       const { sq, treasure } = treasureSquare(room.state);
       if (sq.col === 1) return; // N1 would move it; the random board decides, other boards cover this
-      player(0).target = treasure;
-      place(player(0), sq);
+      arrange(room, 1, { target: treasure, pawn: sq });
       await shiftFirst(clients[0]!);
       expect([...player(0).found]).toEqual([]);
     });
@@ -223,8 +209,8 @@ describe("treasures in a room", () => {
       await shiftFirst(clients[0]!);
       const { sq, treasure } = treasureSquare(room.state);
       const p = player(0);
-      lastCard(p, stack(1), treasure);
-      place(p, sq);
+      lastCard(room, 1, stack(1), treasure);
+      arrange(room, 1, { pawn: sq });
       expect(await move(clients[0]!, here(p))).toEqual({ ok: true });
       expect(p.found.length).toBe(12);
       expect(p.target).toBe("");
@@ -234,8 +220,7 @@ describe("treasures in a room", () => {
     it("Winning (and Winning move: the turn does not pass): finished, winner, room locked, logged", async () => {
       const { room, clients, player } = await game(2);
       const p = player(0);
-      p.found.push(...TREASURES.slice(0, 6));
-      p.target = "";
+      arrange(room, 1, { found: TREASURES.slice(0, 6), target: "" });
       await shiftFirst(clients[0]!);
       expect(sameSquare(here(p), homeSquare(1))).toBe(true);
       expect(await move(clients[0]!, here(p))).toEqual({ ok: true });
@@ -261,8 +246,7 @@ describe("treasures in a room", () => {
     async function finished() {
       const g = await game(2);
       const p = g.player(0);
-      p.found.push(...TREASURES.slice(0, 6));
-      p.target = "";
+      arrange(g.room, 1, { found: TREASURES.slice(0, 6), target: "" });
       await shiftFirst(g.clients[0]!);
       await move(g.clients[0]!, here(p));
       expect(g.room.state.phase).toBe("finished");
@@ -296,8 +280,7 @@ describe("treasures in a room", () => {
       forceStartSeat(room as never, 1);
       expect(await first.request("start", {})).toEqual({ ok: true });
       const p = room.state.players.get(first.sessionId)!;
-      p.found.push(...TREASURES.slice(0, 6));
-      p.target = "";
+      arrange(room as never, 1, { found: TREASURES.slice(0, 6), target: "" });
       await shift(first as unknown as Client, { insertion: "N1", rotation: 0 });
       await move(first as unknown as Client, here(p));
       expect(room.state.phase).toBe("finished");

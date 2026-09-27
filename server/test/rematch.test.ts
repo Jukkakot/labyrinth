@@ -83,17 +83,6 @@ describe("rematch", () => {
     expect((await listing(await rematchId(clients[0]!)))?.private).toBe(true);
   });
 
-  it("Quick bot game again: the rematch starts at once with the same bots", async () => {
-    const maija = (await colyseus.sdk.create("game", { nickname: "Maija", bots: 2 })) as unknown as TestClient;
-    const room = roomOf(colyseus, maija.roomId);
-    finish(room, 1);
-    expect(await maija.request("rematch", {})).toEqual({ ok: true });
-    const next = roomOf(colyseus, await rematchId(maija));
-    await join(colyseus, next, "Maija");
-    expect(next.state.phase).toBe("shift");
-    expect(next.state.players.size).toBe(3);
-  });
-
   it("Rematch of a running game: WRONG_PHASE, no game", async () => {
     const { clients } = await startedGame(colyseus, 2);
     expect(await clients[0]!.request("rematch", {})).toEqual({ ok: false, code: "WRONG_PHASE" });

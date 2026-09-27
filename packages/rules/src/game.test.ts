@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { chooseBotTurn, greedyBotTurn } from "./bot.js";
 import { createBoard } from "./board.js";
 import { sameSquare, square } from "./geometry.js";
-import { applyMove, applyShift, botRngFor, botViewOf, startGame, targetOf, type GameState } from "./game.js";
+import { applyMove, applyShift, botRngFor, botViewOf, endGame, removeSeat, startGame, targetOf, type GameState } from "./game.js";
 import { reachableSquares } from "./move.js";
 import { reverseOf } from "./shift.js";
 import { homeSquare, tileOfTreasure } from "./treasures.js";
@@ -43,6 +43,39 @@ describe("startGame", () => {
     const a = startGame(42, [ME, ROBO, PIXEL, BYTE]);
     expect(a.seats.map((s) => s.stack.length)).toEqual([6, 6, 6, 6]);
     expect(startGame(42, [ME, ROBO, PIXEL, BYTE])).toEqual(a);
+  });
+
+  it("a given board is kept; the deal still comes from the seed", () => {
+    const board = startGame(5, [ME, ROBO]).board;
+    const state = startGame(42, [ME, ROBO], undefined, board);
+    expect(state.board).toBe(board);
+    expect(state.seats).toEqual(startGame(42, [ME, ROBO]).seats);
+  });
+});
+
+describe("removeSeat and endGame", () => {
+  const three = { ...startGame(3, [ME, ROBO, PIXEL]), turnSeat: 2 };
+
+  it("a seat off turn leaves: the turn stays", () => {
+    const state = removeSeat(three, 3);
+    expect(state.seats.map((s) => s.seat)).toEqual([1, 2]);
+    expect(state).toMatchObject({ step: "shift", turnSeat: 2, turn: 1 });
+  });
+
+  it("the seat on turn leaves mid-turn: the next seat's turn starts with a shift", () => {
+    const state = removeSeat({ ...three, step: "move" }, 2);
+    expect(state).toMatchObject({ step: "shift", turnSeat: 3, turn: 2 });
+  });
+
+  it("the last seat standing wins; a finished game or an unknown seat changes nothing", () => {
+    const won = removeSeat(removeSeat(three, 3), 2);
+    expect(won).toMatchObject({ step: "finished", winnerSeat: 1 });
+    expect(removeSeat(won, 1)).toBe(won);
+    expect(removeSeat(three, 4)).toBe(three);
+  });
+
+  it("endGame finishes with the given winner, 0 for none", () => {
+    expect(endGame(three, 0)).toMatchObject({ step: "finished", winnerSeat: 0 });
   });
 });
 

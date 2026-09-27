@@ -88,9 +88,16 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   out) closes the room for everyone (`closeRoom`, close code `HOST_LEFT` 4101). Private rooms
   (`setPrivate`) are never listed or quick-matched; metadata `{ host, open, pool, seated }` feeds
   the list (`seated` = people + bots).
-- **Start** (host only, ≥ 2 seated): `dealGame(dealSeed, seats)` deals 24/n cards from one seeded RNG;
-  the host takes the first turn (`firstSeat`; a bot-only game keeps the seat the deal drew), and
-  `game.started { dealSeed, seats, startSeat }` records the opening. The room locks: nobody joins a started game.
+- **Game engine:** from the start the room holds the game as the rules engine's `GameState`
+  (`packages/rules/src/game.ts`, the same engine as the device's quick games) and every rule goes
+  through it: `startGame`, `applyShift` / `applyMove` (their rejection codes are the commands'),
+  `removeSeat`, `endGame`, `botViewOf`. The synced schema mirrors the engine after each change;
+  the room keeps only what is not a rule (seats and connections, clock, bots' timers, logs).
+  Room tests arrange positions through `arrange()` in `test/support/game.ts`, which edits both.
+- **Start** (host only, ≥ 2 seated): `startGame(dealSeed, seats, hostSeat, board)` deals 24/n cards
+  from one seeded RNG onto the waiting room's board; the host takes the first turn (`firstSeat`; a
+  bot-only game keeps the seat the deal drew), and `game.started { dealSeed, seats, startSeat }`
+  records the opening. The room locks: nobody joins a started game.
 - **Turn:** `shift` then `move` by the current player; the turn passes clockwise to the next taken
   seat after the move or when the current player leaves. Shift and move before the start or after
   the end are `WRONG_PHASE`.
@@ -108,10 +115,7 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   the deal seed and seat) and sends the shift; 1 s later the move. A rejected choice logs
   `bot.fallback` and the bot makes an allowed shift and stays. One `botTimer` per room, cleared
   on every turn change, finish and dispose.
-- **Quick bot game (server path):** the client now runs quick bot games on the device, so nothing
-  sends this today; it stays for later use. Creating a room with `bots: 1–3` makes it private; when the creator joins,
-  `onJoin` seats the bots in the next seats and calls the same `startGame()` as the host's `start`
-  (`game.started { quick: true }`), so the client lands straight on the board.
+- **Quick bot games** run only on the device: `bots` without `watch` is refused (`INVALID_OPTIONS`).
 - **Nobody left:** when no person is seated and nobody watches (held drops count), a started game
   finishes with `winnerSeat = 0` (reason `noPeople`); bots play on only for spectators.
 - **Spectators** (spec `spectators`): a started room stays locked, so `joinById` refuses everyone;
@@ -123,8 +127,8 @@ Specs: `lobby`, `game-session`, `turns`, `tile-shift`, `pawn-movement`, `treasur
   spectator, bots take seats 1..n and it starts. `setSpeed` (spectator, no person seated) sets
   `botSpeed`; bot pauses are divided by it. After the start `maxClients` = 4 + 8.
 - **Rematch:** `rematch` (seated, finished) creates one new room through `matchMaker.createRoom`
-  with the requester's nickname, the same `private`/`pool`, and `botSeats` (bots of the start) or
-  the quick game's `bots`; concurrent requests share one pending creation. The id is synced as
+  with the requester's nickname, the same `private`/`pool`, and `botSeats` (bots of the start);
+  concurrent requests share one pending creation. The id is synced as
   `rematchRoomId`; clients that tapped "Pelaa uudelleen" leave and `joinById` it (the requester
   first, so they host).
 
@@ -156,9 +160,10 @@ old greedy one kept as a baseline, `botSeed`), `botHint` (the "Vihje" hint: the 
 viewer's seat, always blocking, rng seeded from the position; `hintTurn` for the shift step,
 `hintMove` for the move step after a shift; the client maps its view to a `BotView` with only
 its own target in `client/src/game/hint.ts`), `game` (a whole game as JSON-serialisable data: `startGame`, `applyShift`, `applyMove` with the
-server's rejection codes and order, `botViewOf`, `botRngFor`; runs the games on the device; the
-server still composes the same rule functions itself), `botTournament` (whole games among
-strategies, win rates and ms per turn; not in the package entry). Test fixtures in
+server's rejection codes and order, `removeSeat`, `endGame`, `botViewOf`, `botRngFor`; the one
+rules engine of the device's games, the server's rooms and the tournament), `botTournament`
+(whole games among strategies through the engine, win rates and ms per turn; not in the package
+entry). Test fixtures in
 `@labyrinth/rules/testing` (`boardFromRows`, `boardToText`). Board coordinates: `(row, col)`
 0–6 from the top-left; tile ids never change, which is what the client animates by.
 

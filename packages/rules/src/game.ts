@@ -8,7 +8,7 @@ import { reverseOf, shiftBoard, type InsertionId } from "./shift.js";
 import type { Rotation } from "./tile.js";
 import type { TreasureId } from "./tileSet.js";
 import { dealGame, firstSeat, homeSquare, settleMove } from "./treasures.js";
-import { nextSeat } from "./turns.js";
+import { nextSeat, soleSurvivor } from "./turns.js";
 
 /*
  * A whole game as plain, JSON-serialisable data, and the commands that change it. The same rule
@@ -54,8 +54,11 @@ export type GameRejection = "NOT_SEATED" | "WRONG_PHASE" | "NOT_YOUR_TURN" | "RE
 
 export type GameCommandResult = { ok: true; state: GameState } | { ok: false; code: GameRejection };
 
-/** A started game: board and deal from `seed`, pawns on their start corners; the host on turn (else the drawn seat). */
-export function startGame(seed: number, seats: readonly NewSeat[], hostSeat?: number): GameState {
+/**
+ * A started game: deal (and board, unless one is given) from `seed`, pawns on their start
+ * corners; the host on turn (else the drawn seat).
+ */
+export function startGame(seed: number, seats: readonly NewSeat[], hostSeat?: number, board: Board = setupBoard(seed)): GameState {
   const ordered = [...seats].sort((a, b) => a.seat - b.seat);
   const { stacks, startSeat } = dealGame(
     seed,
@@ -63,7 +66,7 @@ export function startGame(seed: number, seats: readonly NewSeat[], hostSeat?: nu
   );
   return {
     seed,
-    board: setupBoard(seed),
+    board,
     seats: ordered.map(({ seat, name, bot }) => ({ seat, name, bot, pawn: homeSquare(seat), stack: stacks.get(seat)!, found: [] })),
     step: "shift",
     turnSeat: firstSeat(hostSeat, ordered.map((s) => s.seat), startSeat),
@@ -119,6 +122,28 @@ export function applyMove(state: GameState, seat: number, to: Square): GameComma
     seat,
   );
   return { ok: true, state: { ...state, seats, step: "shift", turnSeat: next, turn: state.turn + 1 } };
+}
+
+/**
+ * A seat leaves a running game (left, kicked, timed out): its pawn and cards go. The last seat
+ * standing wins; if the leaver was on turn, the next seat's turn starts.
+ */
+export function removeSeat(state: GameState, seat: number): GameState {
+  if (state.step === "finished" || !state.seats.some((s) => s.seat === seat)) return state;
+  const seats = state.seats.filter((s) => s.seat !== seat);
+  const survivor = soleSurvivor(seats.map((s) => s.seat));
+  if (survivor !== undefined) return { ...state, seats, step: "finished", winnerSeat: survivor };
+  if (seat !== state.turnSeat) return { ...state, seats };
+  const next = nextSeat(
+    seats.map((s) => s.seat),
+    seat,
+  );
+  return { ...state, seats, step: "shift", turnSeat: next, turn: state.turn + 1 };
+}
+
+/** Ends the game at once with `winnerSeat` (0: no winner, e.g. no person left). */
+export function endGame(state: GameState, winnerSeat: number): GameState {
+  return { ...state, step: "finished", winnerSeat };
 }
 
 /** What `seat` may fairly know: everything public plus its own target, never anyone else's. */

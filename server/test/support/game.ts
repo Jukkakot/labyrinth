@@ -1,6 +1,7 @@
 import type { ColyseusTestServer } from "@colyseus/testing";
 import { expect } from "vitest";
 import type { CommandResult } from "@labyrinth/protocol";
+import { targetOf, type GameState as Game, type Square, type TreasureId } from "@labyrinth/rules";
 import type appConfig from "../../src/app.config.js";
 import type { GameRoom } from "../../src/rooms/GameRoom.js";
 
@@ -44,6 +45,45 @@ export async function waitingRoom(colyseus: Server, players: number, options: Ga
 /** Seats one more player in `room` under `nickname`. */
 export async function join(colyseus: Server, room: GameRoom, nickname: string): Promise<TestClient> {
   return (await colyseus.connectTo(room as never, { nickname })) as unknown as TestClient;
+}
+
+/** The running game as the room's rules engine holds it (undefined in the waiting room). */
+export function gameOf(room: GameRoom): Game {
+  return (room as unknown as { game: Game }).game;
+}
+
+export interface Arrangement {
+  pawn?: Square;
+  /** Treasures that count as found (replaces the found ones). */
+  found?: readonly TreasureId[];
+  /** The current target; "" heads home. The stack is reordered so this card comes next. */
+  target?: TreasureId | "";
+}
+
+/**
+ * Arranges a seat of a running game for a test: changes the engine's state (the rules' truth)
+ * and mirrors it into the synced state, as if play had led there.
+ */
+export function arrange(room: GameRoom, seat: number, arrangement: Arrangement): void {
+  const internals = room as unknown as { game: Game };
+  const player = [...room.state.players.values()].find((p) => p.seat === seat)!;
+  internals.game = {
+    ...internals.game,
+    seats: internals.game.seats.map((s) => {
+      if (s.seat !== seat) return s;
+      const found = arrangement.found ?? s.found;
+      const target = arrangement.target ?? targetOf(s) ?? "";
+      const rest = s.stack.filter((t) => !found.includes(t) && t !== target);
+      const stack = target ? [...found, target, ...rest] : [...found];
+      return { ...s, pawn: arrangement.pawn ?? s.pawn, found, stack };
+    }),
+  };
+  const arranged = internals.game.seats.find((s) => s.seat === seat)!;
+  player.row = arranged.pawn.row;
+  player.col = arranged.pawn.col;
+  player.found.clear();
+  player.found.push(...arranged.found);
+  player.target = targetOf(arranged) ?? "";
 }
 
 /** Makes the next start give the first turn to `startSeat` instead of the host. */

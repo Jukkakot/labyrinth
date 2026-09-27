@@ -7,7 +7,7 @@ import appConfig from "../src/app.config.js";
 import { configureLogger } from "../src/logging/logger.js";
 import type { GameRoom } from "../src/rooms/GameRoom.js";
 import { captureLogs } from "./support/captureLogs.js";
-import { forceStartSeat, join, waitingRoom, type TestClient } from "./support/game.js";
+import { arrange, forceStartSeat, join, waitingRoom, type TestClient } from "./support/game.js";
 
 const addBot = (client: TestClient, seat: number) => client.request("addBot", { seat }) as Promise<CommandResult>;
 const removeBot = (client: TestClient, seat: number) => client.request("removeBot", { seat }) as Promise<CommandResult>;
@@ -208,7 +208,7 @@ describe("bots in a room", () => {
       forceStartSeat(r, 1);
       await clients[0]!.request("start", {});
       const me = r.state.players.get(clients[0]!.sessionId)!;
-      me.found.push("crown");
+      arrange(r, 1, { found: ["crown"] });
       await clients[0]!.request("shift", { insertion: "N1", rotation: 0 });
       await clients[0]!.request("move", { row: me.row, col: me.col });
       await vi.waitFor(() => expect(views.length).toBeGreaterThan(0));
@@ -234,40 +234,8 @@ describe("bots in a room", () => {
   });
 
   describe("Quick game against bots", () => {
-    async function quick(bots: unknown) {
-      const r = (await colyseus.createRoom("game", { nickname: "Maija", bots })) as unknown as GameRoom;
-      r.botShiftDelayMs = 60_000;
-      const client = await join(colyseus, r, "Maija");
-      return { room: r, client };
-    }
-
-    it("One against one: started at once with Maija and Robo, 12 cards each, private and locked", async () => {
-      const { room: r } = await quick(1);
-      expect(r.state.phase).not.toBe("waiting");
-      expect([...r.state.players.values()].map((p) => [p.seat, p.name, p.bot, p.cards])).toEqual([
-        [1, "Maija", false, 12],
-        [2, "Robo", true, 12],
-      ]);
-      expect([1, 2]).toContain(r.state.turnSeat);
-      expect(logs.byEvt("game.started")).toEqual([expect.objectContaining({ quick: true, seats: [1, 2] })]);
-      const entry = await listing(r.roomId);
-      expect(entry?.private).toBe(true);
-      expect(entry?.locked).toBe(true);
-    });
-
-    it("One against three: Maija, Robo, Pixel and Byte with 6 cards each", async () => {
-      const { room: r } = await quick(3);
-      expect([...r.state.players.values()].map((p) => [p.name, p.cards])).toEqual([
-        ["Maija", 6],
-        ["Robo", 6],
-        ["Pixel", 6],
-        ["Byte", 6],
-      ]);
-      expect(logs.byEvt("bot.added")).toHaveLength(3);
-    });
-
-    it("Too many bots: no game is created", async () => {
-      await expect(colyseus.sdk.create("game", { nickname: "Maija", bots: 4 })).rejects.toThrow("INVALID_OPTIONS");
+    it("Not on the server (it runs on the device): no game is created", async () => {
+      await expect(colyseus.sdk.create("game", { nickname: "Maija", bots: 1 })).rejects.toThrow("INVALID_OPTIONS");
       expect(logs.byEvt("room.created")).toHaveLength(0);
       expect(logs.byEvt("room.refused")).toEqual([expect.objectContaining({ reason: "options" })]);
     });

@@ -1,12 +1,7 @@
-import type { BotStrategy, BotView } from "./bot.js";
+import type { BotStrategy } from "./bot.js";
 import { botSeed } from "./bot.js";
-import { isReachable } from "./move.js";
+import { applyMove, applyShift, botViewOf, startGame, type GameCommandResult, type GameState } from "./game.js";
 import { createRng } from "./rng.js";
-import { setupBoard } from "./setup.js";
-import { reverseOf, shiftBoard, type InsertionId } from "./shift.js";
-import { dealGame, homeSquare, settleMove } from "./treasures.js";
-import type { TreasureId } from "./tileSet.js";
-import { nextSeat } from "./turns.js";
 
 /*
  * Whole games among bots, for tests and for comparing strategies. Not part of the package's
@@ -29,7 +24,8 @@ export interface TurnTimes {
 }
 
 /**
- * Plays a whole game among bots (`strategies` by seat), checking every turn against the rules.
+ * Plays a whole game among bots (`strategies` by seat) through the game engine, so every turn is
+ * checked against the rules.
  * Undefined when nobody wins within `turnCap` turns. `times` collects the time each seat's
  * strategy took per turn.
  */
@@ -39,50 +35,29 @@ export function simulateGame(
   turnCap = 1500,
   times?: Map<number, TurnTimes>,
 ): GameResult | undefined {
-  const seats = [...strategies.keys()].sort((a, b) => a - b);
-  let board = setupBoard(seed);
-  const deal = dealGame(seed, seats);
-  const pawns = new Map(seats.map((s) => [s, homeSquare(s)]));
-  const stacks = new Map(seats.map((s) => [s, [...deal.stacks.get(s)!]]));
-  const found = new Map(seats.map((s) => [s, [] as TreasureId[]]));
+  const seats = [...strategies.keys()];
+  let state = startGame(
+    seed,
+    seats.map((seat) => ({ seat, name: `bot${seat}`, bot: true })),
+  );
+  // One rng per seat for the whole game (not `botRngFor`), so tournament results stay comparable.
   const rngs = new Map(seats.map((s) => [s, createRng(botSeed(seed, s))]));
-  let last: InsertionId | undefined;
-  let turnSeat = deal.startSeat;
+  const legal = (result: GameCommandResult): GameState => {
+    if (!result.ok) throw new Error(`illegal bot turn: ${result.code}`);
+    return result.state;
+  };
   for (let turns = 1; turns <= turnCap; turns++) {
-    const view: BotView = {
-      board,
-      seat: turnSeat,
-      seats: seats.map((s) => ({
-        seat: s,
-        pawn: pawns.get(s)!,
-        found: found.get(s)!.length,
-        cardsLeft: stacks.get(s)!.length,
-        foundTreasures: found.get(s)!,
-      })),
-      lastInsertion: last,
-      target: stacks.get(turnSeat)![0],
-    };
+    const seat = state.turnSeat;
     const started = clock.now();
-    const turn = strategies.get(turnSeat)!(view, rngs.get(turnSeat)!);
+    const turn = strategies.get(seat)!(botViewOf(state, seat), rngs.get(seat)!);
     if (times) {
       const took = clock.now() - started;
-      const t = times.get(turnSeat) ?? { total: 0, max: 0, count: 0 };
-      times.set(turnSeat, { total: t.total + took, max: Math.max(t.max, took), count: t.count + 1 });
+      const t = times.get(seat) ?? { total: 0, max: 0, count: 0 };
+      times.set(seat, { total: t.total + took, max: Math.max(t.max, took), count: t.count + 1 });
     }
-    if (last !== undefined && turn.insertion === reverseOf(last)) throw new Error("reverse shift");
-    const shifted = shiftBoard(board, turn.insertion, turn.rotation, seats.map((s) => pawns.get(s)!));
-    board = shifted.board;
-    seats.forEach((s, i) => pawns.set(s, shifted.pawns[i]!));
-    if (!isReachable(board, pawns.get(turnSeat)!, turn.to)) throw new Error("unreachable move");
-    pawns.set(turnSeat, turn.to);
-    last = turn.insertion;
-    const outcome = settleMove(board, { seat: turnSeat, square: turn.to, target: view.target });
-    if (outcome.won) return { winner: turnSeat, turns };
-    if (outcome.collected) {
-      stacks.get(turnSeat)!.shift();
-      found.set(turnSeat, [...found.get(turnSeat)!, outcome.collected]);
-    }
-    turnSeat = nextSeat(seats, turnSeat);
+    state = legal(applyShift(state, seat, turn.insertion, turn.rotation));
+    state = legal(applyMove(state, seat, turn.to));
+    if (state.step === "finished") return { winner: state.winnerSeat, turns };
   }
   return undefined;
 }

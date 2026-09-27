@@ -120,10 +120,9 @@ describe("joinOptionsSchema", () => {
     expect(joinOptionsSchema.safeParse({ nickname: "Pekka", private: "yes" }).success).toBe(false);
   });
 
-  it("accepts 1–3 bots for a quick bot game, nothing else", () => {
-    expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots: 1 }).success).toBe(true);
-    expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots: 3 }).success).toBe(true);
-    for (const bots of [0, 4, 1.5, "2"]) expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots }).success).toBe(false);
+  it("refuses bots without watching: quick games against bots run on the device", () => {
+    for (const bots of [1, 2, 3]) expect(joinOptionsSchema.safeParse({ nickname: "Pekka", bots }).success).toBe(false);
+    for (const bots of [0, 5, 2.5, "2"]) expect(joinOptionsSchema.safeParse({ nickname: "Pekka", watch: true, bots }).success).toBe(false);
   });
 
   it("accepts 2–4 bots to watch, with an optional speed", () => {
@@ -136,14 +135,14 @@ describe("joinOptionsSchema", () => {
     expect(ok({ bots: 2, speed: 2 })).toBe(false);
   });
 
-  it("accepts distinct bot seats for a rematch, not with a quick game", () => {
+  it("accepts distinct bot seats for a rematch, not when watching", () => {
     const ok = (o: object) => joinOptionsSchema.safeParse({ nickname: "Pekka", ...o }).success;
     expect(ok({ botSeats: [2, 4] })).toBe(true);
     expect(ok({ botSeats: [] })).toBe(true);
     expect(ok({ botSeats: [2, 2] })).toBe(false);
     expect(ok({ botSeats: [1, 2, 3, 4] })).toBe(false);
     expect(ok({ botSeats: [5] })).toBe(false);
-    expect(ok({ botSeats: [2], bots: 1 })).toBe(false);
+    expect(ok({ botSeats: [2], watch: true, bots: 2 })).toBe(false);
   });
 });
 
