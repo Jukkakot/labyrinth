@@ -27,6 +27,12 @@ environment.
 Pages deploy on its next load (the new worker takes over and reloads the page once). To rule out a
 stale client when checking a deploy, compare the footer's "Client …" build time.
 
+**Installing on Android:** install from **Chrome** (⋮ → "Asenna sovellus" / "Lisää aloitusnäyttöön").
+Samsung Internet packages the PWA as an APK built by Samsung with an old Android target, and Google
+Play Protect blocks it ("Vaarallinen sovellus estetty … suunniteltu vanhemmalle Android-versiolle").
+That APK is only a launcher for the same web page, so "Asenna silti" is harmless, but the manifest
+cannot change how Samsung builds it; Chrome's install (built by Google) passes Play Protect.
+
 ### After a deploy (manual checks)
 
 1. Open https://jukkakot.github.io/labyrinth/ on the phone (or Playwright MCP `playwright-mobile`).
