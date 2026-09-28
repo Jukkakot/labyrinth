@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import type { Tile } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import styles from "./SpareTile.module.css";
@@ -23,6 +23,11 @@ export function SpareTile({ tile, caption, outgoing = false, target, collected }
   const { t } = useTranslation();
   const clipId = useId();
   const label = caption ?? t("board.spare");
+  // A new rotation of the same tile turns in with a short clockwise quarter turn (restarted per turn).
+  const [seen, setSeen] = useState({ id: tile.id, rotation: tile.rotation, turns: 0 });
+  if (seen.id !== tile.id || seen.rotation !== tile.rotation) {
+    setSeen({ id: tile.id, rotation: tile.rotation, turns: seen.id === tile.id ? seen.turns + 1 : 0 });
+  }
   return (
     <figure className={outgoing ? `${styles.spare} ${styles.outgoing}` : styles.spare}>
       <svg viewBox={`0 0 ${TILE_UNITS} ${TILE_UNITS}`} className={styles.tile} aria-label={label} role="group">
@@ -30,7 +35,9 @@ export function SpareTile({ tile, caption, outgoing = false, target, collected }
           <rect x={3} y={3} width={TILE_UNITS - 6} height={TILE_UNITS - 6} rx={10} />
         </clipPath>
         <g clipPath={`url(#${clipId})`}>
-          <TileView tile={tile} target={targetOf(tile.id, target)} treasureHidden={isCollected(tile.id, collected)} />
+          <g key={seen.turns} className={seen.turns ? styles.turning : undefined} data-turning={seen.turns > 0 || undefined}>
+            <TileView tile={tile} target={targetOf(tile.id, target)} treasureHidden={isCollected(tile.id, collected)} />
+          </g>
         </g>
       </svg>
       <figcaption className={styles.caption}>{label}</figcaption>

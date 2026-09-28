@@ -8,7 +8,10 @@ import { SpareTile } from "../game/SpareTile.tsx";
 import { DEFAULT_SETTINGS, updateSettings } from "../settings/settings.ts";
 import type { GameSession } from "../session/useGameSession.ts";
 import { toGameView, type SyncedState } from "../session/viewModel.ts";
+import { playSound } from "../settings/feedback.ts";
 import { GameScreen } from "./GameScreen.tsx";
+
+vi.mock("../settings/feedback.ts", async (original) => ({ ...(await original<object>()), playSound: vi.fn(() => true) }));
 
 const board = setupBoard(7);
 const testBoard = board;
@@ -844,5 +847,79 @@ describe("board-view › Move controls (dots)", () => {
       expect(target.querySelectorAll("rect")).toHaveLength(1);
       expect(target.querySelector("circle[r='13']")).not.toBeNull();
     }
+  });
+});
+
+describe("game polish", () => {
+  const session = { ...extra, shift: vi.fn(), move: vi.fn(), kick: vi.fn(), leave: vi.fn(), pending: false };
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.mocked(playSound).mockClear();
+  });
+
+  it("Treasure pickup effect: another player's collected treasure rises from their square, then is gone", () => {
+    vi.useFakeTimers();
+    const other = { row: 3, col: 3 };
+    const { container, rerender } = render(<GameScreen view={view({ turnSeat: 2, other })} session={session} />);
+    expect(container.querySelector("[data-pickup]")).toBeNull();
+    rerender(<GameScreen view={view({ turnSeat: 2, other: { ...other, found: [TREASURES[5]] } })} session={session} />);
+    expect(container.querySelector("[data-pickup]")?.getAttribute("data-pickup")).toBe("3,3");
+    act(() => {
+      vi.advanceTimersByTime(900);
+    });
+    expect(container.querySelector("[data-pickup]")).toBeNull();
+  });
+
+  it("Someone wins: the winner hops, their square bursts once and the finish tune plays; an already finished game shows nothing", () => {
+    vi.useFakeTimers();
+    const other = { row: 2, col: 2 };
+    const { container, rerender } = render(<GameScreen view={view({ turnSeat: 2, phase: "move", other })} session={session} />);
+    rerender(<GameScreen view={view({ turnSeat: 2, phase: "finished", winnerSeat: 2, other })} session={session} />);
+    expect(container.querySelector("[data-win-burst]")?.getAttribute("data-win-burst")).toBe("2,2");
+    expect(container.querySelector('[data-seat="2"] [data-hop]')).not.toBeNull();
+    expect(playSound).toHaveBeenCalledWith("finish");
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(container.querySelector("[data-win-burst]")).toBeNull();
+
+    const opened = render(<GameScreen view={view({ phase: "finished", winnerSeat: 1 })} session={session} />);
+    expect(opened.container.querySelector("[data-win-burst]")).toBeNull();
+  });
+
+  it("Winning tune: the viewer's own win plays the rising tune", () => {
+    const { rerender } = render(<GameScreen view={view({ phase: "move" })} session={session} />);
+    rerender(<GameScreen view={view({ phase: "finished", winnerSeat: 1 })} session={session} />);
+    expect(playSound).toHaveBeenCalledWith("win");
+  });
+
+  it("a shift landing thuds for a player", () => {
+    const { rerender } = render(<GameScreen view={view({ turnSeat: 2 })} session={session} />);
+    const after = shiftBoard(board, "N1", board.spare.rotation).board;
+    rerender(<GameScreen view={view({ turnSeat: 2, phase: "move", lastInsertion: "N1", board: after })} session={session} />);
+    expect(playSound).toHaveBeenCalledWith("shift");
+  });
+
+  it("Reduced motion: no burst when the game ends", () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ matches: query.includes("reduce"), media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+    try {
+      const { container, rerender } = render(<GameScreen view={view({ phase: "move" })} session={session} />);
+      rerender(<GameScreen view={view({ phase: "finished", winnerSeat: 1 })} session={session} />);
+      expect(container.querySelector("[data-win-burst]")).toBeNull();
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it("Four turns: every press of the rotate button turns the spare in again", () => {
+    setup();
+    const spareGroup = () => screen.getByRole("group", { name: "Ylimääräinen laatta" }).querySelector("[data-turning]");
+    expect(spareGroup()).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Käännä laattaa" }));
+    const first = spareGroup();
+    expect(first).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Käännä laattaa" }));
+    expect(spareGroup()).not.toBe(first);
   });
 });

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { BotSpeed } from "@labyrinth/protocol";
 import { reachableSquares, reverseOf, rotate, sameSquare, shiftBoard, type BotTurn, type InsertionId, type Square, type TreasureId } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
-import { Board } from "../game/Board.tsx";
+import { Board, type Pickup } from "../game/Board.tsx";
+import { prefersReducedMotion } from "../game/pawnMotion.ts";
 import { collectedTreasures } from "../game/collected.ts";
 import { GameIdBadge } from "../game/GameIdBadge.tsx";
 import { DailyOver } from "../game/DailyOver.tsx";
@@ -31,6 +32,10 @@ import { useTurnAlert } from "../settings/turnAlert.ts";
 import { FirstGameTips } from "../tips/FirstGameTips.tsx";
 import { Notice } from "../ui/Notice.tsx";
 import { Screen } from "../ui/Screen.tsx";
+
+/** How long a pickup effect and the win celebration stay drawn (their animations end before). */
+const PICKUP_MS = 900;
+const CELEBRATION_MS = 1500;
 
 export interface GameScreenProps {
   view: GameView;
@@ -215,6 +220,54 @@ export function GameScreen({ view, session }: GameScreenProps) {
     const timer = setTimeout(() => setCollected(undefined), NOTICE_MS);
     return () => clearTimeout(timer);
   }, [collected]);
+  // Every seat's newly collected treasure plays a short effect on its square (one per seat and count).
+  const foundList = view.seats.map((s) => `${s.seat}:${s.found.length}`).join(",");
+  const [seenFinds, setSeenFinds] = useState({ list: foundList, room: view.roomId });
+  const [pickups, setPickups] = useState<Pickup[]>([]);
+  if (seenFinds.list !== foundList || seenFinds.room !== view.roomId) {
+    const before = new Map(seenFinds.list.split(",").map((e) => e.split(":").map(Number) as [number, number]));
+    const fresh =
+      seenFinds.room !== view.roomId || prefersReducedMotion()
+        ? []
+        : view.seats.flatMap((s) => {
+            const treasure = s.found.at(-1);
+            return treasure && s.found.length > (before.get(s.seat) ?? s.found.length)
+              ? [{ key: `${s.seat}:${s.found.length}`, square: s.square, treasure, look: s.look ?? s.seat }]
+              : [];
+          });
+    setSeenFinds({ list: foundList, room: view.roomId });
+    if (fresh.length) setPickups((cur) => [...cur, ...fresh]);
+  }
+  useEffect(() => {
+    if (!pickups.length) return;
+    const timer = setTimeout(() => setPickups([]), PICKUP_MS);
+    return () => clearTimeout(timer);
+  }, [pickups]);
+
+  // The game ending while watched: the winner hops, their square bursts, and a tune plays.
+  const [seenFinish, setSeenFinish] = useState({ finished: view.finished, room: view.roomId });
+  const [celebration, setCelebration] = useState<{ seat: number; square: Square }>();
+  if (seenFinish.finished !== view.finished || seenFinish.room !== view.roomId) {
+    const winner = view.seats.find((s) => s.seat === view.winnerSeat);
+    if (view.finished && !seenFinish.finished && seenFinish.room === view.roomId && winner) {
+      if (!prefersReducedMotion()) setCelebration({ seat: winner.seat, square: winner.square });
+      if (!view.spectating) playSound(winner.isMe ? "win" : "finish");
+    }
+    setSeenFinish({ finished: view.finished, room: view.roomId });
+  }
+  useEffect(() => {
+    if (!celebration) return;
+    const timer = setTimeout(() => setCelebration(undefined), CELEBRATION_MS);
+    return () => clearTimeout(timer);
+  }, [celebration]);
+
+  // A shift landing (the synced spare changes within the same game) thuds for the players.
+  const [seenSpare, setSeenSpare] = useState({ spare: view.board.spare.id, room: view.roomId });
+  if (seenSpare.spare !== view.board.spare.id || seenSpare.room !== view.roomId) {
+    if (seenSpare.room === view.roomId && !view.spectating) playSound("shift");
+    setSeenSpare({ spare: view.board.spare.id, room: view.roomId });
+  }
+
   // Announce a player leaving the running game (left, kicked or timed out; the reason is not synced).
   // Their name is gone from the state with them, so the last seen seat → name map is kept.
   const seatList = view.seats.map((s) => `${s.seat}:${s.name}`).join(",");
@@ -273,6 +326,8 @@ export function GameScreen({ view, session }: GameScreenProps) {
         reach={picking ? undefined : reach}
         hint={hintSquare}
         myTurn={view.isMyTurn && !view.myAutoplay && !view.finished}
+        pickups={frame ? undefined : pickups}
+        celebration={frame ? undefined : celebration}
         shiftTargets={
           shifting
             ? {

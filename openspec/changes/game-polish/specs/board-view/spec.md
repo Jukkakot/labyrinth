@@ -4,7 +4,7 @@
 When any player collects a treasure, every viewer SHALL see a short effect on that square: the
 treasure's icon rises and fades while a ring in the collector's colour widens and fades, within a
 second. It MUST NOT catch taps or be announced to screen readers (the progress already says it).
-With reduced motion the icon only fades.
+With reduced motion the effect is not shown.
 
 #### Scenario: A bot collects
 - **WHEN** a bot stops on the dragon's tile and collects it

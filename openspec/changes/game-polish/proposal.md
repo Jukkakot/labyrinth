@@ -17,7 +17,7 @@ controls or text.
 - **Sounds:** a soft low "thud" when a shift lands (players, not spectators), a rising three-note
   tune when the viewer wins or solves the puzzle, and a short lower one when someone else wins.
   All under the existing "Äänet" setting.
-- Reduced motion: no hop, no burst, no rotation or rising motion; the pickup icon only fades.
+- Reduced motion: no hop, no burst, no pickup effect, no rotation.
 
 ## Capabilities
 

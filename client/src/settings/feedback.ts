@@ -1,13 +1,18 @@
 import { getSettings } from "./settings.ts";
 
-/** The generated sounds: a soft two-note chime for the turn, a brighter one for a treasure. */
-export type SoundName = "turn" | "treasure";
+/**
+ * The generated sounds: a soft two-note chime for the turn, a brighter one for a treasure, a low short
+ * thud when a shift lands, a rising tune for the viewer's win and a short falling one for another's.
+ */
+export type SoundName = "turn" | "treasure" | "shift" | "win" | "finish";
 
-const NOTES: Record<SoundName, readonly number[]> = {
-  turn: [587.33, 880], // D5 → A5
-  treasure: [880, 1318.51], // A5 → E6
+const SOUNDS: Record<SoundName, { notes: readonly number[]; noteS: number }> = {
+  turn: { notes: [587.33, 880], noteS: 0.12 }, // D5 → A5
+  treasure: { notes: [880, 1318.51], noteS: 0.12 }, // A5 → E6
+  shift: { notes: [196], noteS: 0.06 }, // G3, very short
+  win: { notes: [523.25, 659.25, 783.99], noteS: 0.13 }, // C5 → E5 → G5
+  finish: { notes: [392, 329.63], noteS: 0.14 }, // G4 → E4
 };
-const NOTE_S = 0.12;
 const GAIN = 0.08;
 
 let context: AudioContext | undefined;
@@ -32,18 +37,19 @@ export function playSound(name: SoundName): boolean {
   try {
     if (ctx.state === "suspended") void ctx.resume();
     const start = ctx.currentTime;
-    NOTES[name].forEach((frequency, i) => {
-      const at = start + i * NOTE_S;
+    const { notes, noteS } = SOUNDS[name];
+    notes.forEach((frequency, i) => {
+      const at = start + i * noteS;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
       osc.frequency.value = frequency;
       gain.gain.setValueAtTime(0, at);
       gain.gain.linearRampToValueAtTime(GAIN, at + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + NOTE_S * 1.8);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + noteS * 1.8);
       osc.connect(gain).connect(ctx.destination);
       osc.start(at);
-      osc.stop(at + NOTE_S * 2);
+      osc.stop(at + noteS * 2);
     });
     return true;
   } catch {

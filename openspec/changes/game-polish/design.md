@@ -28,18 +28,18 @@ how-to-play pictures, a lose animation.
   pawn group) and 18 small pieces (squares and circles in the four seat colours, seeded positions so
   tests are stable) fly out from its square and fade within 1.2 s. Only on the transition to
   finished, not when opening an already finished game.
-- **Spare rotation:** `SpareTile` draws the tile at rotation 0 inside a group rotated by a
-  cumulative angle (+90 per turn of the same tile, reset when the tile changes), with a 180 ms
-  transform transition. Cumulative so 270° → 360° keeps turning clockwise instead of spinning back.
-  The drawn corridors are the same as before; tests reading `data-openings` of the spare now read
-  the group's angle instead, so the spare exposes `data-rotation`.
+- **Spare rotation:** `SpareTile` keeps drawing the tile at its real rotation (treasure icon and
+  target badge stay upright) and, on each new rotation of the same tile, replays a 180 ms turn-in from
+  a quarter turn back (keyed group). Always clockwise, no cumulative angle needed; a hint's multi-turn
+  jump animates only its last quarter.
 - **Sounds:** `shift` = a low sine at 196 Hz, 90 ms, with a quick drop; `win` = C5 E5 G5; `finish`
   (someone else won) = G4 E4. Played from the game screen: shift when the synced spare changes (a
   shift landed) for seated viewers; win/finish on the transition to finished. Sounds setting governs
   all.
-- **Reduced motion:** the global reduced-motion rule already shortens animations to ~0; effect
-  components also skip the burst and the hop when `prefersReducedMotion()` is true, and the pickup
-  icon only fades.
+- **Reduced motion:** the app's global rule cuts every animation to ~0 ms, so a fade-only variant is
+  not possible; the game screen does not create pickup or burst effects when `prefersReducedMotion()`
+  is true (the notice and the player strip still tell what happened), and the hop and turn-in are
+  cut by the global rule.
 
 ## NFR (openspec/context/nfr.md)
 

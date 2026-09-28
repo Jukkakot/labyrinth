@@ -21,6 +21,8 @@ export interface PawnProps {
   isMe?: boolean;
   /** The viewer's own turn: the own ring pulses slowly. */
   pulse?: boolean;
+  /** Won the game just now: hops a few times. */
+  hop?: boolean;
   connected?: boolean;
   /** Top-left of the square it stands on, in board units. */
   x?: number;
@@ -35,7 +37,7 @@ export interface PawnProps {
  * A player's pawn: its colour + shape (never colour alone); the viewer's own pawn gets a ring in its
  * colour, pulsing on the viewer's turn. The seat only picks the crowd quadrant.
  */
-export function Pawn({ seat, look = seat, name = "", isMe = false, pulse = false, connected = true, x = 0, y = 0, moveMs = 0, crowded = false }: PawnProps) {
+export function Pawn({ seat, look = seat, name = "", isMe = false, pulse = false, hop = false, connected = true, x = 0, y = 0, moveMs = 0, crowded = false }: PawnProps) {
   const { t } = useTranslation();
   const label = t(isMe ? "board.pawnMe" : "board.pawn", { name });
   const [dx, dy] = CROWD_OFFSET[seat] ?? [0, 0];
@@ -57,7 +59,9 @@ export function Pawn({ seat, look = seat, name = "", isMe = false, pulse = false
             <circle cx={50} cy={50} r={34} className={styles.ring} style={{ stroke: `var(--seat-${look})` }} />
           </g>
         )}
-        <path d={SHAPES[look]} className={styles.pawn} style={{ fill: `var(--seat-${look})` }} />
+        <g className={hop ? styles.hop : undefined} data-hop={hop || undefined}>
+          <path d={SHAPES[look]} className={styles.pawn} style={{ fill: `var(--seat-${look})` }} />
+        </g>
       </g>
     </g>
   );

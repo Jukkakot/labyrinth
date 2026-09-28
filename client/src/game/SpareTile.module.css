@@ -24,3 +24,16 @@
   height: 48px;
   opacity: 0.5;
 }
+
+/* The rotate button: the new rotation turns in clockwise from a quarter turn back. */
+.turning {
+  transform-box: view-box;
+  transform-origin: 50px 50px;
+  animation: turnIn 180ms ease-out;
+}
+
+@keyframes turnIn {
+  from {
+    transform: rotate(-90deg);
+  }
+}

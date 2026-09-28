@@ -28,8 +28,20 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hop,
   .pulse {
     animation: none;
+  }
+}
+
+/* The winner hops three times. */
+.hop {
+  animation: hop 300ms ease-out 3;
+}
+
+@keyframes hop {
+  50% {
+    transform: translateY(-18px);
   }
 }
 

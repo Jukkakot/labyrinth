@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { BOARD_SIZE, insertionLine, isFixed, squareIndex, type Board as BoardModel, type Square } from "@labyrinth/rules";
+import { BOARD_SIZE, insertionLine, isFixed, squareIndex, type Board as BoardModel, type Square, type TreasureId } from "@labyrinth/rules";
 import { useTranslation } from "react-i18next";
 import type { SeatView } from "../session/viewModel.ts";
 import styles from "./Board.module.css";
@@ -9,6 +9,7 @@ import { ShiftTargets, type ShiftTargetsProps } from "./ShiftTargets.tsx";
 import { collectedTreasures, isCollected } from "./collected.ts";
 import { targetOf, type TargetMark } from "./target.ts";
 import { TILE_UNITS, TileView } from "./TileView.tsx";
+import { PickupEffect, WinBurst } from "./Effects.tsx";
 import { BOARD_MARGIN, HintMark, PushedTileMark, ReachMarks, RouteTrace } from "./TurnMarks.tsx";
 import type { TurnTrace } from "./turnTrace.ts";
 
@@ -33,10 +34,21 @@ export interface BoardProps {
   hint?: Square;
   /** The viewer's own turn: their pawn's ring pulses. */
   myTurn?: boolean;
+  /** Treasures being collected right now (one-shot effects). */
+  pickups?: readonly Pickup[];
+  /** The game was just won: the winner's pawn hops and its square bursts. */
+  celebration?: { seat: number; square: Square };
+}
+
+export interface Pickup {
+  key: string;
+  square: Square;
+  treasure: TreasureId;
+  look: number;
 }
 
 /** The 7×7 board as one scalable SVG, with the pawns on their squares and the controls of the current step. */
-export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target, trace, reach, hint, myTurn = false }: BoardProps) {
+export function Board({ board, seats = [], shiftTargets, moveTargets, highlightTileId, target, trace, reach, hint, myTurn = false, pickups = [], celebration }: BoardProps) {
   const { t } = useTranslation();
   const clipId = useId();
   const collected = collectedTreasures(seats);
@@ -77,8 +89,12 @@ export function Board({ board, seats = [], shiftTargets, moveTargets, highlightT
       {hint && <HintMark square={hint} />}
       {/* Pawns never catch taps: a move target under a pawn must stay tappable. */}
       <g className={styles.pawns}>
-        <PawnLayer seats={seats} board={board} myTurn={myTurn} />
+        <PawnLayer seats={seats} board={board} myTurn={myTurn} hopSeat={celebration?.seat} />
       </g>
+      {pickups.map((p) => (
+        <PickupEffect key={p.key} square={p.square} treasure={p.treasure} look={p.look} />
+      ))}
+      {celebration && <WinBurst square={celebration.square} />}
       {shiftTargets && <ShiftTargets {...shiftTargets} covered={covered} />}
     </svg>
   );
