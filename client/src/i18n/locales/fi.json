@@ -129,6 +129,7 @@
   "shift": {
     "hint": "Valitse nuoli laudan reunalta",
     "rotate": "Käännä laattaa",
+    "rotateSpare": "Ylimääräinen laatta – napauta kääntääksesi",
     "confirm": "Työnnä",
     "cancel": "Peru",
     "waiting": "Odotetaan palvelinta…",

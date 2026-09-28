@@ -912,6 +912,24 @@ describe("game polish", () => {
     }
   });
 
+  it("tapping the spare tile turns it like the rotate button; not on another player's turn", async () => {
+    const { shift } = setup();
+    fireEvent.click(screen.getByRole("button", { name: "Ylimääräinen laatta – napauta kääntääksesi" }));
+    const turned = rotate(board.spare, 1);
+    const spare = screen.getByRole("group", { name: "Ylimääräinen laatta" });
+    expect(spare.querySelector("[data-tile-id]")?.getAttribute("data-openings")).toBe(openings(turned).join(""));
+    fireEvent.click(arrow("Työnnä ylhäältä sarakkeeseen 4"));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Jää paikalleen" }));
+    });
+    expect(shift).toHaveBeenCalledWith("N3", turned.rotation);
+  });
+
+  it("the spare tile is not a button on another player's turn", () => {
+    setup({ turnSeat: 2 });
+    expect(screen.queryByRole("button", { name: "Ylimääräinen laatta – napauta kääntääksesi" })).toBeNull();
+  });
+
   it("Four turns: every press of the rotate button turns the spare in again", () => {
     setup();
     const spareGroup = () => screen.getByRole("group", { name: "Ylimääräinen laatta" }).querySelector("[data-turning]");

@@ -16,10 +16,12 @@ export interface SpareTileProps {
   target?: TargetMark;
   /** Collected treasures: not drawn on the tile. */
   collected?: Collected;
+  /** Given while the viewer may turn the spare: tapping the tile turns it a quarter clockwise. */
+  onRotate?(): void;
 }
 
-/** A tile off the board (the spare, or the one about to drop out), drawn exactly like a board tile, with its label. */
-export function SpareTile({ tile, caption, outgoing = false, target, collected }: SpareTileProps) {
+/** A tile off the board (the spare, or the one about to drop out), drawn exactly like a board tile, with its label; the spare turns when tapped on the viewer's shift step. */
+export function SpareTile({ tile, caption, outgoing = false, target, collected, onRotate }: SpareTileProps) {
   const { t } = useTranslation();
   const clipId = useId();
   const label = caption ?? t("board.spare");
@@ -28,18 +30,27 @@ export function SpareTile({ tile, caption, outgoing = false, target, collected }
   if (seen.id !== tile.id || seen.rotation !== tile.rotation) {
     setSeen({ id: tile.id, rotation: tile.rotation, turns: seen.id === tile.id ? seen.turns + 1 : 0 });
   }
+  const drawing = (
+    <svg viewBox={`0 0 ${TILE_UNITS} ${TILE_UNITS}`} className={styles.tile} aria-label={label} role="group">
+      <clipPath id={clipId}>
+        <rect x={3} y={3} width={TILE_UNITS - 6} height={TILE_UNITS - 6} rx={10} />
+      </clipPath>
+      <g clipPath={`url(#${clipId})`}>
+        <g key={seen.turns} className={seen.turns ? styles.turning : undefined} data-turning={seen.turns > 0 || undefined}>
+          <TileView tile={tile} target={targetOf(tile.id, target)} treasureHidden={isCollected(tile.id, collected)} />
+        </g>
+      </g>
+    </svg>
+  );
   return (
     <figure className={outgoing ? `${styles.spare} ${styles.outgoing}` : styles.spare}>
-      <svg viewBox={`0 0 ${TILE_UNITS} ${TILE_UNITS}`} className={styles.tile} aria-label={label} role="group">
-        <clipPath id={clipId}>
-          <rect x={3} y={3} width={TILE_UNITS - 6} height={TILE_UNITS - 6} rx={10} />
-        </clipPath>
-        <g clipPath={`url(#${clipId})`}>
-          <g key={seen.turns} className={seen.turns ? styles.turning : undefined} data-turning={seen.turns > 0 || undefined}>
-            <TileView tile={tile} target={targetOf(tile.id, target)} treasureHidden={isCollected(tile.id, collected)} />
-          </g>
-        </g>
-      </svg>
+      {onRotate ? (
+        <button type="button" className={styles.press} onClick={onRotate} aria-label={t("shift.rotateSpare")} title={t("shift.rotate")}>
+          {drawing}
+        </button>
+      ) : (
+        drawing
+      )}
       <figcaption className={styles.caption}>{label}</figcaption>
     </figure>
   );

@@ -129,6 +129,7 @@
   "shift": {
     "hint": "Pick an arrow on the board edge",
     "rotate": "Rotate tile",
+    "rotateSpare": "Spare tile – tap to rotate",
     "confirm": "Push",
     "cancel": "Cancel",
     "waiting": "Waiting for the server…",

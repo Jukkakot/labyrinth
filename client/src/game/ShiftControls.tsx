@@ -70,7 +70,7 @@ export function ShiftControls({
   return (
     <div className={styles.controls}>
       <div className={styles.tiles}>
-        <SpareTile tile={spare} target={target} collected={collected} />
+        <SpareTile tile={spare} target={target} collected={collected} onRotate={enabled && !pending ? onRotate : undefined} />
         <Button
           variant="secondary"
           className={styles.icon}

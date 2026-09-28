@@ -18,6 +18,21 @@
   white-space: nowrap;
 }
 
+/* The spare on the viewer's shift step: the tile itself is a button that turns it (44 px+ target). */
+.press {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.press:active .tile {
+  transform: scale(0.96);
+}
+
 /* The tile that would drop out of the board in a preview. */
 .outgoing .tile {
   width: 48px;
