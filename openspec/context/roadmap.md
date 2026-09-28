@@ -109,6 +109,10 @@ In this order:
    proposal: where the bug-report line (id · time · version) goes, and what device games (no URL)
    show and copy.
 
+## Refinement round 2 (asked 2026-09-28)
+
+1. ~~`game-polish`~~ (done): treasure pickup effect for every player, win celebration (hop + burst), spare turns in smoothly, shift thud and win/finish tunes; all skipped with reduced motion.
+
 ## Improvement backlog
 
 Ideas for existing features, picked up after the roadmap items above or when a change touches the
