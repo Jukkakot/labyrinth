@@ -112,6 +112,7 @@ In this order:
 ## Refinement round 2 (asked 2026-09-28)
 
 1. ~~`game-polish`~~ (done): treasure pickup effect for every player, win celebration (hop + burst), spare turns in smoothly, shift thud and win/finish tunes; all skipped with reduced motion.
+2. ~~`tap-spare-to-rotate`~~ (done): tapping the spare tile under the board turns it like the rotate button (shift step only).
 
 ## Improvement backlog
 
