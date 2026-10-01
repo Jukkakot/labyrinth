@@ -135,3 +135,4 @@ same area. Each becomes its own change (or joins a related one) when picked up.
   ahead with good moves for everyone and picks the best average move; must stay within a
   phone's time budget (now a few ms per turn). Compare with `botTournament` before switching;
   the hint would get stronger with it. Pick up when the current bot starts to feel easy.
+- **Logs to the shared Axiom dataset** (noted 2026-10-01): Axiom's personal tier allows 3 datasets; the kit games (Palikka, Neljän suora) now share one dataset `games`, every line naming its game in `game` (game-kit README → Logs). Idea: add `game: "muuttuva-labyrintti"` to the logger, ship to `games` with the shared token (`AXIOM_GAMES_TOKEN`), then delete the dataset `labyrinth` to free a slot.
